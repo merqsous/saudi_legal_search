@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { Search, Loader2, ExternalLink, Scale, Filter, X, ChevronDown } from 'lucide-react';
+import { Search, Loader2, ExternalLink, Scale, Filter, X, ChevronDown, Sparkles } from 'lucide-react';
 
 interface SearchResult {
   judgment_id: number;
@@ -27,6 +27,7 @@ interface SearchResponse {
   total: number;
   limit: number;
   offset: number;
+  ai_answer?: string | null;
 }
 
 interface Filters {
@@ -49,6 +50,7 @@ export default function Home() {
   const [selectedCity, setSelectedCity] = useState('');
   const [selectedYear, setSelectedYear] = useState('');
   const [selectedCourtLevel, setSelectedCourtLevel] = useState('');
+  const [aiAnswer, setAiAnswer] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/filters')
@@ -70,11 +72,12 @@ export default function Home() {
     if (selectedCourtLevel) params.set('court_level', selectedCourtLevel);
 
     try {
-      const res = await fetch(`/api/search?${params.toString()}`);
+      const res = await fetch(`/api/search-with-answer?${params.toString()}`);
       if (!res.ok) throw new Error(`API error: ${res.status}`);
       const data: SearchResponse = await res.json();
       setResults(data.results);
       setTotal(data.total);
+      setAiAnswer(data.ai_answer ?? null);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Search failed');
       setResults([]);
@@ -82,6 +85,16 @@ export default function Home() {
       setLoading(false);
     }
   }, [query, selectedCourtType, selectedCity, selectedYear, selectedCourtLevel]);
+
+  const formatAiAnswer = (text: string) => {
+    const parts = text.split(/(\(\d+\))/g);
+    return parts.map((part, i) => {
+      if (/^\(\d+\)$/.test(part)) {
+        return <span key={i} className="text-primary-600 font-medium">{part}</span>;
+      }
+      return <span key={i}>{part}</span>;
+    });
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') doSearch();
@@ -227,6 +240,17 @@ export default function Home() {
 
           {!loading && results.length > 0 && (
             <>
+              {aiAnswer && (
+                <div className="mb-4 bg-gradient-to-l from-primary-50 to-white border border-primary-200 rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Sparkles className="w-5 h-5 text-primary-600" />
+                    <h2 className="text-sm font-bold text-slate-800">إجابة قانونية مساعدة</h2>
+                  </div>
+                  <p className="text-sm text-slate-700 leading-relaxed arabic-text" dir="rtl">
+                    {formatAiAnswer(aiAnswer)}
+                  </p>
+                </div>
+              )}
               <p className="text-sm text-slate-500 mb-4">
                 {total} نتيجة
               </p>
