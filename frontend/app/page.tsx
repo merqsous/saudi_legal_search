@@ -51,6 +51,7 @@ export default function Home() {
   const [selectedYear, setSelectedYear] = useState('');
   const [selectedCourtLevel, setSelectedCourtLevel] = useState('');
   const [aiAnswer, setAiAnswer] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
 
   useEffect(() => {
     fetch('/api/filters')
@@ -77,7 +78,14 @@ export default function Home() {
       const data: SearchResponse = await res.json();
       setResults(data.results);
       setTotal(data.total);
-      setAiAnswer(data.ai_answer ?? null);
+      setAiAnswer(null);
+
+      setAiLoading(true);
+      fetch(`/api/ai-answer?${new URLSearchParams({ q: query, limit: '20' })}`)
+        .then((r) => r.json())
+        .then((d) => setAiAnswer(d.ai_answer ?? null))
+        .catch(() => setAiAnswer(null))
+        .finally(() => setAiLoading(false));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Search failed');
       setResults([]);
@@ -240,15 +248,20 @@ export default function Home() {
 
           {!loading && results.length > 0 && (
             <>
-              {aiAnswer && (
+              {(aiAnswer || aiLoading) && (
                 <div className="mb-4 bg-gradient-to-l from-primary-50 to-white border border-primary-200 rounded-xl p-5">
                   <div className="flex items-center gap-2 mb-3">
                     <Sparkles className="w-5 h-5 text-primary-600" />
                     <h2 className="text-sm font-bold text-slate-800">إجابة قانونية مساعدة</h2>
+                    {aiLoading && <Loader2 className="w-4 h-4 text-primary-500 animate-spin" />}
                   </div>
-                  <p className="text-sm text-slate-700 leading-relaxed arabic-text" dir="rtl">
-                    {formatAiAnswer(aiAnswer)}
-                  </p>
+                  {aiAnswer ? (
+                    <p className="text-sm text-slate-700 leading-relaxed arabic-text" dir="rtl">
+                      {formatAiAnswer(aiAnswer)}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-slate-400">جاري توليد الإجابة...</p>
+                  )}
                 </div>
               )}
               <p className="text-sm text-slate-500 mb-4">

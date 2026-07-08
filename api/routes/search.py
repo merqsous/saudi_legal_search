@@ -102,6 +102,10 @@ def search(
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
 ):
+    return _do_search(q, court_type, city, year, court_level, limit, offset)
+
+
+def _do_search(q, court_type, city, year, court_level, limit, offset):
     try:
         expanded_q = expand_query(q)
         embedding = embed_text(expanded_q)
@@ -151,10 +155,6 @@ def search(
     total = count_row["count"] if count_row else 0
 
     fetch_pool = min(limit * 5, 50)
-    params_with_pagination = params + [fetch_pool, offset]
-
-    keyword_conditions = " OR ".join(["jc.chunk_text ILIKE %s" for _ in keywords])
-    keyword_params = [f"%{kw}%" for kw in keywords]
 
     sql = f"""
         SELECT * FROM (
@@ -174,8 +174,7 @@ def search(
                 cl.code AS court_level_code,
                 js.section_name_ar,
                 jc.chunk_text,
-                jc.embedding <=> %s::vector AS distance,
-                CASE WHEN ({keyword_conditions}) THEN 0.15 ELSE 0 END AS keyword_boost
+                jc.embedding <=> %s::vector AS distance
             FROM judgment_chunks jc
             JOIN judgments j ON jc.judgment_id = j.id
             JOIN cases c ON j.case_id = c.id
@@ -188,11 +187,11 @@ def search(
               {where_clause}
             ORDER BY j.id, jc.embedding <=> %s::vector
         ) AS best_chunks
-        ORDER BY (distance - keyword_boost) ASC, distance
+        ORDER BY distance
         LIMIT %s OFFSET %s;
     """
 
-    all_params = [vec_str] + keyword_params + [vec_str, fetch_pool, offset]
+    all_params = [vec_str, vec_str, fetch_pool, offset]
 
     rows = query_all(sql, all_params)
 
@@ -201,8 +200,6 @@ def search(
         snippet = row.get("chunk_text", "")
 
         distance = float(row["distance"]) if row["distance"] else None
-        if distance is not None:
-            distance = max(0.0, distance - float(row.get("keyword_boost", 0)))
 
         results.append({
             "judgment_id": row["judgment_id"],
@@ -223,8 +220,16 @@ def search(
             "distance": distance,
         })
 
-    ai_answer = generate_ai_answer(q, results[:limit])
-    return {"results": results[:limit], "total": total, "limit": limit, "offset": offset, "ai_answer": ai_answer}
+    return {"results": results[:limit], "total": total, "limit": limit, "offset": offset}
+
+
+@router.get("/ai-answer")
+def get_ai_answer(
+    q: str = Query(..., description="Search query"),
+    limit: int = Query(20, ge=1, le=100),
+):
+    search_result = _do_search(q, None, None, None, None, limit, 0)
+    return {"ai_answer": generate_ai_answer(q, search_result["results"])}
 
 
 @router.get("/judgments/{judgment_id}")
