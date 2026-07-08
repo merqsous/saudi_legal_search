@@ -39,3 +39,7 @@ logs/
 
 # DB exports
 data/db_export.sql
+
+# WAHA
+waha-service/.waha_session/
+waha-service/node_modules/
