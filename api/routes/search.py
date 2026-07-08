@@ -104,10 +104,11 @@ def search(
         LEFT JOIN court_levels cl ON j.court_level_id = cl.id
         WHERE jc.embedding IS NOT NULL
           AND length(jc.chunk_text) >= 100
+          AND jc.embedding <=> %s::vector < 0.55
           {where_clause}
     """
 
-    count_params = params[2:] if len(params) > 2 else []
+    count_params = [vec_str] + (params[2:] if len(params) > 2 else [])
     count_row = query_one(count_sql, count_params)
     total = count_row["count"] if count_row else 0
 
