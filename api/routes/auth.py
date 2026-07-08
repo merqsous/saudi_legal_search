@@ -19,6 +19,9 @@ TWILIO_WHATSAPP_FROM = os.getenv("TWILIO_WHATSAPP_FROM", "")
 # WAHA (WhatsApp HTTP API) config
 WAHA_URL = os.getenv("WAHA_URL", "http://localhost:3001")
 
+# Admin phone (bypasses OTP)
+ADMIN_PHONE = "966514789632"
+
 # Session tokens (in-memory, survives across requests)
 _sessions: dict[str, dict] = {}
 
@@ -196,3 +199,32 @@ def get_me(authorization: str = Header(None)):
     if not user:
         raise HTTPException(status_code=401, detail="المستخدم غير موجود")
     return user
+
+
+@router.post("/auth/admin-login")
+def admin_login(req: SendCodeRequest):
+    phone = normalize_phone(req.phone)
+    if not phone:
+        raise HTTPException(status_code=400, detail="رقم الهاتف غير صحيح")
+
+    if phone != ADMIN_PHONE:
+        raise HTTPException(status_code=403, detail="غير مصرح")
+
+    with get_db() as conn:
+        cur = conn.cursor()
+        user = query_one("SELECT * FROM users WHERE phone = %s", [phone])
+        if not user:
+            cur.execute(
+                "INSERT INTO users (phone, first_name, last_name) VALUES (%s, %s, %s) RETURNING id",
+                (phone, "Admin", "User"),
+            )
+            user_id = cur.fetchone()[0]
+        else:
+            user_id = user["id"]
+        cur.close()
+
+    token = secrets.token_urlsafe(32)
+    _sessions[token] = {"user_id": user_id, "phone": phone}
+
+    user_data = query_one("SELECT id, phone, first_name, last_name FROM users WHERE id = %s", [user_id])
+    return {"status": "ok", "token": token, "user": user_data}

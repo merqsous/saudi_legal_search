@@ -40,12 +40,39 @@ export default function SignInPage() {
     return cleaned;
   };
 
+  const ADMIN_PHONE = '0514789632';
+
   const handleSendCode = async () => {
     setError(null);
     if (phone.length !== 10 || !phone.startsWith('05')) {
       setError('رقم الهاتف يجب أن يبدأ بـ 05 ويتكون من 10 أرقام');
       return;
     }
+
+    // Admin bypass - no OTP needed
+    if (phone === ADMIN_PHONE) {
+      setLoading(true);
+      try {
+        const res = await fetch('/api/auth/admin-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'فشل تسجيل الدخول');
+        if (data.token) {
+          localStorage.setItem('auth_token', data.token);
+          localStorage.setItem('auth_user', JSON.stringify(data.user));
+          router.push('/search');
+        }
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'فشل تسجيل الدخول');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await fetch('/api/auth/send-code', {
