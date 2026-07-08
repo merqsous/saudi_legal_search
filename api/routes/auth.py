@@ -345,6 +345,17 @@ def admin_stats(authorization: str = Header(None)):
            GROUP BY DATE(created_at) ORDER BY day"""
     )
 
+    recent_cases = safe_query_all(
+        """SELECT j.id, j.judgment_number, j.judgment_year, j.judgment_type,
+                  j.details_url, c.case_number, c.case_year,
+                  ct.name_ar AS court_type, l.city_ar AS city
+           FROM judgments j
+           LEFT JOIN cases c ON j.case_id = c.id
+           LEFT JOIN court_types ct ON c.court_type_id = ct.id
+           LEFT JOIN locations l ON c.location_id = l.id
+           ORDER BY j.id DESC LIMIT 20"""
+    )
+
     return {
         "total_cases": total_cases,
         "total_users": total_users,
@@ -354,6 +365,7 @@ def admin_stats(authorization: str = Header(None)):
         "users": users_with_searches,
         "recent_searches": recent_searches,
         "searches_by_day": searches_by_day,
+        "recent_cases": recent_cases,
     }
 
 

@@ -32,6 +32,17 @@ interface AdminStats {
     country: string | null;
   }[];
   searches_by_day: { day: string; cnt: number }[];
+  recent_cases: {
+    id: number;
+    judgment_number: string | null;
+    judgment_year: string | null;
+    judgment_type: string | null;
+    details_url: string | null;
+    case_number: string | null;
+    case_year: string | null;
+    court_type: string | null;
+    city: string | null;
+  }[];
 }
 
 export default function AdminPage() {
@@ -268,6 +279,43 @@ export default function AdminPage() {
                     <td className="py-3 px-2 text-slate-500">{s.country || '-'}</td>
                     <td className="py-3 px-2 text-slate-500">{s.results_count}</td>
                     <td className="py-3 px-2 text-slate-500">{formatDate(s.created_at)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Recent Cases Added */}
+        <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200 mt-8">
+          <div className="flex items-center gap-2 mb-4">
+            <Database className="w-5 h-5 text-primary-600" />
+            <h2 className="text-lg font-bold text-slate-900">أحدث الأحكام المضافة</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-slate-500 text-xs">
+                  <th className="text-right py-3 px-2">رقم الحكم</th>
+                  <th className="text-right py-3 px-2">السنة</th>
+                  <th className="text-right py-3 px-2">نوع المحكمة</th>
+                  <th className="text-right py-3 px-2">المدينة</th>
+                  <th className="text-right py-3 px-2">رقم القضية</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stats.recent_cases.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="py-4 text-center text-slate-400">لا توجد بيانات</td>
+                  </tr>
+                )}
+                {stats.recent_cases.map((c) => (
+                  <tr key={c.id} className="border-b border-slate-100 last:border-0">
+                    <td className="py-3 px-2 text-slate-700" dir="ltr">{c.judgment_number || '-'}</td>
+                    <td className="py-3 px-2 text-slate-500">{c.judgment_year || '-'}</td>
+                    <td className="py-3 px-2 text-slate-600" dir="rtl">{c.court_type || '-'}</td>
+                    <td className="py-3 px-2 text-slate-600" dir="rtl">{c.city || '-'}</td>
+                    <td className="py-3 px-2 text-slate-500" dir="ltr">{c.case_number || '-'}/{c.case_year || ''}</td>
                   </tr>
                 ))}
               </tbody>
