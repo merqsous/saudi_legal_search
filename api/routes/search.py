@@ -62,34 +62,37 @@ def search(
     params_with_pagination = params + [limit, offset]
 
     sql = f"""
-        SELECT
-            j.id AS judgment_id,
-            j.judgment_number,
-            j.judgment_year,
-            j.judgment_date_hijri,
-            j.judgment_type,
-            j.details_url,
-            c.case_number,
-            c.case_year,
-            ct.name_ar AS court_type,
-            ct.code AS court_type_code,
-            l.city_ar AS city,
-            cl.name_ar AS court_level,
-            cl.code AS court_level_code,
-            js.section_name_ar,
-            jc.chunk_text,
-            jc.embedding <=> %s::vector AS distance
-        FROM judgment_chunks jc
-        JOIN judgments j ON jc.judgment_id = j.id
-        JOIN cases c ON j.case_id = c.id
-        LEFT JOIN judgment_sections js ON jc.section_id = js.id
-        LEFT JOIN court_types ct ON c.court_type_id = ct.id
-        LEFT JOIN locations l ON c.location_id = l.id
-        LEFT JOIN court_levels cl ON j.court_level_id = cl.id
-        WHERE jc.embedding IS NOT NULL
-          AND length(jc.chunk_text) >= 100
-          {where_clause}
-        ORDER BY jc.embedding <=> %s::vector
+        SELECT * FROM (
+            SELECT DISTINCT ON (j.id)
+                j.id AS judgment_id,
+                j.judgment_number,
+                j.judgment_year,
+                j.judgment_date_hijri,
+                j.judgment_type,
+                j.details_url,
+                c.case_number,
+                c.case_year,
+                ct.name_ar AS court_type,
+                ct.code AS court_type_code,
+                l.city_ar AS city,
+                cl.name_ar AS court_level,
+                cl.code AS court_level_code,
+                js.section_name_ar,
+                jc.chunk_text,
+                jc.embedding <=> %s::vector AS distance
+            FROM judgment_chunks jc
+            JOIN judgments j ON jc.judgment_id = j.id
+            JOIN cases c ON j.case_id = c.id
+            LEFT JOIN judgment_sections js ON jc.section_id = js.id
+            LEFT JOIN court_types ct ON c.court_type_id = ct.id
+            LEFT JOIN locations l ON c.location_id = l.id
+            LEFT JOIN court_levels cl ON j.court_level_id = cl.id
+            WHERE jc.embedding IS NOT NULL
+              AND length(jc.chunk_text) >= 100
+              {where_clause}
+            ORDER BY j.id, jc.embedding <=> %s::vector
+        ) AS best_chunks
+        ORDER BY distance
         LIMIT %s OFFSET %s;
     """
 
