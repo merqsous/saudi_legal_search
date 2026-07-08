@@ -289,16 +289,30 @@ def admin_stats(authorization: str = Header(None)):
     if not session or session["phone"] != ADMIN_PHONE:
         raise HTTPException(status_code=403, detail="غير مصرح")
 
-    total_cases = query_one("SELECT COUNT(*) as cnt FROM judgments")["cnt"]
-    total_users = query_one("SELECT COUNT(*) as cnt FROM users")["cnt"]
-    total_searches = query_one("SELECT COUNT(*) as cnt FROM search_logs")["cnt"]
+    def safe_query_one(sql, params=None):
+        try:
+            return query_one(sql, params or [])
+        except Exception as e:
+            print(f"[ADMIN_STATS] query_one error: {e}")
+            return {"cnt": 0}
 
-    top_keywords = query_all(
+    def safe_query_all(sql, params=None):
+        try:
+            return query_all(sql, params or [])
+        except Exception as e:
+            print(f"[ADMIN_STATS] query_all error: {e}")
+            return []
+
+    total_cases = safe_query_one("SELECT COUNT(*) as cnt FROM judgments")["cnt"]
+    total_users = safe_query_one("SELECT COUNT(*) as cnt FROM users")["cnt"]
+    total_searches = safe_query_one("SELECT COUNT(*) as cnt FROM search_logs")["cnt"]
+
+    top_keywords = safe_query_all(
         """SELECT query, COUNT(*) as cnt FROM search_logs
            GROUP BY query ORDER BY cnt DESC LIMIT 20"""
     )
 
-    top_court_types = query_all(
+    top_court_types = safe_query_all(
         """SELECT sl.court_type, ct.name_ar, COUNT(*) as cnt
            FROM search_logs sl
            LEFT JOIN court_types ct ON ct.code = sl.court_type
@@ -307,7 +321,7 @@ def admin_stats(authorization: str = Header(None)):
            ORDER BY cnt DESC LIMIT 10"""
     )
 
-    users_with_searches = query_all(
+    users_with_searches = safe_query_all(
         """SELECT u.id, u.phone, u.first_name, u.last_name, u.ip_address, u.country, u.created_at,
                   COUNT(sl.id) as search_count,
                   MAX(sl.created_at) as last_search
@@ -317,14 +331,14 @@ def admin_stats(authorization: str = Header(None)):
            ORDER BY search_count DESC"""
     )
 
-    recent_searches = query_all(
+    recent_searches = safe_query_all(
         """SELECT sl.query, sl.phone, u.first_name, u.last_name, sl.created_at, sl.results_count, sl.ip_address, sl.country
            FROM search_logs sl
            LEFT JOIN users u ON u.id = sl.user_id
            ORDER BY sl.created_at DESC LIMIT 50"""
     )
 
-    searches_by_day = query_all(
+    searches_by_day = safe_query_all(
         """SELECT DATE(created_at) as day, COUNT(*) as cnt
            FROM search_logs
            WHERE created_at > NOW() - INTERVAL '30 days'
