@@ -1,455 +1,272 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
-import { Search, Loader2, ExternalLink, Scale, Filter, X, ChevronDown, Sparkles, User as UserIcon, LogOut } from 'lucide-react';
-import AuthModal from './AuthModal';
+import { useState, useEffect } from 'react';
+import { Scale, Phone, Loader2, User, MessageCircle, CheckCircle } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
-interface AuthUser {
-  id: number;
-  phone: string;
-  first_name: string;
-  last_name: string;
-}
+type Step = 'phone' | 'verify' | 'name';
 
-interface SearchResult {
-  judgment_id: number;
-  judgment_number: string | null;
-  judgment_year: string | null;
-  judgment_date_hijri: string | null;
-  judgment_type: string | null;
-  details_url: string | null;
-  case_number: string | null;
-  case_year: string | null;
-  court_type: string | null;
-  court_type_code: string | null;
-  city: string | null;
-  court_level: string | null;
-  court_level_code: string | null;
-  section_name: string | null;
-  snippet: string;
-  distance: number | null;
-}
-
-interface SearchResponse {
-  results: SearchResult[];
-  total: number;
-  limit: number;
-  offset: number;
-  ai_answer?: string | null;
-}
-
-interface Filters {
-  court_types: { code: string; name_ar: string }[];
-  locations: { id: number; city_ar: string }[];
-  years: string[];
-  court_levels: { code: string; name_ar: string }[];
-}
-
-export default function Home() {
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState<SearchResult[]>([]);
-  const [total, setTotal] = useState(0);
+export default function SignInPage() {
+  const router = useRouter();
+  const [step, setStep] = useState<Step>('phone');
+  const [phone, setPhone] = useState('');
+  const [code, setCode] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [hasSearched, setHasSearched] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
-  const [filters, setFilters] = useState<Filters | null>(null);
-  const [selectedCourtType, setSelectedCourtType] = useState('');
-  const [selectedCity, setSelectedCity] = useState('');
-  const [selectedYear, setSelectedYear] = useState('');
-  const [selectedCourtLevel, setSelectedCourtLevel] = useState('');
-  const [aiAnswer, setAiAnswer] = useState<string | null>(null);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [showAuth, setShowAuth] = useState(false);
-  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [devCode, setDevCode] = useState<string | null>(null);
+  const [needsName, setNeedsName] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
 
   useEffect(() => {
     const saved = localStorage.getItem('auth_user');
     if (saved) {
-      try { setAuthUser(JSON.parse(saved)); } catch {}
+      try {
+        JSON.parse(saved);
+        router.push('/search');
+        return;
+      } catch {}
     }
-    fetch('/api/filters')
-      .then((r) => r.json())
-      .then((data) => setFilters(data))
-      .catch(() => {});
-  }, []);
+    setCheckingAuth(false);
+  }, [router]);
 
-  const doSearch = useCallback(async () => {
-    if (!query.trim()) return;
-    setLoading(true);
+  const formatPhone = (val: string) => {
+    let cleaned = val.replace(/\D/g, '');
+    if (cleaned.startsWith('966')) cleaned = '0' + cleaned.slice(3);
+    if (cleaned.startsWith('00966')) cleaned = '0' + cleaned.slice(5);
+    if (!cleaned.startsWith('0') && cleaned.startsWith('5')) cleaned = '0' + cleaned;
+    if (cleaned.length > 10) cleaned = cleaned.slice(0, 10);
+    return cleaned;
+  };
+
+  const handleSendCode = async () => {
     setError(null);
-    setHasSearched(true);
-
-    const params = new URLSearchParams({ q: query, limit: '20' });
-    if (selectedCourtType) params.set('court_type', selectedCourtType);
-    if (selectedCity) params.set('city', selectedCity);
-    if (selectedYear) params.set('year', selectedYear);
-    if (selectedCourtLevel) params.set('court_level', selectedCourtLevel);
-
+    if (phone.length !== 10 || !phone.startsWith('05')) {
+      setError('رقم الهاتف يجب أن يبدأ بـ 05 ويتكون من 10 أرقام');
+      return;
+    }
+    setLoading(true);
     try {
-      const res = await fetch(`/api/search?${params.toString()}`);
-      if (!res.ok) throw new Error(`API error: ${res.status}`);
-      const data: SearchResponse = await res.json();
-      setResults(data.results);
-      setTotal(data.total);
-      setAiAnswer(null);
-
-      setAiLoading(true);
-      fetch(`/api/ai-answer?${new URLSearchParams({ q: query, limit: '20' })}`)
-        .then((r) => r.json())
-        .then((d) => setAiAnswer(d.ai_answer ?? null))
-        .catch(() => setAiAnswer(null))
-        .finally(() => setAiLoading(false));
+      const res = await fetch('/api/auth/send-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'فشل إرسال الرمز');
+      if (data.dev_code) setDevCode(data.dev_code);
+      setStep('verify');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Search failed');
-      setResults([]);
+      setError(e instanceof Error ? e.message : 'فشل إرسال الرمز');
     } finally {
       setLoading(false);
     }
-  }, [query, selectedCourtType, selectedCity, selectedYear, selectedCourtLevel]);
+  };
 
-  const formatAiAnswer = (text: string) => {
-    const parts = text.split(/(\(\d+\))/g);
-    return parts.map((part, i) => {
-      if (/^\(\d+\)$/.test(part)) {
-        return <span key={i} className="text-primary-600 font-medium">{part}</span>;
+  const handleVerifyCode = async () => {
+    setError(null);
+    if (code.length !== 6) {
+      setError('الرمز تجب أن يتكون من 6 أرقام');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch('/api/auth/verify-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, code, first_name: needsName ? firstName : undefined, last_name: needsName ? lastName : undefined }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'فشل التحقق');
+      if (data.status === 'new_user' && !data.token) {
+        setNeedsName(true);
+        setStep('name');
+        setLoading(false);
+        return;
       }
-      return <span key={i}>{part}</span>;
-    });
+      if (data.token) {
+        localStorage.setItem('auth_token', data.token);
+        localStorage.setItem('auth_user', JSON.stringify(data.user));
+        router.push('/search');
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'فشل التحقق');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('auth_user');
-    setAuthUser(null);
+  const handleRegister = async () => {
+    setError(null);
+    if (!firstName.trim() || !lastName.trim()) {
+      setError('يرجى إدخال الاسم الأول والأخير');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch('/api/auth/verify-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, code, first_name: firstName.trim(), last_name: lastName.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'فشل التسجيل');
+      if (data.token) {
+        localStorage.setItem('auth_token', data.token);
+        localStorage.setItem('auth_user', JSON.stringify(data.user));
+        router.push('/search');
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'فشل التسجيل');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') doSearch();
-  };
-
-  const clearFilters = () => {
-    setSelectedCourtType('');
-    setSelectedCity('');
-    setSelectedYear('');
-    setSelectedCourtLevel('');
-  };
-
-  const activeFilterCount =
-    (selectedCourtType ? 1 : 0) +
-    (selectedCity ? 1 : 0) +
-    (selectedYear ? 1 : 0) +
-    (selectedCourtLevel ? 1 : 0);
+  if (checkingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100">
+        <Loader2 className="w-8 h-8 text-primary-600 animate-spin" />
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
-      {/* Header */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center gap-3">
-          <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary-600 text-white">
-            <Scale className="w-5 h-5" />
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100 p-4">
+      <div className="w-full max-w-md">
+        <div className="flex flex-col items-center mb-8">
+          <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-primary-600 text-white mb-3">
+            <Scale className="w-8 h-8" />
           </div>
-          <h1 className="text-xl font-bold text-slate-900">الباحث</h1>
-          <div className="flex-1" />
-          {authUser ? (
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-slate-600">{authUser.first_name} {authUser.last_name}</span>
-              <button onClick={handleLogout} className="text-slate-400 hover:text-slate-600">
-                <LogOut className="w-5 h-5" />
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setShowAuth(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700"
-            >
-              <UserIcon className="w-4 h-4" />
-              تسجيل الدخول
-            </button>
-          )}
+          <h1 className="text-2xl font-bold text-slate-900">{'الباحث'}</h1>
+          <p className="text-sm text-slate-500 mt-1">{'بحث في الأحكام القضائية السعودية'}</p>
         </div>
-      </header>
-
-      <main className="max-w-5xl mx-auto px-4 py-8">
-        {/* Search bar */}
-        <div className="relative">
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="ابحث عن حكم قضائي..."
-                className="w-full pr-11 pl-4 py-3.5 text-base bg-white border border-slate-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-                dir="rtl"
-              />
+        <div className="bg-white rounded-2xl shadow-xl p-6">
+          <div className="flex items-center gap-2 mb-6">
+            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary-50 text-primary-600">
+              <MessageCircle className="w-5 h-5" />
             </div>
-            <button
-              onClick={doSearch}
-              disabled={loading || !query.trim()}
-              className="px-6 py-3.5 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-            >
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
-              بحث
-            </button>
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`px-4 py-3.5 rounded-xl font-medium border transition-colors flex items-center gap-2 ${
-                showFilters || activeFilterCount > 0
-                  ? 'bg-primary-50 border-primary-300 text-primary-700'
-                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              <Filter className="w-5 h-5" />
-              {activeFilterCount > 0 && (
-                <span className="bg-primary-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                  {activeFilterCount}
-                </span>
-              )}
-            </button>
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">
+                {step === 'name' ? 'إنشاء حساب' : 'تسجيل الدخول'}
+              </h2>
+              <p className="text-xs text-slate-500">
+                {step === 'phone' && 'أدخل رقم هاتفك للدخول أو إنشاء حساب'}
+                {step === 'verify' && 'أدخل رمز التحقق المرسل عبر واتساب'}
+                {step === 'name' && 'أكمل بياناتك للتسجيل'}
+              </p>
+            </div>
           </div>
-
-          {/* Filters panel */}
-          {showFilters && (
-            <div className="mt-3 bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-slate-700">تصفية النتائج</h3>
-                {activeFilterCount > 0 && (
-                  <button
-                    onClick={clearFilters}
-                    className="text-xs text-primary-600 hover:text-primary-700 flex items-center gap-1"
-                  >
-                    <X className="w-3 h-3" /> مسح الكل
-                  </button>
-                )}
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <FilterSelect
-                  label="نوع المحكمة"
-                  value={selectedCourtType}
-                  onChange={setSelectedCourtType}
-                  options={filters?.court_types?.map((c) => ({ value: c.code, label: c.name_ar })) ?? []}
-                />
-                <FilterSelect
-                  label="المدينة"
-                  value={selectedCity}
-                  onChange={setSelectedCity}
-                  options={filters?.locations?.map((l) => ({ value: l.city_ar, label: l.city_ar })) ?? []}
-                />
-                <FilterSelect
-                  label="السنة"
-                  value={selectedYear}
-                  onChange={setSelectedYear}
-                  options={filters?.years?.map((y) => ({ value: y, label: y })) ?? []}
-                />
-                <FilterSelect
-                  label="درجة المحكمة"
-                  value={selectedCourtLevel}
-                  onChange={setSelectedCourtLevel}
-                  options={filters?.court_levels?.map((c) => ({ value: c.code, label: c.name_ar })) ?? []}
-                />
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Results */}
-        <div className="mt-6">
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-sm">
+            <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm">
               {error}
             </div>
           )}
-
-          {loading && (
-            <div className="flex flex-col items-center justify-center py-20">
-              <Loader2 className="w-8 h-8 text-primary-500 animate-spin" />
-              <p className="mt-3 text-sm text-slate-500">جاري البحث...</p>
+          {step === 'phone' && (
+            <div className="space-y-4">
+              <div className="relative">
+                <Phone className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(formatPhone(e.target.value))}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSendCode()}
+                  placeholder="0501234567"
+                  className="w-full pr-11 pl-4 py-3 text-base bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  dir="ltr"
+                  inputMode="numeric"
+                  autoFocus
+                />
+              </div>
+              <button
+                onClick={handleSendCode}
+                disabled={loading}
+                className="w-full py-3 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <MessageCircle className="w-5 h-5" />}
+                {'إرسال الرمز'}
+              </button>
             </div>
           )}
-
-          {!loading && !hasSearched && (
-            <div className="text-center py-20">
-              <Scale className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-              <p className="text-slate-400 text-lg">ابدأ البحث عن أحكام المحاكم السعودية</p>
-            </div>
-          )}
-
-          {!loading && hasSearched && results.length === 0 && !error && (
-            <div className="text-center py-20">
-              <p className="text-slate-400 text-lg">لا توجد نتائج</p>
-            </div>
-          )}
-
-          {!loading && results.length > 0 && (
-            <>
-              {(aiAnswer || aiLoading) && (
-                <div className="mb-4 bg-gradient-to-l from-primary-50 to-white border border-primary-200 rounded-xl p-5">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Sparkles className="w-5 h-5 text-primary-600" />
-                    <h2 className="text-sm font-bold text-slate-800">إجابة قانونية مساعدة</h2>
-                    {aiLoading && <Loader2 className="w-4 h-4 text-primary-500 animate-spin" />}
-                  </div>
-                  {aiAnswer ? (
-                    <p className="text-sm text-slate-700 leading-relaxed arabic-text" dir="rtl">
-                      {formatAiAnswer(aiAnswer)}
-                    </p>
-                  ) : (
-                    <p className="text-sm text-slate-400">جاري توليد الإجابة...</p>
-                  )}
+          {step === 'verify' && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 rounded-lg p-3">
+                <CheckCircle className="w-4 h-4" />
+                <span>{'تم إرسال الرمز إلى'} {phone}</span>
+              </div>
+              {devCode && (
+                <div className="text-sm text-amber-600 bg-amber-50 rounded-lg p-3 text-center" dir="ltr">
+                  {'رمز التحقق (وضع التطوير)'}: <span className="font-bold">{devCode}</span>
                 </div>
               )}
-              <p className="text-sm text-slate-500 mb-4">
-                {total} نتيجة
-              </p>
-              <div className="space-y-3">
-                {results.map((result, idx) => (
-                  <ResultCard key={`${result.judgment_id}-${idx}`} result={result} />
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-      </main>
-
-      <footer className="border-t border-slate-200 mt-12">
-        <div className="max-w-5xl mx-auto px-4 py-6 text-center text-xs text-slate-400">
-          الباحث — بحث في الأحكام القضائية السعودية
-        </div>
-      </footer>
-
-      {showAuth && (
-        <AuthModal
-          onClose={() => setShowAuth(false)}
-          onAuthSuccess={(user) => { setAuthUser(user); setShowAuth(false); }}
-        />
-      )}
-    </div>
-  );
-}
-
-function FilterSelect({
-  label,
-  value,
-  onChange,
-  options,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  options: { value: string; label: string }[];
-}) {
-  return (
-    <div>
-      <label className="block text-xs font-medium text-slate-500 mb-1">{label}</label>
-      <div className="relative">
-        <select
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-full appearance-none bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-400 cursor-pointer"
-        >
-          <option value="">الكل</option>
-          {options.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-        <ChevronDown className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-      </div>
-    </div>
-  );
-}
-
-function ResultCard({ result }: { result: SearchResult }) {
-  const relevance = result.distance != null ? Math.max(0, 1 - result.distance) : null;
-
-  return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-shadow">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex-1 min-w-0">
-          {/* Badges */}
-          <div className="flex flex-wrap items-center gap-2 mb-2">
-            {result.court_type && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-primary-50 text-primary-700">
-                {result.court_type}
-              </span>
-            )}
-            {result.city && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-600">
-                {result.city}
-              </span>
-            )}
-            {result.court_level && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-amber-50 text-amber-700">
-                {result.court_level}
-              </span>
-            )}
-            {result.section_name && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-emerald-50 text-emerald-700">
-                {result.section_name}
-              </span>
-            )}
-          </div>
-
-          {/* Case info */}
-          <div className="text-sm text-slate-600 mb-2" dir="rtl">
-            {result.case_number && (
-              <span>القضية: {result.case_number}/{result.case_year ?? ''}</span>
-            )}
-            {result.judgment_number && (
-              <span className="mr-3">الحكم: {result.judgment_number}</span>
-            )}
-            {result.judgment_date_hijri && (
-              <span className="mr-3 text-slate-400">التاريخ: {result.judgment_date_hijri}</span>
-            )}
-          </div>
-
-          {/* Snippet */}
-          <p className="text-sm text-slate-700 leading-relaxed arabic-text" dir="rtl">
-            {result.snippet}
-          </p>
-
-          {/* Link */}
-          {result.details_url && (
-            <a
-              href={result.details_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 mt-2 text-xs text-primary-600 hover:text-primary-700"
-            >
-              <ExternalLink className="w-3 h-3" />
-              المصدر
-            </a>
-          )}
-        </div>
-
-        {/* Relevance score */}
-        {relevance != null && (
-          <div className="flex flex-col items-center shrink-0">
-            <div className="relative w-14 h-14">
-              <svg className="w-14 h-14 -rotate-90" viewBox="0 0 56 56">
-                <circle cx="28" cy="28" r="24" fill="none" stroke="#e2e8f0" strokeWidth="4" />
-                <circle
-                  cx="28"
-                  cy="28"
-                  r="24"
-                  fill="none"
-                  stroke="#0c8ee8"
-                  strokeWidth="4"
-                  strokeDasharray={`${relevance * 150.8} 150.8`}
-                  strokeLinecap="round"
-                />
-              </svg>
-              <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-slate-700">
-                {Math.round(relevance * 100)}٪
-              </span>
+              <input
+                type="text"
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                onKeyDown={(e) => e.key === 'Enter' && handleVerifyCode()}
+                placeholder="000000"
+                className="w-full px-4 py-3 text-2xl text-center tracking-[0.5em] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
+                dir="ltr"
+                inputMode="numeric"
+                autoFocus
+              />
+              <button
+                onClick={handleVerifyCode}
+                disabled={loading}
+                className="w-full py-3 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
+                {'تحقق'}
+              </button>
+              <button
+                onClick={() => { setStep('phone'); setCode(''); setDevCode(null); setError(null); }}
+                className="w-full text-sm text-slate-500 hover:text-slate-700"
+              >
+                {'تغيير الرقم'}
+              </button>
             </div>
-            <span className="text-[10px] text-slate-400 mt-1">تطابق</span>
-          </div>
-        )}
+          )}
+          {step === 'name' && (
+            <div className="space-y-4">
+              <div className="relative">
+                <User className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <input
+                  type="text"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  placeholder={'الاسم الأول'}
+                  className="w-full pr-11 pl-4 py-3 text-base bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  dir="rtl"
+                  autoFocus
+                />
+              </div>
+              <div className="relative">
+                <User className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <input
+                  type="text"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleRegister()}
+                  placeholder={'الاسم الأخير'}
+                  className="w-full pr-11 pl-4 py-3 text-base bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  dir="rtl"
+                />
+              </div>
+              <button
+                onClick={handleRegister}
+                disabled={loading}
+                className="w-full py-3 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
+                {'إنشاء الحساب'}
+              </button>
+            </div>
+          )}
+        </div>
+        <p className="text-center text-xs text-slate-400 mt-6">
+          {'بتسجيل الدخول، أنت توافق على شروط الاستخدام'}
+        </p>
       </div>
     </div>
   );
