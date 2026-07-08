@@ -1,11 +1,2 @@
 {
-  "build": {
-    "builder": "DOCKERFILE",
-    "dockerfilePath": "Dockerfile.scraper"
-  },
-  "deploy": {
-    "startCommand": "./scraper_entrypoint.sh",
-    "restartPolicyType": "ON_FAILURE",
-    "restartMaxRetries": 10
-  }
 }
