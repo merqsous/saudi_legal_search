@@ -1,4 +1,5 @@
 import json
+import re
 from fastapi import APIRouter, Query, HTTPException
 from api.db import query_all, query_one
 from api.embeddings import embed_text, vector_to_pgvector, get_client
@@ -6,54 +7,51 @@ from api.embeddings import embed_text, vector_to_pgvector, get_client
 router = APIRouter()
 
 
-def rerank_with_gpt(query: str, results: list[dict], top_k: int) -> list[dict]:
-    """Use GPT-4o-mini to re-rank search results by actual relevance to the query."""
-    if len(results) <= top_k:
-        return results[:top_k]
+def normalize_arabic(text: str) -> str:
+    """Normalize Arabic text: remove diacritics, standardize letters, remove noise."""
+    text = re.sub(r'[\u064B-\u065F\u0670\u0640]', '', text)
+    text = text.replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا')
+    text = text.replace('ى', 'ي').replace('ؤ', 'و').replace('ئ', 'ي').replace('ة', 'ه')
+    text = re.sub(r'[^\u0600-\u06FF\u0750-\u077Fa-zA-Z0-9\s]', ' ', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
 
-    candidates = []
-    for i, r in enumerate(results):
-        snippet = r.get("snippet", "")[:300]
-        candidates.append({
-            "index": i,
-            "judgment_number": r.get("judgment_number", ""),
-            "court_type": r.get("court_type", ""),
-            "court_level": r.get("court_level", ""),
-            "snippet": snippet,
-        })
 
-    prompt = (
-        "أنت خبير قانوني سعودي. أعد ترتيب النتائج التالية حسب مدى صلتها باستعلام المستخدم.\n"
-        "أعطِ قائمة بأرقام المؤشرات (index) مرتبة من الأكثر صلة إلى الأقل صلة.\n"
-        f"استعلام المستخدم: {query}\n\n"
-        f"النتائج المرشحة:\n{json.dumps(candidates, ensure_ascii=False, indent=2)}\n\n"
-        "أجب بقائمة JSON فقط، مثال: {\"ranked_indices\": [3, 0, 5, 1, ...]}"
-    )
-
-    try:
-        response = get_client().chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0,
-            max_tokens=1000,
-        )
-        content = response.choices[0].message.content.strip()
-        parsed = json.loads(content)
-        ranked_indices = parsed.get("ranked_indices", [])
-
-        reranked = []
-        for idx in ranked_indices:
-            if 0 <= idx < len(results) and len(reranked) < top_k:
-                reranked.append(results[idx])
-
-        if len(reranked) < top_k:
-            for r in results:
-                if r not in reranked and len(reranked) < top_k:
-                    reranked.append(r)
-
-        return reranked
-    except Exception:
-        return results[:top_k]
+def expand_query(query: str) -> str:
+    """Expand short queries with legal context for better semantic matching."""
+    query = normalize_arabic(query)
+    
+    legal_keywords = {
+        'محكمه': 'محكمه حكم قضائي',
+        'محامي': 'محامي اتعاب محاماه الدعوي',
+        'اضرار': 'اضرار تعويض ضرر مادي معنوي',
+        'تعويض': 'تعويض ضرر مادي معنوي مبلغ',
+        'نقض': 'نقض حكم استئناف محكمه العليا',
+        'استئناف': 'استئناف حكم محكمه الاستئناف',
+        'تجاري': 'تجاري محكمه تجاريه دعوي تجاريه',
+        'عمالي': 'عمالي محكمه عماليه حقوق العمال',
+        'مطالبه': 'مطالبه مالي دين حقوق',
+        'عقد': 'عقد اتفاق التزام طرفين',
+        'فسخ': 'فسخ عقد انهاء فسخ العقد',
+        'ارض': 'ارض عقار ملكيه عقاري',
+        'شركه': 'شركه شريك حصص شراكه',
+        'وكاله': 'وكاله وكيل توكيل',
+        'ايراد': 'ايراد دخل مالي استثمار',
+        'ميراث': 'ميراث ارث تركه وارث',
+        'طلاق': 'طلاق الزوج زوجه',
+        'نفقه': 'نفقه زوجه اولاد',
+        'حضانه': 'حضانه اولاد ولي',
+    }
+    
+    words = query.split()
+    expanded_words = list(words)
+    for word in words:
+        for key, expansion in legal_keywords.items():
+            if key in word and expansion not in expanded_words:
+                expanded_words.append(expansion)
+                break
+    
+    return ' '.join(expanded_words[:20]) if len(expanded_words) > len(words) else query
 
 
 @router.get("/search")
@@ -67,11 +65,14 @@ def search(
     offset: int = Query(0, ge=0),
 ):
     try:
-        embedding = embed_text(q)
+        expanded_q = expand_query(q)
+        embedding = embed_text(expanded_q)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Embedding failed: {e}")
 
     vec_str = vector_to_pgvector(embedding)
+    normalized_q = normalize_arabic(q)
+    keywords = normalized_q.split()
 
     filters = []
     params: list = [vec_str, vec_str]
@@ -110,8 +111,11 @@ def search(
     count_row = query_one(count_sql, count_params)
     total = count_row["count"] if count_row else 0
 
-    rerank_pool = min(limit * 5, 50)
-    params_with_pagination = params + [rerank_pool, offset]
+    fetch_pool = min(limit * 5, 50)
+    params_with_pagination = params + [fetch_pool, offset]
+
+    keyword_conditions = " OR ".join(["jc.chunk_text ILIKE %s" for _ in keywords])
+    keyword_params = [f"%{kw}%" for kw in keywords]
 
     sql = f"""
         SELECT * FROM (
@@ -131,7 +135,8 @@ def search(
                 cl.code AS court_level_code,
                 js.section_name_ar,
                 jc.chunk_text,
-                jc.embedding <=> %s::vector AS distance
+                jc.embedding <=> %s::vector AS distance,
+                CASE WHEN ({keyword_conditions}) THEN 0.15 ELSE 0 END AS keyword_boost
             FROM judgment_chunks jc
             JOIN judgments j ON jc.judgment_id = j.id
             JOIN cases c ON j.case_id = c.id
@@ -144,17 +149,23 @@ def search(
               {where_clause}
             ORDER BY j.id, jc.embedding <=> %s::vector
         ) AS best_chunks
-        ORDER BY distance
+        ORDER BY (distance - keyword_boost) ASC, distance
         LIMIT %s OFFSET %s;
     """
 
-    rows = query_all(sql, params_with_pagination)
+    all_params = [vec_str] + keyword_params + [vec_str, fetch_pool, offset]
+
+    rows = query_all(sql, all_params)
 
     results = []
     for row in rows:
         snippet = row.get("chunk_text", "")
         if len(snippet) > 500:
             snippet = snippet[:500] + "..."
+
+        distance = float(row["distance"]) if row["distance"] else None
+        if distance is not None:
+            distance = max(0.0, distance - float(row.get("keyword_boost", 0)))
 
         results.append({
             "judgment_id": row["judgment_id"],
@@ -172,12 +183,10 @@ def search(
             "court_level_code": row["court_level_code"],
             "section_name": row["section_name_ar"],
             "snippet": snippet,
-            "distance": float(row["distance"]) if row["distance"] else None,
+            "distance": distance,
         })
 
-    reranked = rerank_with_gpt(q, results, limit)
-
-    return {"results": reranked, "total": total, "limit": limit, "offset": offset}
+    return {"results": results[:limit], "total": total, "limit": limit, "offset": offset}
 
 
 @router.get("/judgments/{judgment_id}")
