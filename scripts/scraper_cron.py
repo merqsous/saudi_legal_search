@@ -3,6 +3,7 @@ Cron-like scheduler for running the weekly scraper on Railway.
 Runs the scraper on a schedule and keeps the container alive.
 """
 import os
+import sys
 import time
 import subprocess
 import threading
@@ -17,20 +18,24 @@ SCRAPE_ON_START = os.getenv("SCRAPE_ON_START", "false").lower() == "true"
 # Max pages per run (0 = all pages)
 MAX_PAGES = os.getenv("SCRAPE_MAX_PAGES", "0")
 
-VENV_PYTHON = "/app/venv/bin/python"
+VENV_PYTHON = os.getenv("SCRAPER_PYTHON", "python")
 
 
-def run_scraper(max_pages=0):
+def run_scraper(max_pages=0, skip_embed=False):
     """Run the weekly scraper."""
     cmd = [VENV_PYTHON, "scripts/weekly_scrape.py"]
     if max_pages and max_pages > 0:
         cmd.extend(["--max-pages", str(max_pages)])
+    if skip_embed:
+        cmd.append("--skip-embed")
 
     print(f"[CRON] Starting scraper at {datetime.now()}")
     print(f"[CRON] Command: {' '.join(cmd)}")
+    sys.stdout.flush()
 
-    result = subprocess.run(cmd, capture_output=False)
+    result = subprocess.run(cmd)
     print(f"[CRON] Scraper finished with exit code {result.returncode} at {datetime.now()}")
+    sys.stdout.flush()
 
 
 def schedule_next_run():
@@ -50,9 +55,10 @@ def main():
     print(f"[CRON] Interval: every {SCRAPE_INTERVAL_HOURS} hours")
     print(f"[CRON] Run on start: {SCRAPE_ON_START}")
 
-    # Optional: run once on startup
+    # Optional: run once on startup (synchronous so we see output)
     if SCRAPE_ON_START:
-        threading.Thread(target=run_scraper, args=(int(MAX_PAGES) if MAX_PAGES else 0,), daemon=True).start()
+        mp = int(MAX_PAGES) if MAX_PAGES else 0
+        run_scraper(max_pages=mp)
 
     # Keep container alive and run on schedule
     while True:
