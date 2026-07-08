@@ -1,8 +1,59 @@
+import json
 from fastapi import APIRouter, Query, HTTPException
 from api.db import query_all, query_one
-from api.embeddings import embed_text, vector_to_pgvector
+from api.embeddings import embed_text, vector_to_pgvector, get_client
 
 router = APIRouter()
+
+
+def rerank_with_gpt(query: str, results: list[dict], top_k: int) -> list[dict]:
+    """Use GPT-4o-mini to re-rank search results by actual relevance to the query."""
+    if len(results) <= top_k:
+        return results[:top_k]
+
+    candidates = []
+    for i, r in enumerate(results):
+        snippet = r.get("snippet", "")[:300]
+        candidates.append({
+            "index": i,
+            "judgment_number": r.get("judgment_number", ""),
+            "court_type": r.get("court_type", ""),
+            "court_level": r.get("court_level", ""),
+            "snippet": snippet,
+        })
+
+    prompt = (
+        "أنت خبير قانوني سعودي. أعد ترتيب النتائج التالية حسب مدى صلتها باستعلام المستخدم.\n"
+        "أعطِ قائمة بأرقام المؤشرات (index) مرتبة من الأكثر صلة إلى الأقل صلة.\n"
+        f"استعلام المستخدم: {query}\n\n"
+        f"النتائج المرشحة:\n{json.dumps(candidates, ensure_ascii=False, indent=2)}\n\n"
+        "أجب بقائمة JSON فقط، مثال: {\"ranked_indices\": [3, 0, 5, 1, ...]}"
+    )
+
+    try:
+        response = get_client().chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0,
+            max_tokens=1000,
+        )
+        content = response.choices[0].message.content.strip()
+        parsed = json.loads(content)
+        ranked_indices = parsed.get("ranked_indices", [])
+
+        reranked = []
+        for idx in ranked_indices:
+            if 0 <= idx < len(results) and len(reranked) < top_k:
+                reranked.append(results[idx])
+
+        if len(reranked) < top_k:
+            for r in results:
+                if r not in reranked and len(reranked) < top_k:
+                    reranked.append(r)
+
+        return reranked
+    except Exception:
+        return results[:top_k]
 
 
 @router.get("/search")
@@ -59,7 +110,8 @@ def search(
     count_row = query_one(count_sql, count_params)
     total = count_row["count"] if count_row else 0
 
-    params_with_pagination = params + [limit, offset]
+    rerank_pool = min(limit * 5, 50)
+    params_with_pagination = params + [rerank_pool, offset]
 
     sql = f"""
         SELECT * FROM (
@@ -123,7 +175,9 @@ def search(
             "distance": float(row["distance"]) if row["distance"] else None,
         })
 
-    return {"results": results, "total": total, "limit": limit, "offset": offset}
+    reranked = rerank_with_gpt(q, results, limit)
+
+    return {"results": reranked, "total": total, "limit": limit, "offset": offset}
 
 
 @router.get("/judgments/{judgment_id}")
