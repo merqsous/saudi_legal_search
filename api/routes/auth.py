@@ -3,7 +3,9 @@ import random
 import time
 import secrets
 import urllib.parse
-from fastapi import APIRouter, Query, HTTPException, Header
+import urllib.request
+import json as _json
+from fastapi import APIRouter, Query, HTTPException, Header, Request
 from pydantic import BaseModel
 from api.db import query_one, query_all, get_db
 from api.config import OPENAI_API_KEY
@@ -36,6 +38,8 @@ def init_auth_tables():
                 phone VARCHAR(15) UNIQUE NOT NULL,
                 first_name VARCHAR(100),
                 last_name VARCHAR(100),
+                ip_address VARCHAR(45),
+                country VARCHAR(100),
                 created_at TIMESTAMP DEFAULT NOW()
             );
         """)
@@ -60,9 +64,17 @@ def init_auth_tables():
                 year VARCHAR(10),
                 court_level VARCHAR(50),
                 results_count INTEGER DEFAULT 0,
+                ip_address VARCHAR(45),
+                country VARCHAR(100),
                 created_at TIMESTAMP DEFAULT NOW()
             );
         """)
+        # Add ip/country columns to existing users table if missing
+        try:
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS ip_address VARCHAR(45)")
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS country VARCHAR(100)")
+        except Exception:
+            pass
         cur.close()
 
 
@@ -82,6 +94,31 @@ def normalize_phone(phone: str) -> str:
     if len(phone) != 9 or not phone.startswith("5"):
         return ""
     return "966" + phone
+
+
+def get_client_ip(request: Request) -> str:
+    """Extract client IP from request headers."""
+    forwarded = request.headers.get("X-Forwarded-For", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    real_ip = request.headers.get("X-Real-IP", "")
+    if real_ip:
+        return real_ip.strip()
+    return request.client.host if request.client else "unknown"
+
+
+def get_country_from_ip(ip: str) -> str:
+    """Get country name from IP using free ip-api.com."""
+    if not ip or ip == "unknown" or ip.startswith("127.") or ip.startswith("10."):
+        return "Local"
+    try:
+        url = f"http://ip-api.com/json/{ip}?fields=country"
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req, timeout=3) as resp:
+            data = _json.loads(resp.read().decode())
+            return data.get("country", "Unknown")
+    except Exception:
+        return "Unknown"
 
 
 def send_otp(phone: str, code: str) -> bool:
@@ -146,7 +183,7 @@ def send_code(req: SendCodeRequest):
 
 
 @router.post("/auth/verify-code")
-def verify_code(req: VerifyCodeRequest):
+def verify_code(req: VerifyCodeRequest, request: Request):
     phone = normalize_phone(req.phone)
     if not phone:
         raise HTTPException(status_code=400, detail="رقم الهاتف غير صحيح")
@@ -179,9 +216,11 @@ def verify_code(req: VerifyCodeRequest):
         if not user:
             if not req.first_name or not req.last_name:
                 return {"status": "new_user", "token": None, "message": "أدخل اسمك الأول والأخير"}
+            ip = get_client_ip(request)
+            country = get_country_from_ip(ip)
             cur.execute(
-                "INSERT INTO users (phone, first_name, last_name) VALUES (%s, %s, %s) RETURNING id",
-                (phone, req.first_name, req.last_name),
+                "INSERT INTO users (phone, first_name, last_name, ip_address, country) VALUES (%s, %s, %s, %s, %s) RETURNING id",
+                (phone, req.first_name, req.last_name, ip, country),
             )
             user_id = cur.fetchone()[0]
         else:
@@ -224,7 +263,7 @@ def check_user(req: SendCodeRequest):
     return {"is_new": user is None, "user": user}
 
 
-def log_search(phone: str, query: str, court_type: str = None, city: str = None, year: str = None, court_level: str = None, results_count: int = 0):
+def log_search(phone: str, query: str, court_type: str = None, city: str = None, year: str = None, court_level: str = None, results_count: int = 0, ip_address: str = None, country: str = None):
     """Log a search query for analytics."""
     try:
         user = query_one("SELECT id FROM users WHERE phone = %s", [phone])
@@ -232,9 +271,9 @@ def log_search(phone: str, query: str, court_type: str = None, city: str = None,
         with get_db() as conn:
             cur = conn.cursor()
             cur.execute(
-                """INSERT INTO search_logs (user_id, phone, query, court_type, city, year, court_level, results_count)
-                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
-                (user_id, phone, query, court_type, city, year, court_level, results_count),
+                """INSERT INTO search_logs (user_id, phone, query, court_type, city, year, court_level, results_count, ip_address, country)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                (user_id, phone, query, court_type, city, year, court_level, results_count, ip_address, country),
             )
             cur.close()
     except Exception as e:
@@ -269,17 +308,17 @@ def admin_stats(authorization: str = Header(None)):
     )
 
     users_with_searches = query_all(
-        """SELECT u.id, u.phone, u.first_name, u.last_name, u.created_at,
+        """SELECT u.id, u.phone, u.first_name, u.last_name, u.ip_address, u.country, u.created_at,
                   COUNT(sl.id) as search_count,
                   MAX(sl.created_at) as last_search
            FROM users u
            LEFT JOIN search_logs sl ON sl.user_id = u.id
-           GROUP BY u.id, u.phone, u.first_name, u.last_name, u.created_at
+           GROUP BY u.id, u.phone, u.first_name, u.last_name, u.ip_address, u.country, u.created_at
            ORDER BY search_count DESC"""
     )
 
     recent_searches = query_all(
-        """SELECT sl.query, sl.phone, u.first_name, u.last_name, sl.created_at, sl.results_count
+        """SELECT sl.query, sl.phone, u.first_name, u.last_name, sl.created_at, sl.results_count, sl.ip_address, sl.country
            FROM search_logs sl
            LEFT JOIN users u ON u.id = sl.user_id
            ORDER BY sl.created_at DESC LIMIT 50"""
@@ -305,7 +344,7 @@ def admin_stats(authorization: str = Header(None)):
 
 
 @router.post("/auth/admin-login")
-def admin_login(req: SendCodeRequest):
+def admin_login(req: SendCodeRequest, request: Request):
     phone = normalize_phone(req.phone)
     if not phone:
         raise HTTPException(status_code=400, detail="رقم الهاتف غير صحيح")
@@ -313,17 +352,24 @@ def admin_login(req: SendCodeRequest):
     if phone != ADMIN_PHONE:
         raise HTTPException(status_code=403, detail="غير مصرح")
 
+    ip = get_client_ip(request)
+    country = get_country_from_ip(ip)
+
     with get_db() as conn:
         cur = conn.cursor()
         user = query_one("SELECT * FROM users WHERE phone = %s", [phone])
         if not user:
             cur.execute(
-                "INSERT INTO users (phone, first_name, last_name) VALUES (%s, %s, %s) RETURNING id",
-                (phone, "Admin", "User"),
+                "INSERT INTO users (phone, first_name, last_name, ip_address, country) VALUES (%s, %s, %s, %s, %s) RETURNING id",
+                (phone, "Admin", "User", ip, country),
             )
             user_id = cur.fetchone()[0]
         else:
             user_id = user["id"]
+            cur.execute(
+                "UPDATE users SET ip_address = %s, country = %s WHERE id = %s",
+                (ip, country, user_id),
+            )
         cur.close()
 
     token = secrets.token_urlsafe(32)

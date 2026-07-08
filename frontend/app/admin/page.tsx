@@ -15,6 +15,8 @@ interface AdminStats {
     phone: string;
     first_name: string;
     last_name: string;
+    ip_address: string | null;
+    country: string | null;
     created_at: string;
     search_count: number;
     last_search: string | null;
@@ -26,6 +28,8 @@ interface AdminStats {
     last_name: string | null;
     created_at: string;
     results_count: number;
+    ip_address: string | null;
+    country: string | null;
   }[];
   searches_by_day: { day: string; cnt: number }[];
 }
@@ -211,6 +215,8 @@ export default function AdminPage() {
                 <tr className="border-b border-slate-200 text-slate-500 text-xs">
                   <th className="text-right py-3 px-2">الاسم</th>
                   <th className="text-right py-3 px-2">الهاتف</th>
+                  <th className="text-right py-3 px-2">IP</th>
+                  <th className="text-right py-3 px-2">الدولة</th>
                   <th className="text-right py-3 px-2">عمليات البحث</th>
                   <th className="text-right py-3 px-2">آخر بحث</th>
                   <th className="text-right py-3 px-2">تاريخ التسجيل</th>
@@ -221,6 +227,8 @@ export default function AdminPage() {
                   <tr key={u.id} className="border-b border-slate-100 last:border-0">
                     <td className="py-3 px-2 text-slate-700" dir="rtl">{u.first_name} {u.last_name}</td>
                     <td className="py-3 px-2 text-slate-600" dir="ltr">{u.phone}</td>
+                    <td className="py-3 px-2 text-slate-500" dir="ltr">{u.ip_address || '-'}</td>
+                    <td className="py-3 px-2 text-slate-500">{u.country || '-'}</td>
                     <td className="py-3 px-2 font-bold text-primary-600">{u.search_count}</td>
                     <td className="py-3 px-2 text-slate-500">{u.last_search ? formatDate(u.last_search) : '-'}</td>
                     <td className="py-3 px-2 text-slate-500">{formatDate(u.created_at)}</td>
@@ -243,6 +251,8 @@ export default function AdminPage() {
                 <tr className="border-b border-slate-200 text-slate-500 text-xs">
                   <th className="text-right py-3 px-2">البحث</th>
                   <th className="text-right py-3 px-2">المستخدم</th>
+                  <th className="text-right py-3 px-2">IP</th>
+                  <th className="text-right py-3 px-2">الدولة</th>
                   <th className="text-right py-3 px-2">النتائج</th>
                   <th className="text-right py-3 px-2">الوقت</th>
                 </tr>
@@ -254,6 +264,8 @@ export default function AdminPage() {
                     <td className="py-3 px-2 text-slate-600" dir="rtl">
                       {s.first_name ? `${s.first_name} ${s.last_name}` : s.phone}
                     </td>
+                    <td className="py-3 px-2 text-slate-500" dir="ltr">{s.ip_address || '-'}</td>
+                    <td className="py-3 px-2 text-slate-500">{s.country || '-'}</td>
                     <td className="py-3 px-2 text-slate-500">{s.results_count}</td>
                     <td className="py-3 px-2 text-slate-500">{formatDate(s.created_at)}</td>
                   </tr>

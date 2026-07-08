@@ -3,7 +3,7 @@ import re
 from fastapi import APIRouter, Query, HTTPException, Request
 from api.db import query_all, query_one
 from api.embeddings import embed_text, vector_to_pgvector, get_client
-from api.routes.auth import log_search
+from api.routes.auth import log_search, get_client_ip, get_country_from_ip
 
 router = APIRouter()
 
@@ -109,7 +109,9 @@ def search(
     # Log the search
     phone = request.headers.get("X-User-Phone", "")
     if phone:
-        log_search(phone, q, court_type, city, year, court_level, result.get("total", 0))
+        ip = get_client_ip(request)
+        country = get_country_from_ip(ip)
+        log_search(phone, q, court_type, city, year, court_level, result.get("total", 0), ip, country)
 
     return result
 
