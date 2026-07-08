@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+*.egg-info/
+
+# Environment
+.env
+saudi_legal_scraper/.env
+
+# Node
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Data (scraped content - too large for git)
+saudi_legal_scraper/data/cases/
+saudi_legal_scraper/data/cases_appeal/
+saudi_legal_scraper/data/raw_appeal_list_pages/
+saudi_legal_scraper/data/index/
+saudi_legal_scraper/data/index_appeal/
+saudi_legal_scraper/data/index_all/
+
+# Logs
+saudi_legal_scraper/import_log.txt
+saudi_legal_scraper/data/weekly_scrape_log.json
+saudi_legal_scraper/data/weekly_failed_*.json
+logs/
+
+# DB exports
+data/db_export.sql
