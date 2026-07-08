@@ -72,7 +72,7 @@ export default function Home() {
     if (selectedCourtLevel) params.set('court_level', selectedCourtLevel);
 
     try {
-      const res = await fetch(`/api/search-with-answer?${params.toString()}`);
+      const res = await fetch(`/api/search?${params.toString()}`);
       if (!res.ok) throw new Error(`API error: ${res.status}`);
       const data: SearchResponse = await res.json();
       setResults(data.results);

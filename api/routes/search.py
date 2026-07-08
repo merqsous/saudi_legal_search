@@ -54,6 +54,44 @@ def expand_query(query: str) -> str:
     return ' '.join(expanded_words[:20]) if len(expanded_words) > len(words) else query
 
 
+def generate_ai_answer(query: str, results: list[dict]) -> str | None:
+    """Generate an AI summary answer based on search results, like Google AI Overview."""
+    if not results:
+        return None
+
+    top_results = results[:5]
+    context_parts = []
+    for i, r in enumerate(top_results):
+        context_parts.append(
+            f"القضية {i+1}: رقم الحكم {r.get('judgment_number', 'غير محدد')} - "
+            f"المحكمة: {r.get('court_type', '')} - {r.get('court_level', '')}\n"
+            f"النص: {r.get('snippet', '')[:300]}"
+        )
+    context = "\n\n".join(context_parts)
+
+    prompt = (
+        "أنت مساعد قانوني سعودي متخصص. بناءً على الأحكام القضائية التالية، "
+        "أجب على سؤال المستخدم بشكل مباشر وواضح.\n\n"
+        f"سؤال المستخدم: {query}\n\n"
+        f"الأحكام المرتبطة:\n{context}\n\n"
+        "اكتب إجابة مختصرة (3-5 أسطر) تلخص الموقف القانوني، "
+        "واشرح المبدأ القانوني المستخلص من هذه الأحكام. "
+        "اذكر أرقام الأحكام المرتبطة في الإجابة. "
+        "اكتب بالعربية الفصحى بأسلوب قانوني واضح."
+    )
+
+    try:
+        response = get_client().chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3,
+            max_tokens=500,
+        )
+        return response.choices[0].message.content.strip()
+    except Exception:
+        return None
+
+
 @router.get("/search")
 def search(
     q: str = Query(..., description="Search query in Arabic or English"),
@@ -185,68 +223,8 @@ def search(
             "distance": distance,
         })
 
-    return {"results": results[:limit], "total": total, "limit": limit, "offset": offset}
-
-
-def generate_ai_answer(query: str, results: list[dict]) -> str | None:
-    """Generate an AI summary answer based on search results, like Google AI Overview."""
-    if not results:
-        return None
-
-    top_results = results[:5]
-    context_parts = []
-    for i, r in enumerate(top_results):
-        context_parts.append(
-            f"القضية {i+1}: رقم الحكم {r.get('judgment_number', 'غير محدد')} - "
-            f"المحكمة: {r.get('court_type', '')} - {r.get('court_level', '')}\n"
-            f"النص: {r.get('snippet', '')[:400]}"
-        )
-    context = "\n\n".join(context_parts)
-
-    prompt = (
-        "أنت مساعد قانوني سعودي متخصص. بناءً على الأحكام القضائية التالية، "
-        "أجب على سؤال المستخدم بشكل مباشر وواضح.\n\n"
-        f"سؤال المستخدم: {query}\n\n"
-        f"الأحكام المرتبطة:\n{context}\n\n"
-        "اكتب إجابة مختصرة (3-5 أسطر) تلخص الموقف القانوني، "
-        "واشرح المبدأ القانوني المستخلص من هذه الأحكام. "
-        "اذكر أرقام الأحكام المرتبطة في الإجابة. "
-        "اكتب بالعربية الفصحى بأسلوب قانوني واضح."
-    )
-
-    try:
-        response = get_client().chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,
-            max_tokens=500,
-        )
-        return response.choices[0].message.content.strip()
-    except Exception:
-        return None
-
-
-@router.get("/search-with-answer")
-def search_with_answer(
-    q: str = Query(..., description="Search query in Arabic or English"),
-    court_type: str | None = Query(None),
-    city: str | None = Query(None),
-    year: str | None = Query(None),
-    court_level: str | None = Query(None),
-    limit: int = Query(20, ge=1, le=100),
-    offset: int = Query(0, ge=0),
-):
-    import asyncio
-    from concurrent.futures import ThreadPoolExecutor
-
-    search_result = search(q, court_type, city, year, court_level, limit, offset)
-
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        future = executor.submit(generate_ai_answer, q, search_result["results"])
-        ai_answer = future.result(timeout=15)
-
-    search_result["ai_answer"] = ai_answer
-    return search_result
+    ai_answer = generate_ai_answer(q, results[:limit])
+    return {"results": results[:limit], "total": total, "limit": limit, "offset": offset, "ai_answer": ai_answer}
 
 
 @router.get("/judgments/{judgment_id}")
