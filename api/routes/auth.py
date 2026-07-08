@@ -201,6 +201,15 @@ def get_me(authorization: str = Header(None)):
     return user
 
 
+@router.post("/auth/check-user")
+def check_user(req: SendCodeRequest):
+    phone = normalize_phone(req.phone)
+    if not phone:
+        raise HTTPException(status_code=400, detail="رقم الهاتف غير صحيح")
+    user = query_one("SELECT id, phone, first_name, last_name FROM users WHERE phone = %s", [phone])
+    return {"is_new": user is None, "user": user}
+
+
 @router.post("/auth/admin-login")
 def admin_login(req: SendCodeRequest):
     phone = normalize_phone(req.phone)

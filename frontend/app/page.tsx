@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Scale, Phone, Loader2, User, MessageCircle, CheckCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-type Step = 'phone' | 'verify' | 'name';
+type Step = 'phone' | 'name' | 'verify';
 
 export default function SignInPage() {
   const router = useRouter();
@@ -16,7 +16,7 @@ export default function SignInPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [devCode, setDevCode] = useState<string | null>(null);
-  const [needsName, setNeedsName] = useState(false);
+  const [isNewUser, setIsNewUser] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
 
   useEffect(() => {
@@ -75,6 +75,47 @@ export default function SignInPage() {
 
     setLoading(true);
     try {
+      // Check if user exists
+      const checkRes = await fetch('/api/auth/check-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone }),
+      });
+      const checkData = await checkRes.json();
+
+      if (checkData.is_new) {
+        // New user - go to name step first
+        setIsNewUser(true);
+        setStep('name');
+      } else {
+        // Existing user - send code and go to verify
+        setIsNewUser(false);
+        const res = await fetch('/api/auth/send-code', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'فشل إرسال الرمز');
+        if (data.dev_code) setDevCode(data.dev_code);
+        setStep('verify');
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'فشل');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleNameSubmit = async () => {
+    setError(null);
+    if (!firstName.trim() || !lastName.trim()) {
+      setError('يرجى إدخال الاسم الأول والأخير');
+      return;
+    }
+    setLoading(true);
+    try {
+      // Send code after name is entered
       const res = await fetch('/api/auth/send-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -94,7 +135,7 @@ export default function SignInPage() {
   const handleVerifyCode = async () => {
     setError(null);
     if (code.length !== 6) {
-      setError('الرمز تجب أن يتكون من 6 أرقام');
+      setError('الرمز يجب أن يتكون من 6 أرقام');
       return;
     }
     setLoading(true);
@@ -102,16 +143,15 @@ export default function SignInPage() {
       const res = await fetch('/api/auth/verify-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, code, first_name: needsName ? firstName : undefined, last_name: needsName ? lastName : undefined }),
+        body: JSON.stringify({
+          phone,
+          code,
+          first_name: isNewUser ? firstName.trim() : undefined,
+          last_name: isNewUser ? lastName.trim() : undefined,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'فشل التحقق');
-      if (data.status === 'new_user' && !data.token) {
-        setNeedsName(true);
-        setStep('name');
-        setLoading(false);
-        return;
-      }
       if (data.token) {
         localStorage.setItem('auth_token', data.token);
         localStorage.setItem('auth_user', JSON.stringify(data.user));
@@ -119,33 +159,6 @@ export default function SignInPage() {
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'فشل التحقق');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRegister = async () => {
-    setError(null);
-    if (!firstName.trim() || !lastName.trim()) {
-      setError('يرجى إدخال الاسم الأول والأخير');
-      return;
-    }
-    setLoading(true);
-    try {
-      const res = await fetch('/api/auth/verify-code', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, code, first_name: firstName.trim(), last_name: lastName.trim() }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'فشل التسجيل');
-      if (data.token) {
-        localStorage.setItem('auth_token', data.token);
-        localStorage.setItem('auth_user', JSON.stringify(data.user));
-        router.push('/search');
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'فشل التسجيل');
     } finally {
       setLoading(false);
     }
@@ -274,25 +287,29 @@ export default function SignInPage() {
                   type="text"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleRegister()}
+                  onKeyDown={(e) => e.key === 'Enter' && handleNameSubmit()}
                   placeholder={'الاسم الأخير'}
                   className="w-full pr-11 pl-4 py-3 text-base bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
                   dir="rtl"
                 />
               </div>
               <button
-                onClick={handleRegister}
+                onClick={handleNameSubmit}
                 disabled={loading}
                 className="w-full py-3 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
-                {'إنشاء الحساب'}
+                {'متابعة'}
               </button>
             </div>
           )}
         </div>
         <p className="text-center text-xs text-slate-400 mt-6">
           {'بتسجيل الدخول، أنت توافق على شروط الاستخدام'}
+        </p>
+        <p className="text-center text-xs text-slate-400 mt-2">
+          {'للتواصل: '}
+          <a href="mailto:albahethapp@gmail.com" className="text-primary-600 hover:text-primary-700">albahethapp@gmail.com</a>
         </p>
       </div>
     </div>
