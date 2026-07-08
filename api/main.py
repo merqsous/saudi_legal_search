@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api.routes import search
+from api.routes import search, auth
 
 app = FastAPI(
     title="Saudi Legal Search API",
@@ -17,6 +17,12 @@ app.add_middleware(
 )
 
 app.include_router(search.router, prefix="/api", tags=["search"])
+app.include_router(auth.router, prefix="/api", tags=["auth"])
+
+
+@app.on_event("startup")
+def startup():
+    auth.init_auth_tables()
 
 
 @app.get("/")

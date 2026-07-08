@@ -1,7 +1,15 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { Search, Loader2, ExternalLink, Scale, Filter, X, ChevronDown, Sparkles } from 'lucide-react';
+import { Search, Loader2, ExternalLink, Scale, Filter, X, ChevronDown, Sparkles, User as UserIcon, LogOut } from 'lucide-react';
+import AuthModal from './AuthModal';
+
+interface AuthUser {
+  id: number;
+  phone: string;
+  first_name: string;
+  last_name: string;
+}
 
 interface SearchResult {
   judgment_id: number;
@@ -52,8 +60,14 @@ export default function Home() {
   const [selectedCourtLevel, setSelectedCourtLevel] = useState('');
   const [aiAnswer, setAiAnswer] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
 
   useEffect(() => {
+    const saved = localStorage.getItem('auth_user');
+    if (saved) {
+      try { setAuthUser(JSON.parse(saved)); } catch {}
+    }
     fetch('/api/filters')
       .then((r) => r.json())
       .then((data) => setFilters(data))
@@ -104,6 +118,12 @@ export default function Home() {
     });
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
+    setAuthUser(null);
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') doSearch();
   };
@@ -130,6 +150,23 @@ export default function Home() {
             <Scale className="w-5 h-5" />
           </div>
           <h1 className="text-xl font-bold text-slate-900">الباحث</h1>
+          <div className="flex-1" />
+          {authUser ? (
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-slate-600">{authUser.first_name} {authUser.last_name}</span>
+              <button onClick={handleLogout} className="text-slate-400 hover:text-slate-600">
+                <LogOut className="w-5 h-5" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowAuth(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700"
+            >
+              <UserIcon className="w-4 h-4" />
+              تسجيل الدخول
+            </button>
+          )}
         </div>
       </header>
 
@@ -282,6 +319,13 @@ export default function Home() {
           الباحث — بحث في الأحكام القضائية السعودية
         </div>
       </footer>
+
+      {showAuth && (
+        <AuthModal
+          onClose={() => setShowAuth(false)}
+          onAuthSuccess={(user) => { setAuthUser(user); setShowAuth(false); }}
+        />
+      )}
     </div>
   );
 }
