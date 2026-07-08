@@ -304,12 +304,12 @@ export default function AdminPage() {
                 </tr>
               </thead>
               <tbody>
-                {stats.recent_cases.length === 0 && (
+                {(stats.recent_cases || []).length === 0 && (
                   <tr>
                     <td colSpan={5} className="py-4 text-center text-slate-400">لا توجد بيانات</td>
                   </tr>
                 )}
-                {stats.recent_cases.map((c) => (
+                {(stats.recent_cases || []).map((c) => (
                   <tr key={c.id} className="border-b border-slate-100 last:border-0">
                     <td className="py-3 px-2 text-slate-700" dir="ltr">{c.judgment_number || '-'}</td>
                     <td className="py-3 px-2 text-slate-500">{c.judgment_year || '-'}</td>
