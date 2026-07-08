@@ -1,8 +1,9 @@
 import json
 import re
-from fastapi import APIRouter, Query, HTTPException
+from fastapi import APIRouter, Query, HTTPException, Request
 from api.db import query_all, query_one
 from api.embeddings import embed_text, vector_to_pgvector, get_client
+from api.routes.auth import log_search
 
 router = APIRouter()
 
@@ -94,6 +95,7 @@ def generate_ai_answer(query: str, results: list[dict]) -> str | None:
 
 @router.get("/search")
 def search(
+    request: Request,
     q: str = Query(..., description="Search query in Arabic or English"),
     court_type: str | None = Query(None),
     city: str | None = Query(None),
@@ -102,7 +104,14 @@ def search(
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
 ):
-    return _do_search(q, court_type, city, year, court_level, limit, offset)
+    result = _do_search(q, court_type, city, year, court_level, limit, offset)
+
+    # Log the search
+    phone = request.headers.get("X-User-Phone", "")
+    if phone:
+        log_search(phone, q, court_type, city, year, court_level, result.get("total", 0))
+
+    return result
 
 
 def _do_search(q, court_type, city, year, court_level, limit, offset):

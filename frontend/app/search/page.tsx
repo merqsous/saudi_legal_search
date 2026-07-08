@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Loader2, ExternalLink, Scale, Filter, X, ChevronDown, Sparkles, LogOut } from 'lucide-react';
+import { Search, Loader2, ExternalLink, Scale, Filter, X, ChevronDown, Sparkles, LogOut, LayoutDashboard } from 'lucide-react';
 
 interface AuthUser {
   id: number;
@@ -90,7 +90,9 @@ export default function SearchPage() {
     if (selectedCourtLevel) params.set('court_level', selectedCourtLevel);
 
     try {
-      const res = await fetch(`/api/search?${params.toString()}`);
+      const res = await fetch(`/api/search?${params.toString()}`, {
+        headers: { 'X-User-Phone': authUser?.phone || '' },
+      });
       if (!res.ok) throw new Error(`API error: ${res.status}`);
       const data: SearchResponse = await res.json();
       setResults(data.results);
@@ -156,6 +158,15 @@ export default function SearchPage() {
           <div className="flex-1" />
           {authUser && (
             <div className="flex items-center gap-3">
+              {authUser.phone === '966514789632' && (
+                <button
+                  onClick={() => router.push('/admin')}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-primary-600 hover:text-primary-700 font-medium"
+                >
+                  <LayoutDashboard className="w-4 h-4" />
+                  لوحة التحكم
+                </button>
+              )}
               <span className="text-sm text-slate-600">{authUser.first_name} {authUser.last_name}</span>
               <button onClick={handleLogout} className="text-slate-400 hover:text-slate-600">
                 <LogOut className="w-5 h-5" />

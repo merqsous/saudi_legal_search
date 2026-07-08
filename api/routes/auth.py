@@ -49,6 +49,20 @@ def init_auth_tables():
                 used BOOLEAN DEFAULT FALSE
             );
         """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS search_logs (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id),
+                phone VARCHAR(15),
+                query TEXT NOT NULL,
+                court_type VARCHAR(50),
+                city VARCHAR(100),
+                year VARCHAR(10),
+                court_level VARCHAR(50),
+                results_count INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        """)
         cur.close()
 
 
@@ -208,6 +222,86 @@ def check_user(req: SendCodeRequest):
         raise HTTPException(status_code=400, detail="رقم الهاتف غير صحيح")
     user = query_one("SELECT id, phone, first_name, last_name FROM users WHERE phone = %s", [phone])
     return {"is_new": user is None, "user": user}
+
+
+def log_search(phone: str, query: str, court_type: str = None, city: str = None, year: str = None, court_level: str = None, results_count: int = 0):
+    """Log a search query for analytics."""
+    try:
+        user = query_one("SELECT id FROM users WHERE phone = %s", [phone])
+        user_id = user["id"] if user else None
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                """INSERT INTO search_logs (user_id, phone, query, court_type, city, year, court_level, results_count)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
+                (user_id, phone, query, court_type, city, year, court_level, results_count),
+            )
+            cur.close()
+    except Exception as e:
+        print(f"[LOG_SEARCH] Error: {e}")
+
+
+@router.get("/auth/admin/stats")
+def admin_stats(authorization: str = Header(None)):
+    if not authorization:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+    token = authorization.replace("Bearer ", "")
+    session = _sessions.get(token)
+    if not session or session["phone"] != ADMIN_PHONE:
+        raise HTTPException(status_code=403, detail="غير مصرح")
+
+    total_cases = query_one("SELECT COUNT(*) as cnt FROM judgments")["cnt"]
+    total_users = query_one("SELECT COUNT(*) as cnt FROM users")["cnt"]
+    total_searches = query_one("SELECT COUNT(*) as cnt FROM search_logs")["cnt"]
+
+    top_keywords = query_all(
+        """SELECT query, COUNT(*) as cnt FROM search_logs
+           GROUP BY query ORDER BY cnt DESC LIMIT 20"""
+    )
+
+    top_court_types = query_all(
+        """SELECT sl.court_type, ct.name_ar, COUNT(*) as cnt
+           FROM search_logs sl
+           LEFT JOIN court_types ct ON ct.code = sl.court_type
+           WHERE sl.court_type IS NOT NULL
+           GROUP BY sl.court_type, ct.name_ar
+           ORDER BY cnt DESC LIMIT 10"""
+    )
+
+    users_with_searches = query_all(
+        """SELECT u.id, u.phone, u.first_name, u.last_name, u.created_at,
+                  COUNT(sl.id) as search_count,
+                  MAX(sl.created_at) as last_search
+           FROM users u
+           LEFT JOIN search_logs sl ON sl.user_id = u.id
+           GROUP BY u.id, u.phone, u.first_name, u.last_name, u.created_at
+           ORDER BY search_count DESC"""
+    )
+
+    recent_searches = query_all(
+        """SELECT sl.query, sl.phone, u.first_name, u.last_name, sl.created_at, sl.results_count
+           FROM search_logs sl
+           LEFT JOIN users u ON u.id = sl.user_id
+           ORDER BY sl.created_at DESC LIMIT 50"""
+    )
+
+    searches_by_day = query_all(
+        """SELECT DATE(created_at) as day, COUNT(*) as cnt
+           FROM search_logs
+           WHERE created_at > NOW() - INTERVAL '30 days'
+           GROUP BY DATE(created_at) ORDER BY day"""
+    )
+
+    return {
+        "total_cases": total_cases,
+        "total_users": total_users,
+        "total_searches": total_searches,
+        "top_keywords": top_keywords,
+        "top_court_types": top_court_types,
+        "users": users_with_searches,
+        "recent_searches": recent_searches,
+        "searches_by_day": searches_by_day,
+    }
 
 
 @router.post("/auth/admin-login")
