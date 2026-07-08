@@ -23,7 +23,7 @@ VENV_PYTHON = os.getenv("SCRAPER_PYTHON", "python")
 
 def run_scraper(max_pages=0, skip_embed=False):
     """Run the weekly scraper."""
-    cmd = [VENV_PYTHON, "scripts/weekly_scrape.py"]
+    cmd = [VENV_PYTHON, "-u", "scripts/weekly_scrape.py"]
     if max_pages and max_pages > 0:
         cmd.extend(["--max-pages", str(max_pages)])
     if skip_embed:
