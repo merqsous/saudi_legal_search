@@ -20,5 +20,5 @@ COPY saudi_legal_scraper/schema.sql ./schema.sql
 # Expose port
 EXPOSE 8000
 
-# Start command: run schema migration then start API
-CMD ["sh", "-c", "python -c \"import psycopg2, os; conn = psycopg2.connect(os.environ['DATABASE_URL']); cur = conn.cursor(); cur.execute(open('schema.sql').read()); conn.commit(); conn.close()\" && uvicorn api.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Start API server (Railway sets PORT automatically)
+CMD ["sh", "-c", "uvicorn api.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
