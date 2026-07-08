@@ -69,6 +69,10 @@ def normalize_phone(phone: str) -> str:
 
 def send_otp(phone: str, code: str) -> bool:
     """Send OTP via WAHA WhatsApp API. Falls back to console log if WAHA is not running."""
+    if not WAHA_URL:
+        print(f"[DEV MODE] OTP for {phone}: {code}")
+        return True
+
     try:
         import urllib.request
         import json as _json
@@ -85,8 +89,8 @@ def send_otp(phone: str, code: str) -> bool:
         with urllib.request.urlopen(req, timeout=10) as resp:
             return resp.status == 200
     except Exception as e:
-        print(f"[DEV MODE] OTP for {phone}: {code} (WAHA error: {e})")
-        return True
+        print(f"WAHA send error: {e}")
+        return False
 
 
 class SendCodeRequest(BaseModel):
@@ -119,7 +123,7 @@ def send_code(req: SendCodeRequest):
     sent = send_otp(phone, code)
 
     if sent:
-        return {"status": "ok", "message": "تم إرسال رمز التحقق عبر الرسائل النصية", "dev_code": code if not TWILIO_API_KEY_SID else None}
+        return {"status": "ok", "message": "تم إرسال رمز التحقق عبر واتساب", "dev_code": code if not WAHA_URL else None}
     else:
         raise HTTPException(status_code=500, detail="فشل إرسال رمز التحقق. حاول مرة أخرى.")
 
