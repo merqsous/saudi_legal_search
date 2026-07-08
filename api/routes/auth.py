@@ -130,6 +130,8 @@ def verify_code(req: VerifyCodeRequest):
     if not phone:
         raise HTTPException(status_code=400, detail="رقم الهاتف غير صحيح")
 
+    print(f"[VERIFY] phone={phone}, code={req.code}")
+
     row = query_one(
         """
         SELECT * FROM verification_codes
@@ -140,6 +142,11 @@ def verify_code(req: VerifyCodeRequest):
     )
 
     if not row:
+        all_codes = query_all(
+            "SELECT id, phone, code, used, expires_at, created_at FROM verification_codes WHERE phone = %s ORDER BY created_at DESC LIMIT 5",
+            [phone],
+        )
+        print(f"[VERIFY] No match. Recent codes for {phone}: {all_codes}")
         raise HTTPException(status_code=400, detail="رمز التحقق غير صحيح أو منتهي الصلاحية")
 
     with get_db() as conn:
