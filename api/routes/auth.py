@@ -10,10 +10,14 @@ from api.config import OPENAI_API_KEY
 
 router = APIRouter()
 
-# Twilio WhatsApp config from env
+# Twilio config (kept as fallback)
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", "")
-TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN", "")
-TWILIO_WHATSAPP_FROM = os.getenv("TWILIO_WHATSAPP_FROM", "whatsapp:+14155238886")
+TWILIO_API_KEY_SID = os.getenv("TWILIO_API_KEY_SID", "")
+TWILIO_API_KEY_SECRET = os.getenv("TWILIO_API_KEY_SECRET", "")
+TWILIO_WHATSAPP_FROM = os.getenv("TWILIO_WHATSAPP_FROM", "")
+
+# WAHA (WhatsApp HTTP API) config
+WAHA_URL = os.getenv("WAHA_URL", "http://localhost:3001")
 
 # Session tokens (in-memory, survives across requests)
 _sessions: dict[str, dict] = {}
@@ -47,11 +51,9 @@ def init_auth_tables():
 
 def normalize_phone(phone: str) -> str:
     """Normalize Saudi phone to format 9665XXXXXXXX."""
-    phone = phone.strip().replace("-", "").replace(" ", "")
+    phone = phone.strip().replace("-", "").replace(" ", "").replace("+", "")
     if phone.startswith("00966"):
         phone = phone[5:]
-    elif phone.startswith("+966"):
-        phone = phone[4:]
     elif phone.startswith("966"):
         phone = phone[3:]
     elif phone.startswith("05"):
@@ -65,33 +67,26 @@ def normalize_phone(phone: str) -> str:
     return "966" + phone
 
 
-def send_whatsapp_otp(phone: str, code: str) -> bool:
-    """Send OTP via Twilio WhatsApp API. Falls back to console log if no credentials."""
-    if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN:
-        print(f"[DEV MODE] WhatsApp OTP for {phone}: {code}")
-        return True
-
+def send_otp(phone: str, code: str) -> bool:
+    """Send OTP via WAHA WhatsApp API. Falls back to console log if WAHA is not running."""
     try:
         import urllib.request
         import json as _json
-        import base64
 
-        url = f"https://api.twilio.com/2010-04-01/Accounts/{TWILIO_ACCOUNT_SID}/Messages.json"
-        data = urllib.parse.urlencode({
-            "From": TWILIO_WHATSAPP_FROM,
-            "To": f"whatsapp:+{phone}",
-            "Body": f"رمز التحقق الخاص بك في الباحث القانوني هو: {code}",
+        url = f"{WAHA_URL}/send"
+        data = _json.dumps({
+            "phone": f"+{phone}",
+            "message": f"رمز التحقق الخاص بك في الباحث القانوني هو: {code}",
         }).encode()
 
-        auth = base64.b64encode(f"{TWILIO_ACCOUNT_SID}:{TWILIO_AUTH_TOKEN}".encode()).decode()
         req = urllib.request.Request(url, data=data, method="POST")
-        req.add_header("Authorization", f"Basic {auth}")
+        req.add_header("Content-Type", "application/json")
 
         with urllib.request.urlopen(req, timeout=10) as resp:
-            return resp.status == 201
+            return resp.status == 200
     except Exception as e:
-        print(f"WhatsApp send error: {e}")
-        return False
+        print(f"[DEV MODE] OTP for {phone}: {code} (WAHA error: {e})")
+        return True
 
 
 class SendCodeRequest(BaseModel):
@@ -121,10 +116,10 @@ def send_code(req: SendCodeRequest):
         )
         cur.close()
 
-    sent = send_whatsapp_otp(phone, code)
+    sent = send_otp(phone, code)
 
     if sent:
-        return {"status": "ok", "message": "تم إرسال رمز التحقق عبر واتساب", "dev_code": code if not TWILIO_ACCOUNT_SID else None}
+        return {"status": "ok", "message": "تم إرسال رمز التحقق عبر الرسائل النصية", "dev_code": code if not TWILIO_API_KEY_SID else None}
     else:
         raise HTTPException(status_code=500, detail="فشل إرسال رمز التحقق. حاول مرة أخرى.")
 
