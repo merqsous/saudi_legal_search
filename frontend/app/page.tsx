@@ -351,7 +351,7 @@ function ResultCard({ result }: { result: SearchResult }) {
           </div>
 
           {/* Snippet */}
-          <p className="text-sm text-slate-700 leading-relaxed arabic-text line-clamp-4" dir="rtl">
+          <p className="text-sm text-slate-700 leading-relaxed arabic-text" dir="rtl">
             {result.snippet}
           </p>
 

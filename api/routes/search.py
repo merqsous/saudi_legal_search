@@ -161,8 +161,6 @@ def search(
     results = []
     for row in rows:
         snippet = row.get("chunk_text", "")
-        if len(snippet) > 500:
-            snippet = snippet[:500] + "..."
 
         distance = float(row["distance"]) if row["distance"] else None
         if distance is not None:
