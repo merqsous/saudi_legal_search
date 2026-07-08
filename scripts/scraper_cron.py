@@ -1,6 +1,7 @@
 """
 Cron-like scheduler for running the weekly scraper on Railway.
 Runs the scraper on a schedule and keeps the container alive.
+Includes a simple HTTP health check server so Railway doesn't kill the container.
 """
 import os
 import sys
@@ -8,6 +9,7 @@ import time
 import subprocess
 import threading
 from datetime import datetime, timedelta
+from http.server import HTTPServer, BaseHTTPRequestHandler
 
 # Run every N hours (set via env, default 168 = weekly)
 SCRAPE_INTERVAL_HOURS = int(os.getenv("SCRAPE_INTERVAL_HOURS", "168"))
@@ -19,6 +21,26 @@ SCRAPE_ON_START = os.getenv("SCRAPE_ON_START", "false").lower() == "true"
 MAX_PAGES = os.getenv("SCRAPE_MAX_PAGES", "0")
 
 VENV_PYTHON = os.getenv("SCRAPER_PYTHON", "python")
+
+PORT = int(os.getenv("PORT", "8080"))
+
+
+class HealthHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain")
+        self.end_headers()
+        self.wfile.write(b"Scraper running")
+
+    def log_message(self, format, *args):
+        pass  # Suppress health check logs
+
+
+def start_health_server():
+    server = HTTPServer(("0.0.0.0", PORT), HealthHandler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    print(f"[CRON] Health check server listening on :{PORT}")
+    sys.stdout.flush()
 
 
 def run_scraper(max_pages=0, skip_embed=False):
@@ -54,17 +76,22 @@ def main():
     print(f"[CRON] Scraper scheduler started")
     print(f"[CRON] Interval: every {SCRAPE_INTERVAL_HOURS} hours")
     print(f"[CRON] Run on start: {SCRAPE_ON_START}")
+    sys.stdout.flush()
 
-    # Optional: run once on startup (synchronous so we see output)
+    # Start health check server so Railway doesn't kill us
+    start_health_server()
+
+    # Run scraper in a thread so the main loop stays alive
     if SCRAPE_ON_START:
         mp = int(MAX_PAGES) if MAX_PAGES else 0
-        run_scraper(max_pages=mp)
+        threading.Thread(target=run_scraper, args=(mp,), daemon=True).start()
 
     # Keep container alive and run on schedule
     while True:
         next_run = schedule_next_run()
         wait_seconds = (next_run - datetime.now()).total_seconds()
         print(f"[CRON] Next scheduled run: {next_run} (in {wait_seconds/3600:.1f} hours)")
+        sys.stdout.flush()
 
         # Sleep in chunks so Railway doesn't think we're dead
         while wait_seconds > 0:
