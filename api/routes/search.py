@@ -157,7 +157,7 @@ def _do_search(q, court_type, city, year, court_level, limit, offset):
         LEFT JOIN court_levels cl ON j.court_level_id = cl.id
         WHERE jc.embedding IS NOT NULL
           AND length(jc.chunk_text) >= 100
-          AND jc.embedding <=> %s::vector < 0.55
+          AND jc.embedding <=> %s::vector < 0.40
           {where_clause}
     """
 
@@ -195,6 +195,7 @@ def _do_search(q, court_type, city, year, court_level, limit, offset):
             LEFT JOIN court_levels cl ON j.court_level_id = cl.id
             WHERE jc.embedding IS NOT NULL
               AND length(jc.chunk_text) >= 100
+              AND jc.embedding <=> %s::vector < 0.40
               {where_clause}
             ORDER BY j.id, jc.embedding <=> %s::vector
         ) AS best_chunks
