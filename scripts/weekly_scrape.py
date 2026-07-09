@@ -758,6 +758,10 @@ def chunk_and_embed_new(conn) -> int:
 
     cur = conn.cursor()
 
+    # Reset the sequence to avoid duplicate key violations
+    cur.execute("SELECT setval('judgment_chunks_id_seq', COALESCE((SELECT MAX(id) FROM judgment_chunks), 0));")
+    conn.commit()
+
     cur.execute("""
         SELECT j.id, js.id AS section_id, js.section_code, js.section_text
         FROM judgment_sections js
