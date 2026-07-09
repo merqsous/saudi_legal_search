@@ -75,6 +75,12 @@ def init_auth_tables():
             cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS country VARCHAR(100)")
         except Exception:
             pass
+        # Add ip/country columns to existing search_logs table if missing
+        try:
+            cur.execute("ALTER TABLE search_logs ADD COLUMN IF NOT EXISTS ip_address VARCHAR(45)")
+            cur.execute("ALTER TABLE search_logs ADD COLUMN IF NOT EXISTS country VARCHAR(100)")
+        except Exception:
+            pass
         cur.close()
 
 
