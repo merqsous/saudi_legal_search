@@ -203,7 +203,7 @@ def _do_search(q, court_type, city, year, court_level, limit, offset):
         LIMIT %s OFFSET %s;
     """
 
-    all_params = [vec_str, vec_str, fetch_pool, offset]
+    all_params = [vec_str, vec_str, vec_str] + (params[2:] if len(params) > 2 else []) + [fetch_pool, offset]
 
     rows = query_all(sql, all_params)
 
