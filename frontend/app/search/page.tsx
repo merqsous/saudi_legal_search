@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Loader2, ExternalLink, Scale, Filter, X, ChevronDown, Sparkles, LogOut, LayoutDashboard } from 'lucide-react';
+import { Search, Loader2, ExternalLink, Scale, Filter, X, ChevronDown, Sparkles, LogOut, LayoutDashboard, CheckCircle } from 'lucide-react';
 
 interface AuthUser {
   id: number;
@@ -250,6 +250,14 @@ export default function SearchPage() {
                   </>
                 )}
               </div>
+              <button
+                onClick={() => { if (query.trim()) doSearch(); }}
+                disabled={loading || !query.trim()}
+                className="mt-3 w-full py-2.5 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 disabled:opacity-50 flex items-center justify-center gap-2 text-sm"
+              >
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                {'تطبيق الفلترة'}
+              </button>
             </div>
           )}
         </div>
@@ -300,7 +308,7 @@ export default function SearchPage() {
             </p>
             <div className="space-y-3">
               {results.map((result, idx) => (
-                <ResultCard key={`${result.judgment_id}-${idx}`} result={result} />
+                <ResultCard key={`${result.judgment_id}-${idx}`} result={result} query={query} />
               ))}
             </div>
           </>
@@ -349,8 +357,34 @@ function FilterSelect({
   );
 }
 
-function ResultCard({ result }: { result: SearchResult }) {
+function ResultCard({ result, query }: { result: SearchResult; query: string }) {
   const relevance = result.distance != null ? Math.max(0, 1 - result.distance) : null;
+
+  const highlightSnippet = (text: string, q: string) => {
+    if (!q.trim()) return text;
+    const queryWords = new Set(q.trim().toLowerCase().split(/\s+/).filter(w => w.length >= 2));
+    if (queryWords.size === 0) return text;
+
+    // Split into sentences (Arabic and English delimiters)
+    const sentences = text.split(/(?<=[.؟!،؛\n])\s+/);
+    if (sentences.length <= 1) return text;
+
+    // Score each sentence by query term overlap
+    const scored = sentences.map(s => {
+      const lower = s.toLowerCase();
+      let matches = 0;
+      queryWords.forEach(w => { if (lower.includes(w)) matches++; });
+      return { text: s, score: matches / queryWords.size, matches };
+    });
+
+    // Highlight sentences with >= 30% query term overlap
+    return scored.map((s, i) => {
+      if (s.score >= 0.3 && s.matches > 0) {
+        return <mark key={i} className="bg-primary-100 text-primary-900 rounded px-0.5">{s.text} </mark>;
+      }
+      return <span key={i}>{s.text} </span>;
+    });
+  };
 
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-shadow">
@@ -395,7 +429,7 @@ function ResultCard({ result }: { result: SearchResult }) {
 
           {/* Snippet */}
           <p className="text-sm text-slate-700 leading-relaxed arabic-text" dir="rtl">
-            {result.snippet}
+            {highlightSnippet(result.snippet, query)}
           </p>
 
           {/* Link */}

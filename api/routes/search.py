@@ -3,6 +3,7 @@ import re
 from fastapi import APIRouter, Query, HTTPException, Request
 from api.db import query_all, query_one
 from api.embeddings import embed_text, vector_to_pgvector, get_client
+from api.config import EMBEDDING_MODEL
 from api.routes.auth import log_search, get_client_ip, get_country_from_ip
 
 router = APIRouter()
@@ -121,6 +122,7 @@ def _do_search(q, court_type, city, year, court_level, limit, offset):
         expanded_q = expand_query(q)
         embedding = embed_text(expanded_q)
     except Exception as e:
+        print(f"[SEARCH ERROR] Embedding failed: {e}")
         raise HTTPException(status_code=500, detail=f"Embedding failed: {e}")
 
     vec_str = vector_to_pgvector(embedding)
@@ -157,12 +159,18 @@ def _do_search(q, court_type, city, year, court_level, limit, offset):
         LEFT JOIN court_levels cl ON j.court_level_id = cl.id
         WHERE jc.embedding IS NOT NULL
           AND length(jc.chunk_text) >= 100
-          AND jc.embedding <=> %s::vector < 0.40
+          AND jc.embedding <=> %s::vector < 0.50
           {where_clause}
     """
 
     count_params = [vec_str] + (params[2:] if len(params) > 2 else [])
-    count_row = query_one(count_sql, count_params)
+    try:
+        count_row = query_one(count_sql, count_params)
+    except Exception as e:
+        print(f"[SEARCH ERROR] Count query failed: {e}")
+        print(f"[SEARCH ERROR] count_params: {count_params}")
+        print(f"[SEARCH ERROR] where_clause: {where_clause}")
+        raise HTTPException(status_code=500, detail=f"Search query failed: {e}")
     total = count_row["count"] if count_row else 0
 
     fetch_pool = min(limit * 5, 50)
@@ -195,7 +203,7 @@ def _do_search(q, court_type, city, year, court_level, limit, offset):
             LEFT JOIN court_levels cl ON j.court_level_id = cl.id
             WHERE jc.embedding IS NOT NULL
               AND length(jc.chunk_text) >= 100
-              AND jc.embedding <=> %s::vector < 0.40
+              AND jc.embedding <=> %s::vector < 0.50
               {where_clause}
             ORDER BY j.id, jc.embedding <=> %s::vector
         ) AS best_chunks
@@ -203,15 +211,64 @@ def _do_search(q, court_type, city, year, court_level, limit, offset):
         LIMIT %s OFFSET %s;
     """
 
-    all_params = [vec_str, vec_str, vec_str] + (params[2:] if len(params) > 2 else []) + [fetch_pool, offset]
+    all_params = [vec_str, vec_str] + (params[2:] if len(params) > 2 else []) + [vec_str, fetch_pool, offset]
 
-    rows = query_all(sql, all_params)
+    try:
+        rows = query_all(sql, all_params)
+    except Exception as e:
+        print(f"[SEARCH ERROR] Fetch query failed: {e}")
+        print(f"[SEARCH ERROR] all_params count: {len(all_params)}")
+        print(f"[SEARCH ERROR] where_clause: {where_clause}")
+        raise HTTPException(status_code=500, detail=f"Search query failed: {e}")
 
+    # Sentence-level re-ranking: embed sentences and find most relevant ones
     results = []
     for row in rows:
-        snippet = row.get("chunk_text", "")
+        chunk_text = row.get("chunk_text", "")
+        chunk_distance = float(row["distance"]) if row["distance"] else None
 
-        distance = float(row["distance"]) if row["distance"] else None
+        # Split chunk into sentences
+        import re as _re
+        sentences = [s.strip() for s in _re.split(r'(?<=[.؟!\n])\s+', chunk_text) if len(s.strip()) >= 20]
+
+        if len(sentences) <= 1:
+            # Short chunk, use as-is
+            best_sentences = [{"text": chunk_text, "distance": chunk_distance}]
+        else:
+            # Embed all sentences in one batch call
+            try:
+                sentence_embeddings = get_client().embeddings.create(
+                    model=EMBEDDING_MODEL,
+                    input=sentences,
+                ).data
+
+                # Compute cosine distance for each sentence vs query
+                import math
+                query_norm = math.sqrt(sum(x * x for x in embedding))
+
+                scored_sentences = []
+                for sent, emb_obj in zip(sentences, sentence_embeddings):
+                    sent_vec = emb_obj.embedding
+                    # Cosine similarity via dot product / norms
+                    dot = sum(a * b for a, b in zip(embedding, sent_vec))
+                    sent_norm = math.sqrt(sum(x * x for x in sent_vec))
+                    cos_sim = dot / (query_norm * sent_norm + 1e-9) if sent_norm > 0 else 0
+                    sent_distance = 1 - cos_sim
+                    scored_sentences.append({"text": sent, "distance": sent_distance})
+
+                # Sort by distance (most relevant first), take top 3
+                scored_sentences.sort(key=lambda x: x["distance"])
+                best_sentences = scored_sentences[:3]
+            except Exception:
+                # Fallback: use chunk as-is
+                best_sentences = [{"text": chunk_text, "distance": chunk_distance}]
+
+        # Build snippet from best sentences, highlight them
+        snippet_parts = [s["text"] for s in best_sentences]
+        snippet = " ... ".join(snippet_parts)
+
+        # Use the best sentence distance as the result distance
+        best_distance = best_sentences[0]["distance"] if best_sentences else chunk_distance
 
         results.append({
             "judgment_id": row["judgment_id"],
@@ -229,8 +286,11 @@ def _do_search(q, court_type, city, year, court_level, limit, offset):
             "court_level_code": row["court_level_code"],
             "section_name": row["section_name_ar"],
             "snippet": snippet,
-            "distance": distance,
+            "distance": best_distance,
         })
+
+    # Re-sort results by sentence-level distance
+    results.sort(key=lambda x: x["distance"] if x["distance"] is not None else 1.0)
 
     return {"results": results[:limit], "total": total, "limit": limit, "offset": offset}
 

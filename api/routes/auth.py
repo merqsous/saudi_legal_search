@@ -1,5 +1,4 @@
 import os
-import random
 import time
 import secrets
 import urllib.parse
@@ -12,16 +11,7 @@ from api.config import OPENAI_API_KEY
 
 router = APIRouter()
 
-# Twilio config (kept as fallback)
-TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", "")
-TWILIO_API_KEY_SID = os.getenv("TWILIO_API_KEY_SID", "")
-TWILIO_API_KEY_SECRET = os.getenv("TWILIO_API_KEY_SECRET", "")
-TWILIO_WHATSAPP_FROM = os.getenv("TWILIO_WHATSAPP_FROM", "")
-
-# WAHA (WhatsApp HTTP API) config
-WAHA_URL = os.getenv("WAHA_URL", "http://localhost:3001")
-
-# Admin phone (bypasses OTP)
+# Admin phone (bypasses login)
 ADMIN_PHONE = "966514789632"
 
 # Session tokens (in-memory, survives across requests)
@@ -127,43 +117,6 @@ def get_country_from_ip(ip: str) -> str:
         return "Unknown"
 
 
-def send_otp(phone: str, code: str) -> bool:
-    """Send OTP via WAHA WhatsApp API. Falls back to console log if WAHA is not running."""
-    if not WAHA_URL:
-        print(f"[DEV MODE] OTP for {phone}: {code}")
-        return True
-
-    try:
-        import urllib.request
-        import json as _json
-
-        url = f"{WAHA_URL}/send"
-        data = _json.dumps({
-            "phone": f"+{phone}",
-            "message": f"رمز التحقق الخاص بك في الباحث القانوني هو: {code}",
-        }).encode()
-
-        req = urllib.request.Request(url, data=data, method="POST")
-        req.add_header("Content-Type", "application/json")
-
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            return resp.status == 200
-    except Exception as e:
-        print(f"WAHA send error: {e}")
-        return False
-
-
-class SendCodeRequest(BaseModel):
-    phone: str
-
-
-class VerifyCodeRequest(BaseModel):
-    phone: str
-    code: str
-    first_name: str | None = None
-    last_name: str | None = None
-
-
 class LoginRequest(BaseModel):
     phone: str
     first_name: str | None = None
@@ -197,88 +150,6 @@ def simple_login(req: LoginRequest, request: Request):
                 (phone, req.first_name, req.last_name, ip, country),
             )
             user_id = cur.fetchone()[0]
-        cur.close()
-
-    token = secrets.token_urlsafe(32)
-    _sessions[token] = {"user_id": user_id, "phone": phone}
-
-    user_data = query_one("SELECT id, phone, first_name, last_name FROM users WHERE id = %s", [user_id])
-    return {"status": "ok", "token": token, "user": user_data}
-
-
-@router.post("/auth/send-code")
-def send_code(req: SendCodeRequest):
-    phone = normalize_phone(req.phone)
-    if not phone:
-        raise HTTPException(status_code=400, detail="رقم الهاتف غير صحيح. يجب أن يبدأ بـ 05 ويتكون من 9 أرقام")
-
-    code = f"{random.randint(0, 999999):06d}"
-
-    with get_db() as conn:
-        cur = conn.cursor()
-        cur.execute(
-            "INSERT INTO verification_codes (phone, code) VALUES (%s, %s)",
-            (phone, code),
-        )
-        cur.close()
-
-    sent = send_otp(phone, code)
-
-    if sent:
-        return {"status": "ok", "message": "تم إرسال رمز التحقق عبر واتساب", "dev_code": code if not WAHA_URL else None}
-    else:
-        raise HTTPException(status_code=500, detail="فشل إرسال رمز التحقق. حاول مرة أخرى.")
-
-
-@router.post("/auth/verify-code")
-def verify_code(req: VerifyCodeRequest, request: Request):
-    phone = normalize_phone(req.phone)
-    if not phone:
-        raise HTTPException(status_code=400, detail="رقم الهاتف غير صحيح")
-
-    print(f"[VERIFY] phone={phone}, code={req.code}")
-
-    row = query_one(
-        """
-        SELECT * FROM verification_codes
-        WHERE phone = %s AND code = %s AND used = FALSE AND expires_at > NOW()
-        ORDER BY created_at DESC LIMIT 1
-        """,
-        [phone, req.code],
-    )
-
-    if not row:
-        all_codes = query_all(
-            "SELECT id, phone, code, used, expires_at, created_at FROM verification_codes WHERE phone = %s ORDER BY created_at DESC LIMIT 5",
-            [phone],
-        )
-        print(f"[VERIFY] No match. Recent codes for {phone}: {all_codes}")
-        raise HTTPException(status_code=400, detail="رمز التحقق غير صحيح أو منتهي الصلاحية")
-
-    with get_db() as conn:
-        cur = conn.cursor()
-        cur.execute("UPDATE verification_codes SET used = TRUE WHERE id = %s", (row["id"],))
-
-        user = query_one("SELECT * FROM users WHERE phone = %s", [phone])
-
-        if not user:
-            if not req.first_name or not req.last_name:
-                return {"status": "new_user", "token": None, "message": "أدخل اسمك الأول والأخير"}
-            ip = get_client_ip(request)
-            country = get_country_from_ip(ip)
-            cur.execute(
-                "INSERT INTO users (phone, first_name, last_name, ip_address, country) VALUES (%s, %s, %s, %s, %s) RETURNING id",
-                (phone, req.first_name, req.last_name, ip, country),
-            )
-            user_id = cur.fetchone()[0]
-        else:
-            user_id = user["id"]
-            if req.first_name and req.last_name:
-                cur.execute(
-                    "UPDATE users SET first_name = %s, last_name = %s WHERE id = %s",
-                    (req.first_name, req.last_name, user_id),
-                )
-
         cur.close()
 
     token = secrets.token_urlsafe(32)
