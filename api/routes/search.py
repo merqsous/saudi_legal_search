@@ -97,7 +97,7 @@ def generate_ai_answer(query: str, results: list[dict]) -> str | None:
 @router.get("/search")
 def search(
     request: Request,
-    q: str = Query(..., description="Search query in Arabic or English"),
+    q: str = Query("", description="Search query in Arabic or English"),
     court_type: str | None = Query(None),
     city: str | None = Query(None),
     year: str | None = Query(None),
@@ -118,19 +118,10 @@ def search(
 
 
 def _do_search(q, court_type, city, year, court_level, limit, offset):
-    try:
-        expanded_q = expand_query(q)
-        embedding = embed_text(expanded_q)
-    except Exception as e:
-        print(f"[SEARCH ERROR] Embedding failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Embedding failed: {e}")
-
-    vec_str = vector_to_pgvector(embedding)
-    normalized_q = normalize_arabic(q)
-    keywords = normalized_q.split()
+    has_query = q and q.strip()
 
     filters = []
-    params: list = [vec_str, vec_str]
+    params: list = []
 
     if court_type:
         filters.append("ct.code = %s")
@@ -149,55 +140,21 @@ def _do_search(q, court_type, city, year, court_level, limit, offset):
     if filters:
         where_clause = "AND " + " AND ".join(filters)
 
-    count_sql = f"""
-        SELECT COUNT(DISTINCT j.id)
-        FROM judgment_chunks jc
-        JOIN judgments j ON jc.judgment_id = j.id
-        JOIN cases c ON j.case_id = c.id
-        LEFT JOIN court_types ct ON c.court_type_id = ct.id
-        LEFT JOIN locations l ON c.location_id = l.id
-        LEFT JOIN court_levels cl ON j.court_level_id = cl.id
-        WHERE jc.embedding IS NOT NULL
-          AND length(jc.chunk_text) >= 100
-          AND jc.embedding <=> %s::vector < 0.50
-          {where_clause}
-    """
+    if has_query:
+        try:
+            expanded_q = expand_query(q)
+            embedding = embed_text(expanded_q)
+        except Exception as e:
+            print(f"[SEARCH ERROR] Embedding failed: {e}")
+            raise HTTPException(status_code=500, detail=f"Embedding failed: {e}")
 
-    count_params = [vec_str] + (params[2:] if len(params) > 2 else [])
-    try:
-        count_row = query_one(count_sql, count_params)
-    except Exception as e:
-        print(f"[SEARCH ERROR] Count query failed: {e}")
-        print(f"[SEARCH ERROR] count_params: {count_params}")
-        print(f"[SEARCH ERROR] where_clause: {where_clause}")
-        raise HTTPException(status_code=500, detail=f"Search query failed: {e}")
-    total = count_row["count"] if count_row else 0
+        vec_str = vector_to_pgvector(embedding)
 
-    fetch_pool = min(limit * 5, 50)
-
-    sql = f"""
-        SELECT * FROM (
-            SELECT DISTINCT ON (j.id)
-                j.id AS judgment_id,
-                j.judgment_number,
-                j.judgment_year,
-                j.judgment_date_hijri,
-                j.judgment_type,
-                j.details_url,
-                c.case_number,
-                c.case_year,
-                ct.name_ar AS court_type,
-                ct.code AS court_type_code,
-                l.city_ar AS city,
-                cl.name_ar AS court_level,
-                cl.code AS court_level_code,
-                js.section_name_ar,
-                jc.chunk_text,
-                jc.embedding <=> %s::vector AS distance
+        count_sql = f"""
+            SELECT COUNT(DISTINCT j.id)
             FROM judgment_chunks jc
             JOIN judgments j ON jc.judgment_id = j.id
             JOIN cases c ON j.case_id = c.id
-            LEFT JOIN judgment_sections js ON jc.section_id = js.id
             LEFT JOIN court_types ct ON c.court_type_id = ct.id
             LEFT JOIN locations l ON c.location_id = l.id
             LEFT JOIN court_levels cl ON j.court_level_id = cl.id
@@ -205,21 +162,127 @@ def _do_search(q, court_type, city, year, court_level, limit, offset):
               AND length(jc.chunk_text) >= 100
               AND jc.embedding <=> %s::vector < 0.50
               {where_clause}
-            ORDER BY j.id, jc.embedding <=> %s::vector
-        ) AS best_chunks
-        ORDER BY distance
-        LIMIT %s OFFSET %s;
-    """
+        """
 
-    all_params = [vec_str, vec_str] + (params[2:] if len(params) > 2 else []) + [vec_str, fetch_pool, offset]
+        count_params = [vec_str] + params
+        try:
+            count_row = query_one(count_sql, count_params)
+        except Exception as e:
+            print(f"[SEARCH ERROR] Count query failed: {e}")
+            raise HTTPException(status_code=500, detail=f"Search query failed: {e}")
+        total = count_row["count"] if count_row else 0
 
-    try:
-        rows = query_all(sql, all_params)
-    except Exception as e:
-        print(f"[SEARCH ERROR] Fetch query failed: {e}")
-        print(f"[SEARCH ERROR] all_params count: {len(all_params)}")
-        print(f"[SEARCH ERROR] where_clause: {where_clause}")
-        raise HTTPException(status_code=500, detail=f"Search query failed: {e}")
+        fetch_pool = min(limit * 5, 50)
+
+        sql = f"""
+            SELECT * FROM (
+                SELECT DISTINCT ON (j.id)
+                    j.id AS judgment_id,
+                    j.judgment_number,
+                    j.judgment_year,
+                    j.judgment_date_hijri,
+                    j.judgment_type,
+                    j.details_url,
+                    c.case_number,
+                    c.case_year,
+                    ct.name_ar AS court_type,
+                    ct.code AS court_type_code,
+                    l.city_ar AS city,
+                    cl.name_ar AS court_level,
+                    cl.code AS court_level_code,
+                    js.section_name_ar,
+                    jc.chunk_text,
+                    jc.embedding <=> %s::vector AS distance
+                FROM judgment_chunks jc
+                JOIN judgments j ON jc.judgment_id = j.id
+                JOIN cases c ON j.case_id = c.id
+                LEFT JOIN judgment_sections js ON jc.section_id = js.id
+                LEFT JOIN court_types ct ON c.court_type_id = ct.id
+                LEFT JOIN locations l ON c.location_id = l.id
+                LEFT JOIN court_levels cl ON j.court_level_id = cl.id
+                WHERE jc.embedding IS NOT NULL
+                  AND length(jc.chunk_text) >= 100
+                  AND jc.embedding <=> %s::vector < 0.50
+                  {where_clause}
+                ORDER BY j.id, jc.embedding <=> %s::vector
+            ) AS best_chunks
+            ORDER BY distance
+            LIMIT %s OFFSET %s;
+        """
+
+        all_params = [vec_str, vec_str] + params + [vec_str, fetch_pool, offset]
+
+        try:
+            rows = query_all(sql, all_params)
+        except Exception as e:
+            print(f"[SEARCH ERROR] Fetch query failed: {e}")
+            raise HTTPException(status_code=500, detail=f"Search query failed: {e}")
+    else:
+        # Filter-only browsing (no query) - return latest judgments matching filters
+        count_sql = f"""
+            SELECT COUNT(DISTINCT j.id)
+            FROM judgment_chunks jc
+            JOIN judgments j ON jc.judgment_id = j.id
+            JOIN cases c ON j.case_id = c.id
+            LEFT JOIN court_types ct ON c.court_type_id = ct.id
+            LEFT JOIN locations l ON c.location_id = l.id
+            LEFT JOIN court_levels cl ON j.court_level_id = cl.id
+            WHERE jc.embedding IS NOT NULL
+              AND length(jc.chunk_text) >= 100
+              {where_clause}
+        """
+
+        try:
+            count_row = query_one(count_sql, params)
+        except Exception as e:
+            print(f"[SEARCH ERROR] Count query failed: {e}")
+            raise HTTPException(status_code=500, detail=f"Search query failed: {e}")
+        total = count_row["count"] if count_row else 0
+
+        fetch_pool = min(limit * 5, 50)
+
+        sql = f"""
+            SELECT * FROM (
+                SELECT DISTINCT ON (j.id)
+                    j.id AS judgment_id,
+                    j.judgment_number,
+                    j.judgment_year,
+                    j.judgment_date_hijri,
+                    j.judgment_type,
+                    j.details_url,
+                    c.case_number,
+                    c.case_year,
+                    ct.name_ar AS court_type,
+                    ct.code AS court_type_code,
+                    l.city_ar AS city,
+                    cl.name_ar AS court_level,
+                    cl.code AS court_level_code,
+                    js.section_name_ar,
+                    jc.chunk_text,
+                    0.5 AS distance
+                FROM judgment_chunks jc
+                JOIN judgments j ON jc.judgment_id = j.id
+                JOIN cases c ON j.case_id = c.id
+                LEFT JOIN judgment_sections js ON jc.section_id = js.id
+                LEFT JOIN court_types ct ON c.court_type_id = ct.id
+                LEFT JOIN locations l ON c.location_id = l.id
+                LEFT JOIN court_levels cl ON j.court_level_id = cl.id
+                WHERE jc.embedding IS NOT NULL
+                  AND length(jc.chunk_text) >= 100
+                  {where_clause}
+                ORDER BY j.id
+            ) AS best_chunks
+            ORDER BY judgment_year DESC, judgment_id DESC
+            LIMIT %s OFFSET %s;
+        """
+
+        all_params = params + [fetch_pool, offset]
+
+        try:
+            rows = query_all(sql, all_params)
+        except Exception as e:
+            print(f"[SEARCH ERROR] Fetch query failed: {e}")
+            raise HTTPException(status_code=500, detail=f"Search query failed: {e}")
 
     # Sentence-level re-ranking: embed sentences and find most relevant ones
     results = []

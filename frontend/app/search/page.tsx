@@ -78,7 +78,9 @@ export default function SearchPage() {
   }, [router]);
 
   const doSearch = useCallback(async () => {
-    if (!query.trim()) return;
+    const hasQuery = query.trim().length > 0;
+    const hasFilters = selectedCourtType || selectedCity || selectedYear || selectedCourtLevel;
+    if (!hasQuery && !hasFilters) return;
     setLoading(true);
     setError(null);
     setHasSearched(true);
@@ -251,8 +253,8 @@ export default function SearchPage() {
                 )}
               </div>
               <button
-                onClick={() => { if (query.trim()) doSearch(); }}
-                disabled={loading || !query.trim()}
+                onClick={() => doSearch()}
+                disabled={loading}
                 className="mt-3 w-full py-2.5 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 disabled:opacity-50 flex items-center justify-center gap-2 text-sm"
               >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
