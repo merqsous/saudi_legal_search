@@ -164,6 +164,48 @@ class VerifyCodeRequest(BaseModel):
     last_name: str | None = None
 
 
+class LoginRequest(BaseModel):
+    phone: str
+    first_name: str | None = None
+    last_name: str | None = None
+
+
+@router.post("/auth/login")
+def simple_login(req: LoginRequest, request: Request):
+    """Login or register a user with just phone + name. No OTP required."""
+    phone = normalize_phone(req.phone)
+    if not phone:
+        raise HTTPException(status_code=400, detail="رقم الهاتف غير صحيح. يجب أن يبدأ بـ 05 ويتكون من 9 أرقام")
+
+    ip = get_client_ip(request)
+    country = get_country_from_ip(ip)
+
+    user = query_one("SELECT * FROM users WHERE phone = %s", [phone])
+
+    with get_db() as conn:
+        cur = conn.cursor()
+        if user:
+            user_id = user["id"]
+            if req.first_name and req.last_name:
+                cur.execute("UPDATE users SET first_name = %s, last_name = %s WHERE id = %s",
+                            (req.first_name, req.last_name, user_id))
+        else:
+            if not req.first_name or not req.last_name:
+                raise HTTPException(status_code=400, detail="الاسم الأول والأخير مطلوبان للمستخدمين الجدد")
+            cur.execute(
+                "INSERT INTO users (phone, first_name, last_name, ip_address, country) VALUES (%s, %s, %s, %s, %s) RETURNING id",
+                (phone, req.first_name, req.last_name, ip, country),
+            )
+            user_id = cur.fetchone()[0]
+        cur.close()
+
+    token = secrets.token_urlsafe(32)
+    _sessions[token] = {"user_id": user_id, "phone": phone}
+
+    user_data = query_one("SELECT id, phone, first_name, last_name FROM users WHERE id = %s", [user_id])
+    return {"status": "ok", "token": token, "user": user_data}
+
+
 @router.post("/auth/send-code")
 def send_code(req: SendCodeRequest):
     phone = normalize_phone(req.phone)

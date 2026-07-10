@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Scale, Phone, Loader2, User, MessageCircle, CheckCircle } from 'lucide-react';
+import { Scale, Phone, Loader2, User, CheckCircle, ShieldCheck } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 type Step = 'phone' | 'name' | 'verify';
@@ -10,14 +10,15 @@ export default function SignInPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>('phone');
   const [phone, setPhone] = useState('');
-  const [code, setCode] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [devCode, setDevCode] = useState<string | null>(null);
   const [isNewUser, setIsNewUser] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const [captchaAnswer, setCaptchaAnswer] = useState('');
+  const [captchaQuestion, setCaptchaQuestion] = useState('');
+  const [captchaExpected, setCaptchaExpected] = useState(0);
 
   useEffect(() => {
     const saved = localStorage.getItem('auth_user');
@@ -40,16 +41,24 @@ export default function SignInPage() {
     return cleaned;
   };
 
+  const generateCaptcha = () => {
+    const a = Math.floor(Math.random() * 9) + 1;
+    const b = Math.floor(Math.random() * 9) + 1;
+    setCaptchaQuestion(`${a} + ${b} = ?`);
+    setCaptchaExpected(a + b);
+    setCaptchaAnswer('');
+  };
+
   const ADMIN_PHONE = '0514789632';
 
-  const handleSendCode = async () => {
+  const handlePhoneSubmit = async () => {
     setError(null);
     if (phone.length !== 10 || !phone.startsWith('05')) {
       setError('رقم الهاتف يجب أن يبدأ بـ 05 ويتكون من 10 أرقام');
       return;
     }
 
-    // Admin bypass - no OTP needed
+    // Admin bypass
     if (phone === ADMIN_PHONE) {
       setLoading(true);
       try {
@@ -84,20 +93,12 @@ export default function SignInPage() {
       const checkData = await checkRes.json();
 
       if (checkData.is_new) {
-        // New user - go to name step first
         setIsNewUser(true);
         setStep('name');
       } else {
-        // Existing user - send code and go to verify
+        // Existing user - go straight to human verification
         setIsNewUser(false);
-        const res = await fetch('/api/auth/send-code', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || 'فشل إرسال الرمز');
-        if (data.dev_code) setDevCode(data.dev_code);
+        generateCaptcha();
         setStep('verify');
       }
     } catch (e) {
@@ -107,58 +108,44 @@ export default function SignInPage() {
     }
   };
 
-  const handleNameSubmit = async () => {
+  const handleNameSubmit = () => {
     setError(null);
     if (!firstName.trim() || !lastName.trim()) {
       setError('يرجى إدخال الاسم الأول والأخير');
       return;
     }
-    setLoading(true);
-    try {
-      // Send code after name is entered
-      const res = await fetch('/api/auth/send-code', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'فشل إرسال الرمز');
-      if (data.dev_code) setDevCode(data.dev_code);
-      setStep('verify');
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'فشل إرسال الرمز');
-    } finally {
-      setLoading(false);
-    }
+    generateCaptcha();
+    setStep('verify');
   };
 
-  const handleVerifyCode = async () => {
+  const handleLogin = async () => {
     setError(null);
-    if (code.length !== 6) {
-      setError('الرمز يجب أن يتكون من 6 أرقام');
+    if (parseInt(captchaAnswer) !== captchaExpected) {
+      setError('الإجابة غير صحيحة. حاول مرة أخرى.');
+      generateCaptcha();
       return;
     }
+
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/verify-code', {
+      const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           phone,
-          code,
           first_name: isNewUser ? firstName.trim() : undefined,
           last_name: isNewUser ? lastName.trim() : undefined,
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'فشل التحقق');
+      if (!res.ok) throw new Error(data.detail || 'فشل تسجيل الدخول');
       if (data.token) {
         localStorage.setItem('auth_token', data.token);
         localStorage.setItem('auth_user', JSON.stringify(data.user));
         router.push('/search');
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'فشل التحقق');
+      setError(e instanceof Error ? e.message : 'فشل تسجيل الدخول');
     } finally {
       setLoading(false);
     }
@@ -185,7 +172,7 @@ export default function SignInPage() {
         <div className="bg-white rounded-2xl shadow-xl p-6">
           <div className="flex items-center gap-2 mb-6">
             <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary-50 text-primary-600">
-              <MessageCircle className="w-5 h-5" />
+              <User className="w-5 h-5" />
             </div>
             <div>
               <h2 className="text-lg font-bold text-slate-900">
@@ -193,7 +180,7 @@ export default function SignInPage() {
               </h2>
               <p className="text-xs text-slate-500">
                 {step === 'phone' && 'أدخل رقم هاتفك للدخول أو إنشاء حساب'}
-                {step === 'verify' && 'أدخل رمز التحقق المرسل عبر واتساب'}
+                {step === 'verify' && 'تأكيد أنك لست روبوت'}
                 {step === 'name' && 'أكمل بياناتك للتسجيل'}
               </p>
             </div>
@@ -211,7 +198,7 @@ export default function SignInPage() {
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(formatPhone(e.target.value))}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSendCode()}
+                  onKeyDown={(e) => e.key === 'Enter' && handlePhoneSubmit()}
                   placeholder="0501234567"
                   className="w-full pr-11 pl-4 py-3 text-base bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
                   dir="ltr"
@@ -220,50 +207,12 @@ export default function SignInPage() {
                 />
               </div>
               <button
-                onClick={handleSendCode}
-                disabled={loading}
-                className="w-full py-3 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <MessageCircle className="w-5 h-5" />}
-                {'إرسال الرمز'}
-              </button>
-            </div>
-          )}
-          {step === 'verify' && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 rounded-lg p-3">
-                <CheckCircle className="w-4 h-4" />
-                <span>{'تم إرسال الرمز إلى'} {phone}</span>
-              </div>
-              {devCode && (
-                <div className="text-sm text-amber-600 bg-amber-50 rounded-lg p-3 text-center" dir="ltr">
-                  {'رمز التحقق (وضع التطوير)'}: <span className="font-bold">{devCode}</span>
-                </div>
-              )}
-              <input
-                type="text"
-                value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                onKeyDown={(e) => e.key === 'Enter' && handleVerifyCode()}
-                placeholder="000000"
-                className="w-full px-4 py-3 text-2xl text-center tracking-[0.5em] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
-                dir="ltr"
-                inputMode="numeric"
-                autoFocus
-              />
-              <button
-                onClick={handleVerifyCode}
+                onClick={handlePhoneSubmit}
                 disabled={loading}
                 className="w-full py-3 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
-                {'تحقق'}
-              </button>
-              <button
-                onClick={() => { setStep('phone'); setCode(''); setDevCode(null); setError(null); }}
-                className="w-full text-sm text-slate-500 hover:text-slate-700"
-              >
-                {'تغيير الرقم'}
+                {'متابعة'}
               </button>
             </div>
           )}
@@ -298,8 +247,45 @@ export default function SignInPage() {
                 disabled={loading}
                 className="w-full py-3 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
+                <CheckCircle className="w-5 h-5" />
                 {'متابعة'}
+              </button>
+            </div>
+          )}
+          {step === 'verify' && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm text-slate-600 bg-slate-50 rounded-lg p-3">
+                <ShieldCheck className="w-5 h-5 text-primary-600" />
+                <span>{'أكد أنك لست روبوت'}</span>
+              </div>
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center">
+                <p className="text-sm text-slate-500 mb-2">{'حل العملية الحسابية التالية:'}</p>
+                <p className="text-2xl font-bold text-slate-900" dir="ltr">{captchaQuestion}</p>
+              </div>
+              <input
+                type="text"
+                value={captchaAnswer}
+                onChange={(e) => setCaptchaAnswer(e.target.value.replace(/\D/g, '').slice(0, 3))}
+                onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                placeholder="الإجابة"
+                className="w-full px-4 py-3 text-xl text-center bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
+                dir="ltr"
+                inputMode="numeric"
+                autoFocus
+              />
+              <button
+                onClick={handleLogin}
+                disabled={loading}
+                className="w-full py-3 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
+                {'دخول'}
+              </button>
+              <button
+                onClick={() => { setStep('phone'); setCaptchaAnswer(''); setError(null); }}
+                className="w-full text-sm text-slate-500 hover:text-slate-700"
+              >
+                {'تغيير الرقم'}
               </button>
             </div>
           )}
