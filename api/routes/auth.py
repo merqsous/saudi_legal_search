@@ -289,7 +289,7 @@ def admin_stats(authorization: str = Header(None)):
 
 
 @router.post("/auth/admin-login")
-def admin_login(req: SendCodeRequest, request: Request):
+def admin_login(req: LoginRequest, request: Request):
     phone = normalize_phone(req.phone)
     if not phone:
         raise HTTPException(status_code=400, detail="رقم الهاتف غير صحيح")
