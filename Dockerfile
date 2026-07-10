@@ -49,6 +49,7 @@ RUN playwright install chromium
 # Copy and build frontend
 COPY frontend/ ./frontend/
 RUN cd frontend && npm install && npm run build
+# Bust cache marker
 
 # Copy all application code
 COPY api/ ./api/
