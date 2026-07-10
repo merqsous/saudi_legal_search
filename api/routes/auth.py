@@ -174,7 +174,7 @@ def get_me(authorization: str = Header(None)):
 
 
 @router.post("/auth/check-user")
-def check_user(req: SendCodeRequest):
+def check_user(req: LoginRequest):
     phone = normalize_phone(req.phone)
     if not phone:
         raise HTTPException(status_code=400, detail="رقم الهاتف غير صحيح")
