@@ -19,6 +19,29 @@ def normalize_arabic(text: str) -> str:
     return text
 
 
+# Metadata keyword mapping: Arabic terms -> filter codes
+METADATA_KEYWORDS = {
+    'تجاري': {'court_type': 'commercial'},
+    'تجاريه': {'court_type': 'commercial'},
+    'عمالي': {'court_type': 'labor'},
+    'عماليه': {'court_type': 'labor'},
+    'استئناف': {'court_level': 'appeal'},
+}
+
+# Terms that should trigger filter-only browsing (no semantic search)
+BROWSE_ONLY_TERMS = {'تجاري', 'تجاريه', 'عمالي', 'عماليه', 'استئناف'}
+
+
+def detect_metadata_filters(q: str) -> dict:
+    """Check if the query contains metadata keywords and return implied filters."""
+    normalized = normalize_arabic(q)
+    detected = {}
+    for keyword, filters in METADATA_KEYWORDS.items():
+        if keyword in normalized:
+            detected.update(filters)
+    return detected
+
+
 def expand_query(query: str) -> str:
     """Expand short queries with legal context for better semantic matching."""
     query = normalize_arabic(query)
@@ -43,6 +66,7 @@ def expand_query(query: str) -> str:
         'طلاق': 'طلاق الزوج زوجه',
         'نفقه': 'نفقه زوجه اولاد',
         'حضانه': 'حضانه اولاد ولي',
+        'جنائي': 'جنائي قضايا جزائيه جريمه عقوبه',
     }
     
     words = query.split()
@@ -120,27 +144,39 @@ def search(
 def _do_search(q, court_type, city, year, court_level, limit, offset):
     has_query = q and q.strip()
 
+    # Detect metadata keywords in query (e.g. "تجاري" -> court_type filter)
+    metadata_filters = {}
+    if has_query:
+        metadata_filters = detect_metadata_filters(q)
+    # Merge: explicit filters take priority over detected ones
+    effective_court_type = court_type or metadata_filters.get('court_type')
+    effective_court_level = court_level or metadata_filters.get('court_level')
+
+    # Check if query is a pure browse term (e.g. just "تجاري") -> skip semantic search
+    normalized_q = normalize_arabic(q).strip() if has_query else ""
+    is_browse_only = has_query and normalized_q in BROWSE_ONLY_TERMS
+
     filters = []
     params: list = []
 
-    if court_type:
+    if effective_court_type:
         filters.append("ct.code = %s")
-        params.append(court_type)
+        params.append(effective_court_type)
     if city:
         filters.append("l.city_ar = %s")
         params.append(city)
     if year:
         filters.append("(j.judgment_year = %s OR c.case_year = %s)")
         params.extend([year, year])
-    if court_level:
+    if effective_court_level:
         filters.append("cl.code = %s")
-        params.append(court_level)
+        params.append(effective_court_level)
 
     where_clause = ""
     if filters:
         where_clause = "AND " + " AND ".join(filters)
 
-    if has_query:
+    if has_query and not is_browse_only:
         try:
             expanded_q = expand_query(q)
             embedding = embed_text(expanded_q)
@@ -160,7 +196,7 @@ def _do_search(q, court_type, city, year, court_level, limit, offset):
             LEFT JOIN court_levels cl ON j.court_level_id = cl.id
             WHERE jc.embedding IS NOT NULL
               AND length(jc.chunk_text) >= 100
-              AND jc.embedding <=> %s::vector < 0.50
+              AND jc.embedding <=> %s::vector < 0.80
               {where_clause}
         """
 
@@ -202,7 +238,7 @@ def _do_search(q, court_type, city, year, court_level, limit, offset):
                 LEFT JOIN court_levels cl ON j.court_level_id = cl.id
                 WHERE jc.embedding IS NOT NULL
                   AND length(jc.chunk_text) >= 100
-                  AND jc.embedding <=> %s::vector < 0.50
+                  AND jc.embedding <=> %s::vector < 0.80
                   {where_clause}
                 ORDER BY j.id, jc.embedding <=> %s::vector
             ) AS best_chunks
@@ -211,6 +247,72 @@ def _do_search(q, court_type, city, year, court_level, limit, offset):
         """
 
         all_params = [vec_str, vec_str] + params + [vec_str, fetch_pool, offset]
+
+        try:
+            rows = query_all(sql, all_params)
+        except Exception as e:
+            print(f"[SEARCH ERROR] Fetch query failed: {e}")
+            raise HTTPException(status_code=500, detail=f"Search query failed: {e}")
+    elif is_browse_only:
+        # Pure metadata term like "تجاري" - browse all cases of that type
+        count_sql = f"""
+            SELECT COUNT(DISTINCT j.id)
+            FROM judgment_chunks jc
+            JOIN judgments j ON jc.judgment_id = j.id
+            JOIN cases c ON j.case_id = c.id
+            LEFT JOIN court_types ct ON c.court_type_id = ct.id
+            LEFT JOIN locations l ON c.location_id = l.id
+            LEFT JOIN court_levels cl ON j.court_level_id = cl.id
+            WHERE jc.embedding IS NOT NULL
+              AND length(jc.chunk_text) >= 100
+              {where_clause}
+        """
+
+        try:
+            count_row = query_one(count_sql, params)
+        except Exception as e:
+            print(f"[SEARCH ERROR] Count query failed: {e}")
+            raise HTTPException(status_code=500, detail=f"Search query failed: {e}")
+        total = count_row["count"] if count_row else 0
+
+        fetch_pool = min(limit * 5, 50)
+
+        sql = f"""
+            SELECT * FROM (
+                SELECT DISTINCT ON (j.id)
+                    j.id AS judgment_id,
+                    j.judgment_number,
+                    j.judgment_year,
+                    j.judgment_date_hijri,
+                    j.judgment_type,
+                    j.details_url,
+                    c.case_number,
+                    c.case_year,
+                    ct.name_ar AS court_type,
+                    ct.code AS court_type_code,
+                    l.city_ar AS city,
+                    cl.name_ar AS court_level,
+                    cl.code AS court_level_code,
+                    js.section_name_ar,
+                    jc.chunk_text,
+                    0.5 AS distance
+                FROM judgment_chunks jc
+                JOIN judgments j ON jc.judgment_id = j.id
+                JOIN cases c ON j.case_id = c.id
+                LEFT JOIN judgment_sections js ON jc.section_id = js.id
+                LEFT JOIN court_types ct ON c.court_type_id = ct.id
+                LEFT JOIN locations l ON c.location_id = l.id
+                LEFT JOIN court_levels cl ON j.court_level_id = cl.id
+                WHERE jc.embedding IS NOT NULL
+                  AND length(jc.chunk_text) >= 100
+                  {where_clause}
+                ORDER BY j.id
+            ) AS best_chunks
+            ORDER BY judgment_year DESC, judgment_id DESC
+            LIMIT %s OFFSET %s;
+        """
+
+        all_params = params + [fetch_pool, offset]
 
         try:
             rows = query_all(sql, all_params)
@@ -294,8 +396,8 @@ def _do_search(q, court_type, city, year, court_level, limit, offset):
         import re as _re
         sentences = [s.strip() for s in _re.split(r'(?<=[.؟!\n])\s+', chunk_text) if len(s.strip()) >= 20]
 
-        if len(sentences) <= 1:
-            # Short chunk, use as-is
+        if len(sentences) <= 1 or not has_query or is_browse_only:
+            # Short chunk, no query, or browse-only mode: use as-is
             best_sentences = [{"text": chunk_text, "distance": chunk_distance}]
         else:
             # Embed all sentences in one batch call

@@ -360,7 +360,7 @@ function FilterSelect({
 }
 
 function ResultCard({ result, query }: { result: SearchResult; query: string }) {
-  const relevance = result.distance != null ? Math.max(0, 1 - result.distance) : null;
+  const relevance = result.distance != null ? Math.max(0, Math.min(1, 1.0 - result.distance * 0.5)) : null;
 
   const highlightSnippet = (text: string, q: string) => {
     if (!q.trim()) return text;
