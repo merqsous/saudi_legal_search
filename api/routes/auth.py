@@ -14,7 +14,44 @@ router = APIRouter()
 # Admin phone (bypasses login)
 ADMIN_PHONE = "966514789632"
 
-# Session tokens (in-memory, survives across requests)
+
+def create_session(token: str, user_id: int, phone: str):
+    """Persist a session to the database so it survives server restarts."""
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            """INSERT INTO user_sessions (token, user_id, phone, expires_at)
+               VALUES (%s, %s, %s, NOW() + INTERVAL '30 days')
+               ON CONFLICT (token) DO UPDATE SET
+                   user_id = EXCLUDED.user_id,
+                   phone = EXCLUDED.phone,
+                   expires_at = EXCLUDED.expires_at;""",
+            (token, user_id, phone),
+        )
+        cur.close()
+
+
+def get_session(token: str) -> dict | None:
+    """Fetch a valid session from the database."""
+    session = query_one(
+        """SELECT token, user_id, phone FROM user_sessions
+           WHERE token = %s AND expires_at > NOW();""",
+        [token],
+    )
+    if session:
+        return dict(session)
+    return None
+
+
+def delete_session(token: str):
+    """Remove a session from the database."""
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM user_sessions WHERE token = %s;", [token])
+        cur.close()
+
+
+# Backward-compatible in-memory cache (kept for performance, DB is source of truth)
 _sessions: dict[str, dict] = {}
 
 
@@ -71,6 +108,19 @@ def init_auth_tables():
             cur.execute("ALTER TABLE search_logs ADD COLUMN IF NOT EXISTS country VARCHAR(100)")
         except Exception:
             pass
+        # Create persistent sessions table (survives server restarts)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS user_sessions (
+                token VARCHAR(255) PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                phone VARCHAR(15) NOT NULL,
+                created_at TIMESTAMP DEFAULT NOW(),
+                expires_at TIMESTAMP DEFAULT NOW() + INTERVAL '30 days'
+            );
+        """)
+        cur.execute("""
+            CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id ON user_sessions(user_id);
+        """)
         cur.close()
 
 
@@ -153,6 +203,7 @@ def simple_login(req: LoginRequest, request: Request):
         cur.close()
 
     token = secrets.token_urlsafe(32)
+    create_session(token, user_id, phone)
     _sessions[token] = {"user_id": user_id, "phone": phone}
 
     user_data = query_one("SELECT id, phone, first_name, last_name FROM users WHERE id = %s", [user_id])
@@ -164,7 +215,7 @@ def get_me(authorization: str = Header(None)):
     if not authorization:
         raise HTTPException(status_code=401, detail="غير مصرح")
     token = authorization.replace("Bearer ", "")
-    session = _sessions.get(token)
+    session = _sessions.get(token) or get_session(token)
     if not session:
         raise HTTPException(status_code=401, detail="جلسة غير صالحة")
     user = query_one("SELECT id, phone, first_name, last_name FROM users WHERE id = %s", [session["user_id"]])
@@ -204,7 +255,7 @@ def admin_stats(authorization: str = Header(None)):
     if not authorization:
         raise HTTPException(status_code=401, detail="غير مصرح")
     token = authorization.replace("Bearer ", "")
-    session = _sessions.get(token)
+    session = _sessions.get(token) or get_session(token)
     if not session or session["phone"] != ADMIN_PHONE:
         raise HTTPException(status_code=403, detail="غير مصرح")
 
