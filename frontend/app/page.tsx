@@ -1,13 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Scale, Phone, Loader2, User, CheckCircle, ShieldCheck } from 'lucide-react';
+import { Scale, Phone, Loader2, User, CheckCircle, ShieldCheck, Search, ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 type Step = 'phone' | 'name' | 'verify';
+type View = 'landing' | 'auth';
 
-export default function SignInPage() {
+export default function LandingPage() {
   const router = useRouter();
+  const [view, setView] = useState<View>('landing');
   const [step, setStep] = useState<Step>('phone');
   const [phone, setPhone] = useState('');
   const [firstName, setFirstName] = useState('');
@@ -31,6 +33,10 @@ export default function SignInPage() {
     }
     setCheckingAuth(false);
   }, [router]);
+
+  const startSearch = () => {
+    router.push('/search');
+  };
 
   const formatPhone = (val: string) => {
     let cleaned = val.replace(/\D/g, '');
@@ -159,8 +165,91 @@ export default function SignInPage() {
     );
   }
 
+  if (view === 'landing') {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100" dir="rtl">
+        <header className="bg-white border-b border-slate-200">
+          <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary-600 text-white">
+                <Scale className="w-5 h-5" />
+              </div>
+              <h1 className="text-xl font-bold text-slate-900">الباحث</h1>
+            </div>
+            <button
+              onClick={() => setView('auth')}
+              className="text-sm font-medium text-primary-600 hover:text-primary-700 px-4 py-2"
+            >
+              تسجيل الدخول
+            </button>
+          </div>
+        </header>
+
+        <main className="max-w-5xl mx-auto px-4 py-16">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl md:text-5xl font-bold text-slate-900 mb-6 leading-tight">
+              محرك بحث ذكي في<br />الأحكام القضائية السعودية
+            </h2>
+            <p className="text-lg text-slate-600 mb-8 max-w-2xl mx-auto leading-relaxed">
+              ابحث بذكاء في آلاف الأحكام من محاكم الدرجة الأولى ومحكمة الاستئناف. تجربة مجانية تتيح لك 3 عمليات بحث.
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <button
+                onClick={startSearch}
+                className="w-full sm:w-auto px-8 py-4 bg-primary-600 text-white rounded-xl font-bold text-lg hover:bg-primary-700 transition-colors flex items-center justify-center gap-2"
+              >
+                <Search className="w-5 h-5" />
+                ابحث الآن
+              </button>
+              <button
+                onClick={() => setView('auth')}
+                className="w-full sm:w-auto px-8 py-4 border-2 border-primary-600 text-primary-600 rounded-xl font-bold text-lg hover:bg-primary-50 transition-colors flex items-center justify-center gap-2"
+              >
+                إنشاء حساب مجاني
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+            <div className="bg-white rounded-2xl p-6 border border-slate-200 text-center">
+              <div className="w-12 h-12 bg-primary-50 text-primary-600 rounded-xl flex items-center justify-center mx-auto mb-4">
+                <Search className="w-6 h-6" />
+              </div>
+              <h3 className="font-bold text-slate-900 mb-2">بحث ذكي</h3>
+              <p className="text-sm text-slate-600">ابحث بالمعنى لا بالكلمة المفتاحية فقط</p>
+            </div>
+            <div className="bg-white rounded-2xl p-6 border border-slate-200 text-center">
+              <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center mx-auto mb-4">
+                <Scale className="w-6 h-6" />
+              </div>
+              <h3 className="font-bold text-slate-900 mb-2">أحكام موثوقة</h3>
+              <p className="text-sm text-slate-600">أحكام من محاكم المملكة العربية السعودية</p>
+            </div>
+            <div className="bg-white rounded-2xl p-6 border border-slate-200 text-center">
+              <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mx-auto mb-4">
+                <CheckCircle className="w-6 h-6" />
+              </div>
+              <h3 className="font-bold text-slate-900 mb-2">مجاني للتجربة</h3>
+              <p className="text-sm text-slate-600">3 عمليات بحث مجانية بدون تسجيل</p>
+            </div>
+          </div>
+        </main>
+
+        <footer className="border-t border-slate-200 bg-white">
+          <div className="max-w-5xl mx-auto px-4 py-6 text-center text-sm text-slate-500">
+            الباحث — بحث في الأحكام القضائية السعودية
+            <div className="mt-2">
+              <a href="mailto:albahethapp@gmail.com" className="text-primary-600 hover:text-primary-700">albahethapp@gmail.com</a>
+            </div>
+          </div>
+        </footer>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100 p-4" dir="rtl">
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-8">
           <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-primary-600 text-white mb-3">
@@ -170,20 +259,28 @@ export default function SignInPage() {
           <p className="text-sm text-slate-500 mt-1">{'بحث في الأحكام القضائية السعودية'}</p>
         </div>
         <div className="bg-white rounded-2xl shadow-xl p-6">
-          <div className="flex items-center gap-2 mb-6">
-            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary-50 text-primary-600">
-              <User className="w-5 h-5" />
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary-50 text-primary-600">
+                <User className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">
+                  {step === 'name' ? 'إنشاء حساب' : 'تسجيل الدخول'}
+                </h2>
+                <p className="text-xs text-slate-500">
+                  {step === 'phone' && 'أدخل رقم هاتفك للدخول أو إنشاء حساب'}
+                  {step === 'verify' && 'تأكيد أنك لست روبوت'}
+                  {step === 'name' && 'أكمل بياناتك للتسجيل'}
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-lg font-bold text-slate-900">
-                {step === 'name' ? 'إنشاء حساب' : 'تسجيل الدخول'}
-              </h2>
-              <p className="text-xs text-slate-500">
-                {step === 'phone' && 'أدخل رقم هاتفك للدخول أو إنشاء حساب'}
-                {step === 'verify' && 'تأكيد أنك لست روبوت'}
-                {step === 'name' && 'أكمل بياناتك للتسجيل'}
-              </p>
-            </div>
+            <button
+              onClick={() => setView('landing')}
+              className="text-xs text-slate-500 hover:text-slate-700"
+            >
+              رجوع
+            </button>
           </div>
           {error && (
             <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm">
