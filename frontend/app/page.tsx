@@ -1,5 +1,8 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 import { useState, useEffect } from 'react';
 import { Scale, Phone, Loader2, User, CheckCircle, ShieldCheck, Search, ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
