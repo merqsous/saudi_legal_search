@@ -85,6 +85,11 @@ def generate_ai_answer(query: str, results: list[dict]) -> str | None:
     if not results:
         return None
 
+    # Skip if top results are not relevant enough (distance > 0.6 means < 70% match)
+    best_distance = min((r.get("distance") or 1.0) for r in results[:3])
+    if best_distance > 0.6:
+        return None
+
     top_results = results[:5]
     context_parts = []
     for i, r in enumerate(top_results):
@@ -196,7 +201,7 @@ def _do_search(q, court_type, city, year, court_level, limit, offset):
             LEFT JOIN court_levels cl ON j.court_level_id = cl.id
             WHERE jc.embedding IS NOT NULL
               AND length(jc.chunk_text) >= 100
-              AND jc.embedding <=> %s::vector < 0.80
+              AND jc.embedding <=> %s::vector < 0.55
               {where_clause}
         """
 
@@ -238,7 +243,7 @@ def _do_search(q, court_type, city, year, court_level, limit, offset):
                 LEFT JOIN court_levels cl ON j.court_level_id = cl.id
                 WHERE jc.embedding IS NOT NULL
                   AND length(jc.chunk_text) >= 100
-                  AND jc.embedding <=> %s::vector < 0.80
+                  AND jc.embedding <=> %s::vector < 0.55
                   {where_clause}
                 ORDER BY j.id, jc.embedding <=> %s::vector
             ) AS best_chunks
