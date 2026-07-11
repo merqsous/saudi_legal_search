@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Loader2, ExternalLink, Scale, Filter, X, ChevronDown, Sparkles, LogOut, LayoutDashboard, CheckCircle } from 'lucide-react';
+import { Search, Loader2, ExternalLink, Scale, Filter, X, ChevronDown, Sparkles, LogOut, LayoutDashboard, CheckCircle, MapPin, Building2, Gavel } from 'lucide-react';
 
 interface AuthUser {
   id: number;
@@ -62,6 +62,13 @@ export default function SearchPage() {
   const [aiAnswer, setAiAnswer] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+
+  // Quick filter presets
+  const quickFilters = [
+    { label: 'تجاري', icon: Building2, action: () => { setSelectedCourtType('commercial'); doSearch(); } },
+    { label: 'الرياض', icon: MapPin, action: () => { setSelectedCity('الرياض'); doSearch(); } },
+    { label: 'استئناف', icon: Gavel, action: () => { setSelectedCourtLevel('appeal'); doSearch(); } },
+  ];
 
   useEffect(() => {
     const saved = localStorage.getItem('auth_user');
@@ -216,6 +223,33 @@ export default function SearchPage() {
                 </span>
               )}
             </button>
+          </div>
+
+          {/* Quick Filters */}
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="text-xs text-slate-500 font-medium">بحث سريع:</span>
+            {quickFilters.map((qf, idx) => {
+              const Icon = qf.icon;
+              const isActive = 
+                (qf.label === 'تجاري' && selectedCourtType === 'commercial') ||
+                (qf.label === 'الرياض' && selectedCity === 'الرياض') ||
+                (qf.label === 'استئناف' && selectedCourtLevel === 'appeal');
+              
+              return (
+                <button
+                  key={idx}
+                  onClick={qf.action}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    isActive
+                      ? 'bg-primary-600 text-white shadow-sm'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  {qf.label}
+                </button>
+              );
+            })}
           </div>
 
           {/* Filters */}
@@ -423,17 +457,29 @@ function ResultCard({ result, query }: { result: SearchResult; query: string }) 
             )}
           </div>
 
-          {/* Case info */}
-          <div className="text-sm text-slate-600 mb-2" dir="rtl">
-            {result.case_number && (
-              <span>القضية: {result.case_number}/{result.case_year ?? ''}</span>
-            )}
-            {result.judgment_number && (
-              <span className="mr-3">الحكم: {result.judgment_number}</span>
-            )}
-            {result.judgment_date_hijri && (
-              <span className="mr-3 text-slate-400">التاريخ: {result.judgment_date_hijri}</span>
-            )}
+          {/* البيانات الأساسية */}
+          <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 mb-3" dir="rtl">
+            <h4 className="text-xs font-semibold text-slate-500 mb-2">البيانات الأساسية</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
+              {result.case_number && (
+                <div>
+                  <span className="text-slate-500">رقم القضية:</span>
+                  <span className="font-medium text-slate-700 mr-1">{result.case_number}/{result.case_year ?? ''}</span>
+                </div>
+              )}
+              {result.judgment_number && (
+                <div>
+                  <span className="text-slate-500">رقم الحكم:</span>
+                  <span className="font-medium text-slate-700 mr-1">{result.judgment_number}</span>
+                </div>
+              )}
+              {result.judgment_date_hijri && (
+                <div>
+                  <span className="text-slate-500">التاريخ:</span>
+                  <span className="font-medium text-slate-700 mr-1">{result.judgment_date_hijri}</span>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Snippet */}
