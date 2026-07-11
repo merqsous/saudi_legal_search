@@ -53,9 +53,11 @@ COPY saudi_legal_scraper/schema.sql ./schema.sql
 
 # Copy and build frontend
 COPY frontend/ ./frontend/
-# Remove stale Next.js build output so Railway always builds fresh from source
-RUN rm -rf frontend/.next
-RUN cd frontend && npm install && npm run build
+# Bust Docker layer cache on every deploy so frontend always rebuilds from source
+RUN date
+# Debug: confirm the new landing page source is present in the build context
+RUN head -20 frontend/app/page.tsx
+RUN cd frontend && rm -rf .next .next/cache && npm install && npm run build
 
 # Create directories
 RUN mkdir -p /app/logs /app/data

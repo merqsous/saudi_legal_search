@@ -1,4 +1,5 @@
 import json
+import os
 import re
 from fastapi import APIRouter, Query, HTTPException, Request
 from api.db import query_all, query_one
@@ -7,6 +8,17 @@ from api.config import EMBEDDING_MODEL
 from api.routes.auth import log_search, get_client_ip, get_country_from_ip
 
 router = APIRouter()
+
+
+@router.get("/version")
+def get_version():
+    """Return deployment version info for debugging cache/deploy issues."""
+    return {
+        "commit_sha": os.environ.get("RAILWAY_GIT_COMMIT_SHA", "unknown"),
+        "railway_service": os.environ.get("RAILWAY_SERVICE_NAME", "unknown"),
+        "deployment_id": os.environ.get("RAILWAY_DEPLOYMENT_ID", "unknown"),
+        "timestamp": os.environ.get("RAILWAY_DEPLOYMENT_CREATED_AT", "unknown"),
+    }
 
 
 def normalize_arabic(text: str) -> str:
