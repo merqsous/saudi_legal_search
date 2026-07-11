@@ -83,14 +83,14 @@ def clean_chunk_text(text: str) -> str:
     return cleaned
 
 
-def clean_all_judgments(dry_run: bool = True) -> dict:
-    """Clean footer text from all judgments and chunks."""
+def clean_all_judgments(dry_run: bool = True, batch_size: int = 500) -> dict:
+    """Clean footer text from all judgments and chunks with batched commits."""
     judgments = query_all("SELECT id, full_text FROM judgments WHERE full_text IS NOT NULL AND full_text != '';")
     results = {"judgments_updated": 0, "chunks_updated": 0, "samples": []}
 
     with get_db() as conn:
         cur = conn.cursor()
-        for j in judgments:
+        for i, j in enumerate(judgments):
             original = j["full_text"]
             cleaned = clean_judgment_text(original)
             if cleaned != original:
@@ -100,14 +100,22 @@ def clean_all_judgments(dry_run: bool = True) -> dict:
                 if len(results["samples"]) < 3:
                     results["samples"].append({"id": j["id"], "before": original[-200:], "after": cleaned[-200:]})
 
+            if not dry_run and (i + 1) % batch_size == 0:
+                conn.commit()
+                print(f"  Committed judgments batch {i + 1}/{len(judgments)}")
+
         chunks = query_all("SELECT id, chunk_text FROM judgment_chunks WHERE chunk_text IS NOT NULL AND chunk_text != '';")
-        for c in chunks:
+        for i, c in enumerate(chunks):
             original = c["chunk_text"]
             cleaned = clean_chunk_text(original)
             if cleaned != original:
                 if not dry_run:
                     cur.execute("UPDATE judgment_chunks SET chunk_text = %s WHERE id = %s;", (cleaned, c["id"]))
                 results["chunks_updated"] += 1
+
+            if not dry_run and (i + 1) % batch_size == 0:
+                conn.commit()
+                print(f"  Committed chunks batch {i + 1}/{len(chunks)}")
 
         if not dry_run:
             conn.commit()
