@@ -46,10 +46,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Install Playwright browsers (needed for scraper)
 RUN playwright install chromium
 
-# Copy and build frontend
+# Copy and build frontend (cache-bust: ARG changes each push to force rebuild)
+ARG CACHE_BUST=1
 COPY frontend/ ./frontend/
 RUN cd frontend && npm install && npm run build
-# Bust cache marker
 
 # Copy all application code
 COPY api/ ./api/
