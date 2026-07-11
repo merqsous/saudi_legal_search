@@ -51,8 +51,10 @@ COPY api/ ./api/
 COPY scripts/ ./scripts/
 COPY saudi_legal_scraper/schema.sql ./schema.sql
 
-# Copy and build frontend (reordered to bust Docker layer cache)
+# Copy and build frontend
 COPY frontend/ ./frontend/
+# Remove stale Next.js build output so Railway always builds fresh from source
+RUN rm -rf frontend/.next
 RUN cd frontend && npm install && npm run build
 
 # Create directories

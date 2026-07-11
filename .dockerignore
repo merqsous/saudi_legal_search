@@ -1,0 +1,17 @@
+# Ignore local build artifacts and dependencies so Docker builds fresh
+frontend/.next
+frontend/node_modules
+frontend/out
+frontend/dist
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.git
+.gitignore
+.env
+*.log
+logs/
+data/
+.DS_Store
+node_modules/
