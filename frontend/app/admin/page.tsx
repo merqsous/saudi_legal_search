@@ -9,6 +9,7 @@ interface AdminStats {
   total_cases: number;
   total_users: number;
   total_searches: number;
+  anonymous_searches: number;
   top_keywords: { query: string; cnt: number }[];
   top_court_types: { court_type: string; name_ar: string; cnt: number }[];
   users: {
@@ -31,6 +32,7 @@ interface AdminStats {
     results_count: number;
     ip_address: string | null;
     country: string | null;
+    is_anonymous: boolean;
   }[];
   searches_by_day: { day: string; cnt: number }[];
   recent_cases: {
@@ -137,7 +139,7 @@ export default function AdminPage() {
 
       <main className="max-w-6xl mx-auto px-4 py-8">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
           <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200">
             <div className="flex items-center gap-3 mb-2">
               <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary-50 text-primary-600">
@@ -176,6 +178,16 @@ export default function AdminPage() {
               <span className="text-sm text-slate-500">إجمالي عمليات البحث</span>
             </div>
             <p className="text-3xl font-bold text-slate-900">{stats.total_searches}</p>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-orange-50 text-orange-600">
+                <Search className="w-5 h-5" />
+              </div>
+              <span className="text-sm text-slate-500">بحث بدون تسجيل</span>
+            </div>
+            <p className="text-3xl font-bold text-slate-900">{stats.anonymous_searches}</p>
           </div>
         </div>
 
@@ -284,7 +296,13 @@ export default function AdminPage() {
                   <tr key={i} className="border-b border-slate-100 last:border-0">
                     <td className="py-3 px-2 text-slate-700" dir="rtl">{s.query}</td>
                     <td className="py-3 px-2 text-slate-600" dir="rtl">
-                      {s.first_name ? `${s.first_name} ${s.last_name}` : s.phone}
+                      {s.is_anonymous ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-orange-50 text-orange-700">
+                          زائر
+                        </span>
+                      ) : (
+                        s.first_name ? `${s.first_name} ${s.last_name}` : s.phone
+                      )}
                     </td>
                     <td className="py-3 px-2 text-slate-500" dir="ltr">{s.ip_address || '-'}</td>
                     <td className="py-3 px-2 text-slate-500">{s.country || '-'}</td>

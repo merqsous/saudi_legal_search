@@ -160,12 +160,14 @@ def search(
     effective_limit = 3 if anonymous else limit
     result = _do_search(q, court_type, city, year, court_level, section, effective_limit, offset)
 
-    # Log the search only for authenticated users
+    # Log the search with IP for both authenticated and anonymous users
     phone = request.headers.get("X-User-Phone", "")
-    if phone and not anonymous:
-        ip = get_client_ip(request)
-        country = get_country_from_ip(ip)
-        log_search(phone, q, court_type, city, year, court_level, result.get("total", 0), ip, country)
+    ip = get_client_ip(request)
+    country = get_country_from_ip(ip)
+    if anonymous or not phone:
+        log_search("", q, court_type, city, year, court_level, result.get("total", 0), ip, country, is_anonymous=True)
+    else:
+        log_search(phone, q, court_type, city, year, court_level, result.get("total", 0), ip, country, is_anonymous=False)
 
     return result
 

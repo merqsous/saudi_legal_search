@@ -106,6 +106,7 @@ def init_auth_tables():
         try:
             cur.execute("ALTER TABLE search_logs ADD COLUMN IF NOT EXISTS ip_address VARCHAR(45)")
             cur.execute("ALTER TABLE search_logs ADD COLUMN IF NOT EXISTS country VARCHAR(100)")
+            cur.execute("ALTER TABLE search_logs ADD COLUMN IF NOT EXISTS is_anonymous BOOLEAN DEFAULT FALSE")
         except Exception:
             pass
         # Create persistent sessions table (survives server restarts)
@@ -233,17 +234,17 @@ def check_user(req: LoginRequest):
     return {"is_new": user is None, "user": user}
 
 
-def log_search(phone: str, query: str, court_type: str = None, city: str = None, year: str = None, court_level: str = None, results_count: int = 0, ip_address: str = None, country: str = None):
+def log_search(phone: str, query: str, court_type: str = None, city: str = None, year: str = None, court_level: str = None, results_count: int = 0, ip_address: str = None, country: str = None, is_anonymous: bool = False):
     """Log a search query for analytics."""
     try:
-        user = query_one("SELECT id FROM users WHERE phone = %s", [phone])
+        user = query_one("SELECT id FROM users WHERE phone = %s", [phone]) if phone and not is_anonymous else None
         user_id = user["id"] if user else None
         with get_db() as conn:
             cur = conn.cursor()
             cur.execute(
-                """INSERT INTO search_logs (user_id, phone, query, court_type, city, year, court_level, results_count, ip_address, country)
-                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
-                (user_id, phone, query, court_type, city, year, court_level, results_count, ip_address, country),
+                """INSERT INTO search_logs (user_id, phone, query, court_type, city, year, court_level, results_count, ip_address, country, is_anonymous)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                (user_id, phone or ("anonymous" if is_anonymous else None), query, court_type, city, year, court_level, results_count, ip_address, country, is_anonymous),
             )
             cur.close()
     except Exception as e:
@@ -277,6 +278,7 @@ def admin_stats(authorization: str = Header(None)):
     total_cases = safe_query_one("SELECT COUNT(*) as cnt FROM cases")["cnt"]
     total_users = safe_query_one("SELECT COUNT(*) as cnt FROM users")["cnt"]
     total_searches = safe_query_one("SELECT COUNT(*) as cnt FROM search_logs")["cnt"]
+    anonymous_searches = safe_query_one("SELECT COUNT(*) as cnt FROM search_logs WHERE is_anonymous = TRUE")["cnt"]
 
     top_keywords = safe_query_all(
         """SELECT query, COUNT(*) as cnt FROM search_logs
@@ -303,7 +305,7 @@ def admin_stats(authorization: str = Header(None)):
     )
 
     recent_searches = safe_query_all(
-        """SELECT sl.query, sl.phone, u.first_name, u.last_name, sl.created_at, sl.results_count, sl.ip_address, sl.country
+        """SELECT sl.query, sl.phone, u.first_name, u.last_name, sl.created_at, sl.results_count, sl.ip_address, sl.country, sl.is_anonymous
            FROM search_logs sl
            LEFT JOIN users u ON u.id = sl.user_id
            ORDER BY sl.created_at DESC LIMIT 50"""
@@ -332,6 +334,7 @@ def admin_stats(authorization: str = Header(None)):
         "total_cases": total_cases,
         "total_users": total_users,
         "total_searches": total_searches,
+        "anonymous_searches": anonymous_searches,
         "top_keywords": top_keywords,
         "top_court_types": top_court_types,
         "users": users_with_searches,
