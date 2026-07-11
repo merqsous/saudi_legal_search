@@ -1,0 +1,29 @@
+=== Cleaning judgment footers (APPLYING CHANGES) ===
+
+  Committed judgments batch 500/27534
+  Committed judgments batch 1000/27534
+  Committed judgments batch 1500/27534
+  Committed judgments batch 2000/27534
+  Committed judgments batch 2500/27534
+  Committed judgments batch 3000/27534
+  Committed judgments batch 3500/27534
+  Committed judgments batch 4000/27534
+  Committed judgments batch 4500/27534
+  Committed judgments batch 5000/27534
+  Committed judgments batch 5500/27534
+  Committed judgments batch 6000/27534
+  Committed judgments batch 6500/27534
+  Committed judgments batch 7000/27534
+  Committed judgments batch 7500/27534
+  Committed judgments batch 8000/27534
+  Committed judgments batch 8500/27534
+Traceback (most recent call last):
+  File "/Users/moaztalal/code/saudi_legal_search/cleanup_judgment_footers.py", line 132, in <module>
+    results = clean_all_judgments(dry_run=dry_run)
+  File "/Users/moaztalal/code/saudi_legal_search/cleanup_judgment_footers.py", line 98, in clean_all_judgments
+    cur.execute("UPDATE judgments SET full_text = %s WHERE id = %s;", (cleaned, j["id"]))
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.OperationalError: could not receive data from server: Operation timed out
+SSL SYSCALL error: Operation timed out
+
+CLEANUP_DONE

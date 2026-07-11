@@ -1,5 +1,7 @@
 """Clean portal footer and junk text from judgment content."""
 import re
+import time
+from psycopg2.extras import execute_values
 from api.db import query_all, get_db
 
 
@@ -83,43 +85,91 @@ def clean_chunk_text(text: str) -> str:
     return cleaned
 
 
-def clean_all_judgments(dry_run: bool = True, batch_size: int = 500) -> dict:
-    """Clean footer text from all judgments and chunks with batched commits."""
-    judgments = query_all("SELECT id, full_text FROM judgments WHERE full_text IS NOT NULL AND full_text != '';")
-    results = {"judgments_updated": 0, "chunks_updated": 0, "samples": []}
+def update_batch(table: str, columns: tuple, rows: list, dry_run: bool) -> int:
+    """Update a small batch of rows using a fresh short-lived connection."""
+    if not rows or dry_run:
+        return len(rows)
 
+    id_col, text_col = columns
+    update_sql = (
+        f"UPDATE {table} AS t SET {text_col} = v.{text_col} "
+        f"FROM (VALUES %s) AS v({id_col}, {text_col}) "
+        f"WHERE t.{id_col} = v.{id_col};"
+    )
+
+    # Use a new connection for each batch so the proxy doesn't kill a long-lived one
     with get_db() as conn:
         cur = conn.cursor()
-        for i, j in enumerate(judgments):
+        execute_values(cur, update_sql, rows, template="(%s, %s)")
+        updated = cur.rowcount
+        cur.close()
+    return updated
+
+
+def clean_all_judgments(dry_run: bool = True, fetch_size: int = 5000, update_size: int = 200) -> dict:
+    """Clean footer text from all judgments and chunks using paginated fetch and short-lived connections."""
+    results = {"judgments_updated": 0, "chunks_updated": 0, "samples": []}
+
+    # --- Clean judgments.full_text ---
+    print("Cleaning judgments.full_text...")
+    last_id = 0
+    total = 0
+    while True:
+        rows = query_all(
+            "SELECT id, full_text FROM judgments WHERE id > %s AND full_text IS NOT NULL AND full_text != '' ORDER BY id LIMIT %s;",
+            (last_id, fetch_size),
+        )
+        if not rows:
+            break
+
+        batch_rows = []
+        for j in rows:
             original = j["full_text"]
             cleaned = clean_judgment_text(original)
             if cleaned != original:
-                if not dry_run:
-                    cur.execute("UPDATE judgments SET full_text = %s WHERE id = %s;", (cleaned, j["id"]))
                 results["judgments_updated"] += 1
+                batch_rows.append((j["id"], cleaned))
                 if len(results["samples"]) < 3:
                     results["samples"].append({"id": j["id"], "before": original[-200:], "after": cleaned[-200:]})
 
-            if not dry_run and (i + 1) % batch_size == 0:
-                conn.commit()
-                print(f"  Committed judgments batch {i + 1}/{len(judgments)}")
+        if not dry_run:
+            # Process in small update-size batches to avoid large network queries
+            for i in range(0, len(batch_rows), update_size):
+                chunk = batch_rows[i : i + update_size]
+                update_batch("judgments", ("id", "full_text"), chunk, dry_run)
 
-        chunks = query_all("SELECT id, chunk_text FROM judgment_chunks WHERE chunk_text IS NOT NULL AND chunk_text != '';")
-        for i, c in enumerate(chunks):
+        total += len(rows)
+        last_id = rows[-1]["id"]
+        print(f"  Processed {total} judgments...")
+
+    # --- Clean judgment_chunks.chunk_text ---
+    print("Cleaning judgment_chunks.chunk_text...")
+    last_id = 0
+    total = 0
+    while True:
+        rows = query_all(
+            "SELECT id, chunk_text FROM judgment_chunks WHERE id > %s AND chunk_text IS NOT NULL AND chunk_text != '' ORDER BY id LIMIT %s;",
+            (last_id, fetch_size),
+        )
+        if not rows:
+            break
+
+        batch_rows = []
+        for c in rows:
             original = c["chunk_text"]
             cleaned = clean_chunk_text(original)
             if cleaned != original:
-                if not dry_run:
-                    cur.execute("UPDATE judgment_chunks SET chunk_text = %s WHERE id = %s;", (cleaned, c["id"]))
                 results["chunks_updated"] += 1
-
-            if not dry_run and (i + 1) % batch_size == 0:
-                conn.commit()
-                print(f"  Committed chunks batch {i + 1}/{len(chunks)}")
+                batch_rows.append((c["id"], cleaned))
 
         if not dry_run:
-            conn.commit()
-        cur.close()
+            for i in range(0, len(batch_rows), update_size):
+                chunk = batch_rows[i : i + update_size]
+                update_batch("judgment_chunks", ("id", "chunk_text"), chunk, dry_run)
+
+        total += len(rows)
+        last_id = rows[-1]["id"]
+        print(f"  Processed {total} chunks...")
 
     return results
 
@@ -129,9 +179,11 @@ if __name__ == "__main__":
     dry_run = not ("--apply" in sys.argv)
     mode = "DRY RUN" if dry_run else "APPLYING CHANGES"
     print(f"=== Cleaning judgment footers ({mode}) ===\n")
+    start = time.time()
     results = clean_all_judgments(dry_run=dry_run)
-    print(f"Judgments with footer removed: {results['judgments_updated']}")
+    print(f"\nJudgments with footer removed: {results['judgments_updated']}")
     print(f"Chunks with footer removed: {results['chunks_updated']}")
+    print(f"Elapsed: {time.time() - start:.1f}s")
     if results["samples"]:
         print("\n=== Sample cleanups ===")
         for s in results["samples"]:
