@@ -51,9 +51,9 @@ COPY api/ ./api/
 COPY scripts/ ./scripts/
 COPY saudi_legal_scraper/schema.sql ./schema.sql
 
-# Copy and build frontend (echo timestamp to bust Docker layer cache)
+# Copy and build frontend (reordered to bust Docker layer cache)
 COPY frontend/ ./frontend/
-RUN echo "Building frontend at $(date)" && cd frontend && npm install && npm run build
+RUN cd frontend && npm install && npm run build
 
 # Create directories
 RUN mkdir -p /app/logs /app/data
