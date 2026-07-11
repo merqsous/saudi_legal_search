@@ -70,6 +70,8 @@ export default function SearchPage() {
     { label: 'الرياض', icon: MapPin, action: () => { setSelectedCity('الرياض'); doSearch(); } },
     { label: 'المدينة المنورة', icon: MapPin, action: () => { setSelectedCity('المدينة المنورة'); doSearch(); } },
     { label: 'استئناف', icon: Gavel, action: () => { setSelectedCourtLevel('appeal'); doSearch(); } },
+    { label: 'المحكمة', icon: Scale, action: () => { setQuery('المحكمة'); doSearch(); } },
+    { label: 'المحكمة العليا', icon: Gavel, action: () => { setQuery('المحكمة العليا'); doSearch(); } },
     { label: 'الوقائع', icon: Scale, action: () => { setSelectedSection('الوقائع'); doSearch(); } },
   ];
 
@@ -241,6 +243,8 @@ export default function SearchPage() {
                 (qf.label === 'الرياض' && selectedCity === 'الرياض') ||
                 (qf.label === 'المدينة المنورة' && selectedCity === 'المدينة المنورة') ||
                 (qf.label === 'استئناف' && selectedCourtLevel === 'appeal') ||
+                (qf.label === 'المحكمة' && query === 'المحكمة') ||
+                (qf.label === 'المحكمة العليا' && query === 'المحكمة العليا') ||
                 (qf.label === 'الوقائع' && selectedSection === 'الوقائع');
               
               return (
