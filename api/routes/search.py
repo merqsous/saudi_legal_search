@@ -44,8 +44,8 @@ def detect_metadata_filters(q: str) -> dict:
 
 def expand_query(query: str) -> str:
     """Expand short queries with legal context for better semantic matching."""
-    query = normalize_arabic(query)
-    
+    normalized = normalize_arabic(query)
+
     legal_keywords = {
         'محكمه': 'محكمه حكم قضائي',
         'محامي': 'محامي اتعاب محاماه الدعوي',
@@ -70,10 +70,11 @@ def expand_query(query: str) -> str:
     }
     
     words = query.split()
+    normalized_words = normalized.split()
     expanded_words = list(words)
-    for word in words:
+    for norm_word in normalized_words:
         for key, expansion in legal_keywords.items():
-            if key in word and expansion not in expanded_words:
+            if key in norm_word and expansion not in expanded_words:
                 expanded_words.append(expansion)
                 break
     
@@ -201,7 +202,7 @@ def _do_search(q, court_type, city, year, court_level, limit, offset):
             LEFT JOIN court_levels cl ON j.court_level_id = cl.id
             WHERE jc.embedding IS NOT NULL
               AND length(jc.chunk_text) >= 100
-              AND jc.embedding <=> %s::vector < 0.55
+              AND jc.embedding <=> %s::vector < 0.60
               {where_clause}
         """
 
@@ -243,7 +244,7 @@ def _do_search(q, court_type, city, year, court_level, limit, offset):
                 LEFT JOIN court_levels cl ON j.court_level_id = cl.id
                 WHERE jc.embedding IS NOT NULL
                   AND length(jc.chunk_text) >= 100
-                  AND jc.embedding <=> %s::vector < 0.55
+                  AND jc.embedding <=> %s::vector < 0.60
                   {where_clause}
                 ORDER BY j.id, jc.embedding <=> %s::vector
             ) AS best_chunks
