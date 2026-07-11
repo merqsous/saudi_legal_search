@@ -63,6 +63,11 @@ export default function SearchPage() {
   const [aiAnswer, setAiAnswer] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [anonymousSearchCount, setAnonymousSearchCount] = useState(0);
+  const isAnonymous = !authUser;
+  const hasReachedAnonymousLimit = isAnonymous && anonymousSearchCount >= 3;
+
+  const FREE_PREVIEW_LIMIT = 3;
 
   // Quick filter presets
   const quickFilters = [
@@ -78,9 +83,10 @@ export default function SearchPage() {
     const saved = localStorage.getItem('auth_user');
     if (saved) {
       try { setAuthUser(JSON.parse(saved)); } catch {}
-    } else {
-      router.push('/');
-      return;
+    }
+    const anonCount = localStorage.getItem('anonymous_search_count');
+    if (anonCount) {
+      try { setAnonymousSearchCount(parseInt(anonCount, 10) || 0); } catch {}
     }
     fetch('/api/filters')
       .then((r) => r.json())
@@ -92,6 +98,12 @@ export default function SearchPage() {
     const hasQuery = query.trim().length > 0;
     const hasFilters = selectedCourtType || selectedCity || selectedYear || selectedCourtLevel || selectedSection;
     if (!hasQuery && !hasFilters) return;
+
+    if (hasReachedAnonymousLimit) {
+      setError('لقد استنفدت عمليات البحث المجانية. يرجى تسجيل الدخول للمتابعة.');
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setHasSearched(true);
@@ -102,6 +114,7 @@ export default function SearchPage() {
     if (selectedYear) params.set('year', selectedYear);
     if (selectedCourtLevel) params.set('court_level', selectedCourtLevel);
     if (selectedSection) params.set('section', selectedSection);
+    if (isAnonymous) params.set('anonymous', 'true');
 
     try {
       const res = await fetch(`/api/search?${params.toString()}`, {
@@ -113,19 +126,27 @@ export default function SearchPage() {
       setTotal(data.total);
       setAiAnswer(null);
 
-      setAiLoading(true);
-      fetch(`/api/ai-answer?${new URLSearchParams({ q: query, limit: '20' })}`)
-        .then((r) => r.json())
-        .then((d) => setAiAnswer(d.ai_answer ?? null))
-        .catch(() => setAiAnswer(null))
-        .finally(() => setAiLoading(false));
+      if (isAnonymous) {
+        const newCount = anonymousSearchCount + 1;
+        setAnonymousSearchCount(newCount);
+        localStorage.setItem('anonymous_search_count', String(newCount));
+      }
+
+      if (!isAnonymous) {
+        setAiLoading(true);
+        fetch(`/api/ai-answer?${new URLSearchParams({ q: query, limit: '20' })}`)
+          .then((r) => r.json())
+          .then((d) => setAiAnswer(d.ai_answer ?? null))
+          .catch(() => setAiAnswer(null))
+          .finally(() => setAiLoading(false));
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Search failed');
       setResults([]);
     } finally {
       setLoading(false);
     }
-  }, [query, selectedCourtType, selectedCity, selectedYear, selectedCourtLevel]);
+  }, [query, selectedCourtType, selectedCity, selectedYear, selectedCourtLevel, selectedSection, isAnonymous, anonymousSearchCount, hasReachedAnonymousLimit, authUser?.phone]);
 
   const formatAiAnswer = (text: string) => {
     const parts = text.split(/(\(\d+\))/g);
@@ -186,6 +207,27 @@ export default function SearchPage() {
               <span className="text-sm text-slate-600">{authUser.first_name} {authUser.last_name}</span>
               <button onClick={handleLogout} className="text-slate-400 hover:text-slate-600">
                 <LogOut className="w-5 h-5" />
+              </button>
+            </div>
+          )}
+          {!authUser && (
+            <div className="flex items-center gap-2">
+              {anonymousSearchCount > 0 && (
+                <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-md">
+                  {Math.max(0, FREE_PREVIEW_LIMIT - anonymousSearchCount)} بحث مجاني متبقي
+                </span>
+              )}
+              <button
+                onClick={() => router.push('/')}
+                className="px-4 py-2 text-sm font-medium text-primary-600 hover:text-primary-700"
+              >
+                تسجيل الدخول
+              </button>
+              <button
+                onClick={() => router.push('/?signup=1')}
+                className="px-4 py-2 text-sm font-medium bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+              >
+                إنشاء حساب
               </button>
             </div>
           )}
@@ -364,6 +406,34 @@ export default function SearchPage() {
                 <ResultCard key={`${result.judgment_id}-${idx}`} result={result} query={query} />
               ))}
             </div>
+            {isAnonymous && (
+              <div className="mt-6 bg-gradient-to-l from-primary-50 to-white border border-primary-200 rounded-xl p-6 text-center">
+                <h3 className="text-lg font-bold text-slate-800 mb-2">
+                  {hasReachedAnonymousLimit
+                    ? 'لقد استنفدت عمليات البحث المجانية'
+                    : 'شاهد جميع النتائج'}
+                </h3>
+                <p className="text-sm text-slate-600 mb-4">
+                  {hasReachedAnonymousLimit
+                    ? 'سجّل الدخول مجاناً للاستمرار في البحث والوصول لكل الأحكام.'
+                    : `هذه نتيجة معاينة فقط. سجّل الدخول للوصول إلى ${total} نتيجة.`}
+                </p>
+                <div className="flex items-center justify-center gap-3">
+                  <button
+                    onClick={() => router.push('/')}
+                    className="px-5 py-2.5 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors"
+                  >
+                    تسجيل الدخول
+                  </button>
+                  <button
+                    onClick={() => router.push('/?signup=1')}
+                    className="px-5 py-2.5 border border-primary-600 text-primary-600 rounded-lg font-medium hover:bg-primary-50 transition-colors"
+                  >
+                    إنشاء حساب مجاني
+                  </button>
+                </div>
+              </div>
+            )}
           </>
         )}
       </main>

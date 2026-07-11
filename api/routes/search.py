@@ -140,14 +140,17 @@ def search(
     year: str | None = Query(None),
     court_level: str | None = Query(None),
     section: str | None = Query(None),
+    anonymous: bool = Query(False, description="Anonymous preview mode, limits results"),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
 ):
-    result = _do_search(q, court_type, city, year, court_level, section, limit, offset)
+    # Anonymous users are limited to a small preview of results
+    effective_limit = 3 if anonymous else limit
+    result = _do_search(q, court_type, city, year, court_level, section, effective_limit, offset)
 
-    # Log the search
+    # Log the search only for authenticated users
     phone = request.headers.get("X-User-Phone", "")
-    if phone:
+    if phone and not anonymous:
         ip = get_client_ip(request)
         country = get_country_from_ip(ip)
         log_search(phone, q, court_type, city, year, court_level, result.get("total", 0), ip, country)
