@@ -180,7 +180,7 @@ export default function SearchPage() {
 
       <main className="max-w-5xl mx-auto px-4 py-8">
         {/* Search bar */}
-        <div className="relative">
+        <div className="relative mb-6">
           <div className="flex gap-2">
             <div className="relative flex-1">
               <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -194,6 +194,13 @@ export default function SearchPage() {
                 dir="rtl"
               />
             </div>
+            <button
+              onClick={() => doSearch()}
+              disabled={loading}
+              className="px-4 py-3.5 rounded-xl bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50 transition-all flex items-center"
+            >
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
+            </button>
             <button
               onClick={() => setShowFilters(!showFilters)}
               className={`px-4 py-3.5 rounded-xl border transition-all flex items-center gap-2 ${
@@ -290,7 +297,7 @@ export default function SearchPage() {
         {!loading && results.length > 0 && (
           <>
             {(aiAnswer || aiLoading) && (
-              <div className="mb-4 bg-gradient-to-l from-primary-50 to-white border border-primary-200 rounded-xl p-5">
+              <div className="mb-6 bg-gradient-to-l from-primary-50 to-white border border-primary-200 rounded-xl p-5 shadow-sm">
                 <div className="flex items-center gap-2 mb-3">
                   <Sparkles className="w-5 h-5 text-primary-600" />
                   <h2 className="text-sm font-bold text-slate-800">إجابة قانونية مساعدة</h2>
