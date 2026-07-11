@@ -19,6 +19,11 @@ def normalize_arabic(text: str) -> str:
     return text
 
 
+def normalize_hamzas(text: str) -> str:
+    """Light normalization: only standardize hamza variants for embedding consistency."""
+    return text.replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا')
+
+
 # Metadata keyword mapping: Arabic terms -> filter codes
 METADATA_KEYWORDS = {
     'تجاري': {'court_type': 'commercial'},
@@ -67,6 +72,8 @@ def expand_query(query: str) -> str:
         'نفقه': 'نفقه زوجه اولاد',
         'حضانه': 'حضانه اولاد ولي',
         'جنائي': 'جنائي قضايا جزائيه جريمه عقوبه',
+        'لامر': 'لأمر',  # Hamza variant normalization
+        'سند': 'سند لأمر',  # Common legal term
     }
     
     words = query.split()
