@@ -646,3 +646,51 @@ def get_stats():
         "by_court_type": by_court_type,
         "by_court_level": by_court_level,
     }
+
+
+@router.get("/judgments/ids")
+def get_judgment_ids(limit: int = Query(50000, ge=1, le=100000)):
+    """Return all judgment IDs for sitemap generation."""
+    ids = query_all(
+        "SELECT id FROM judgments ORDER BY id DESC LIMIT %s;",
+        [limit],
+    )
+    return {"ids": [r["id"] for r in ids]}
+
+
+@router.get("/judgment/{judgment_id}")
+def get_judgment_detail(judgment_id: int):
+    """Return public details for a single judgment (used by SEO detail pages)."""
+    judgment = query_one(
+        """
+        SELECT j.id, j.judgment_number, j.judgment_year, j.judgment_type,
+               j.judgment_date_hijri, j.details_url, j.judgment_text,
+               c.case_number, c.case_year,
+               ct.name_ar AS court_type, ct.code AS court_type_code,
+               l.city_ar AS city,
+               cl.name_ar AS court_level, cl.code AS court_level_code,
+               js.section_name_ar AS section_name
+        FROM judgments j
+        LEFT JOIN cases c ON j.case_id = c.id
+        LEFT JOIN court_types ct ON c.court_type_id = ct.id
+        LEFT JOIN locations l ON c.location_id = l.id
+        LEFT JOIN court_levels cl ON j.court_level_id = cl.id
+        LEFT JOIN judgment_sections js ON j.section_id = js.id
+        WHERE j.id = %s;
+        """,
+        [judgment_id],
+    )
+    if not judgment:
+        raise HTTPException(status_code=404, detail="Judgment not found")
+
+    # Get related chunks (snippets) for the judgment content
+    chunks = query_all(
+        """SELECT id, chunk_text, chunk_index FROM judgment_chunks
+           WHERE judgment_id = %s ORDER BY chunk_index LIMIT 100;""",
+        [judgment_id],
+    )
+
+    return {
+        "judgment": dict(judgment),
+        "chunks": [dict(c) for c in chunks],
+    }

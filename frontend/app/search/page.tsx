@@ -1,8 +1,5 @@
 'use client';
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, Loader2, ExternalLink, Scale, Filter, X, ChevronDown, Sparkles, LogOut, LayoutDashboard, CheckCircle, MapPin, Building2, Gavel } from 'lucide-react';
@@ -513,7 +510,10 @@ function ResultCard({ result, query }: { result: SearchResult; query: string }) 
   };
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-shadow">
+    <a
+      href={`/judgment/${result.judgment_id}`}
+      className="block bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-shadow"
+    >
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           {/* Badges */}
@@ -609,6 +609,6 @@ function ResultCard({ result, query }: { result: SearchResult; query: string }) 
           </div>
         )}
       </div>
-    </div>
+    </a>
   );
 }
