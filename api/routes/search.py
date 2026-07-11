@@ -139,10 +139,11 @@ def search(
     city: str | None = Query(None),
     year: str | None = Query(None),
     court_level: str | None = Query(None),
+    section: str | None = Query(None),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
 ):
-    result = _do_search(q, court_type, city, year, court_level, limit, offset)
+    result = _do_search(q, court_type, city, year, court_level, section, limit, offset)
 
     # Log the search
     phone = request.headers.get("X-User-Phone", "")
@@ -154,7 +155,7 @@ def search(
     return result
 
 
-def _do_search(q, court_type, city, year, court_level, limit, offset):
+def _do_search(q, court_type, city, year, court_level, section, limit, offset):
     has_query = q and q.strip()
 
     # Detect metadata keywords in query (e.g. "تجاري" -> court_type filter)
@@ -184,6 +185,9 @@ def _do_search(q, court_type, city, year, court_level, limit, offset):
     if effective_court_level:
         filters.append("cl.code = %s")
         params.append(effective_court_level)
+    if section:
+        filters.append("js.section_name_ar = %s")
+        params.append(section)
 
     where_clause = ""
     if filters:
@@ -204,6 +208,7 @@ def _do_search(q, court_type, city, year, court_level, limit, offset):
             FROM judgment_chunks jc
             JOIN judgments j ON jc.judgment_id = j.id
             JOIN cases c ON j.case_id = c.id
+            LEFT JOIN judgment_sections js ON jc.section_id = js.id
             LEFT JOIN court_types ct ON c.court_type_id = ct.id
             LEFT JOIN locations l ON c.location_id = l.id
             LEFT JOIN court_levels cl ON j.court_level_id = cl.id
@@ -273,6 +278,7 @@ def _do_search(q, court_type, city, year, court_level, limit, offset):
             FROM judgment_chunks jc
             JOIN judgments j ON jc.judgment_id = j.id
             JOIN cases c ON j.case_id = c.id
+            LEFT JOIN judgment_sections js ON jc.section_id = js.id
             LEFT JOIN court_types ct ON c.court_type_id = ct.id
             LEFT JOIN locations l ON c.location_id = l.id
             LEFT JOIN court_levels cl ON j.court_level_id = cl.id
@@ -339,6 +345,7 @@ def _do_search(q, court_type, city, year, court_level, limit, offset):
             FROM judgment_chunks jc
             JOIN judgments j ON jc.judgment_id = j.id
             JOIN cases c ON j.case_id = c.id
+            LEFT JOIN judgment_sections js ON jc.section_id = js.id
             LEFT JOIN court_types ct ON c.court_type_id = ct.id
             LEFT JOIN locations l ON c.location_id = l.id
             LEFT JOIN court_levels cl ON j.court_level_id = cl.id

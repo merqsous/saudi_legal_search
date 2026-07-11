@@ -59,6 +59,7 @@ export default function SearchPage() {
   const [selectedCity, setSelectedCity] = useState('');
   const [selectedYear, setSelectedYear] = useState('');
   const [selectedCourtLevel, setSelectedCourtLevel] = useState('');
+  const [selectedSection, setSelectedSection] = useState('');
   const [aiAnswer, setAiAnswer] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
@@ -67,7 +68,9 @@ export default function SearchPage() {
   const quickFilters = [
     { label: 'تجاري', icon: Building2, action: () => { setSelectedCourtType('commercial'); doSearch(); } },
     { label: 'الرياض', icon: MapPin, action: () => { setSelectedCity('الرياض'); doSearch(); } },
+    { label: 'المدينة المنورة', icon: MapPin, action: () => { setSelectedCity('المدينة المنورة'); doSearch(); } },
     { label: 'استئناف', icon: Gavel, action: () => { setSelectedCourtLevel('appeal'); doSearch(); } },
+    { label: 'الوقائع', icon: Scale, action: () => { setSelectedSection('الوقائع'); doSearch(); } },
   ];
 
   useEffect(() => {
@@ -86,7 +89,7 @@ export default function SearchPage() {
 
   const doSearch = useCallback(async () => {
     const hasQuery = query.trim().length > 0;
-    const hasFilters = selectedCourtType || selectedCity || selectedYear || selectedCourtLevel;
+    const hasFilters = selectedCourtType || selectedCity || selectedYear || selectedCourtLevel || selectedSection;
     if (!hasQuery && !hasFilters) return;
     setLoading(true);
     setError(null);
@@ -97,6 +100,7 @@ export default function SearchPage() {
     if (selectedCity) params.set('city', selectedCity);
     if (selectedYear) params.set('year', selectedYear);
     if (selectedCourtLevel) params.set('court_level', selectedCourtLevel);
+    if (selectedSection) params.set('section', selectedSection);
 
     try {
       const res = await fetch(`/api/search?${params.toString()}`, {
@@ -147,13 +151,15 @@ export default function SearchPage() {
     setSelectedCity('');
     setSelectedYear('');
     setSelectedCourtLevel('');
+    setSelectedSection('');
   };
 
   const activeFilterCount =
     (selectedCourtType ? 1 : 0) +
     (selectedCity ? 1 : 0) +
     (selectedYear ? 1 : 0) +
-    (selectedCourtLevel ? 1 : 0);
+    (selectedCourtLevel ? 1 : 0) +
+    (selectedSection ? 1 : 0);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
@@ -233,7 +239,9 @@ export default function SearchPage() {
               const isActive = 
                 (qf.label === 'تجاري' && selectedCourtType === 'commercial') ||
                 (qf.label === 'الرياض' && selectedCity === 'الرياض') ||
-                (qf.label === 'استئناف' && selectedCourtLevel === 'appeal');
+                (qf.label === 'المدينة المنورة' && selectedCity === 'المدينة المنورة') ||
+                (qf.label === 'استئناف' && selectedCourtLevel === 'appeal') ||
+                (qf.label === 'الوقائع' && selectedSection === 'الوقائع');
               
               return (
                 <button
