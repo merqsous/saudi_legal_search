@@ -75,13 +75,18 @@ def clean_chunk_text(text: str) -> str:
         idx = text.find(marker)
         if idx != -1:
             return text[:idx].rstrip()
-    # If no full marker, remove trailing footer phrases one by one from the end
+    # If no full marker, keep removing trailing footer phrases until none are left
     cleaned = text
-    for phrase in FOOTER_PHRASES:
-        if cleaned.endswith(phrase):
-            cleaned = cleaned[: -len(phrase)].rstrip()
-            # Remove trailing punctuation
-            cleaned = re.sub(r'[\s\.،؛]+$', '', cleaned)
+    changed = True
+    while changed:
+        changed = False
+        for phrase in FOOTER_PHRASES:
+            if cleaned.endswith(phrase):
+                cleaned = cleaned[: -len(phrase)].rstrip()
+                # Remove trailing punctuation
+                cleaned = re.sub(r'[\s\.،؛]+$', '', cleaned)
+                changed = True
+                break
     return cleaned
 
 
