@@ -222,7 +222,8 @@ def admin_stats(authorization: str = Header(None)):
             print(f"[ADMIN_STATS] query_all error: {e}")
             return []
 
-    total_cases = safe_query_one("SELECT COUNT(*) as cnt FROM judgments")["cnt"]
+    total_judgments = safe_query_one("SELECT COUNT(*) as cnt FROM judgments")["cnt"]
+    total_cases = safe_query_one("SELECT COUNT(*) as cnt FROM cases")["cnt"]
     total_users = safe_query_one("SELECT COUNT(*) as cnt FROM users")["cnt"]
     total_searches = safe_query_one("SELECT COUNT(*) as cnt FROM search_logs")["cnt"]
 
@@ -276,6 +277,7 @@ def admin_stats(authorization: str = Header(None)):
     )
 
     return {
+        "total_judgments": total_judgments,
         "total_cases": total_cases,
         "total_users": total_users,
         "total_searches": total_searches,

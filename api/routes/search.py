@@ -601,9 +601,6 @@ def get_stats():
     embedded_chunks = query_one(
         "SELECT COUNT(*) AS count FROM judgment_chunks WHERE embedding IS NOT NULL;"
     )
-    appeals_linked = query_one(
-        "SELECT COUNT(*) AS count FROM judgments WHERE parent_judgment_id IS NOT NULL;"
-    )
 
     by_court_type = query_all(
         """
@@ -631,7 +628,6 @@ def get_stats():
         "total_cases": total_cases["count"] if total_cases else 0,
         "total_chunks": total_chunks["count"] if total_chunks else 0,
         "embedded_chunks": embedded_chunks["count"] if embedded_chunks else 0,
-        "appeals_linked": appeals_linked["count"] if appeals_linked else 0,
         "by_court_type": by_court_type,
         "by_court_level": by_court_level,
     }
