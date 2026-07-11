@@ -38,7 +38,7 @@ saudi_legal_scraper/data/weekly_failed_*.json
 logs/
 
 # DB exports
-data/db_export.sql
+data/
 
 # WAHA
 waha-service/.waha_session/
