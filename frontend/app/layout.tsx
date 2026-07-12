@@ -37,7 +37,10 @@ export const metadata: Metadata = {
     type: 'website',
   },
   robots: 'index, follow',
-  other: { 'google': 'notranslate' },
+  other: {
+    'google': 'notranslate',
+    'google-site-verification': 'google-site-verification=googled0f7de8c3eeeeec9.html',
+  },
   alternates: {
     canonical: 'https://albaheth.app',
   },
