@@ -55,6 +55,8 @@ COPY saudi_legal_scraper/schema.sql ./schema.sql
 COPY frontend/ ./frontend/
 # Bust Docker layer cache on every deploy so frontend always rebuilds from source
 RUN date
+# Force rebuild for Google Search Console verification deployment
+RUN echo "deploy 9baa79d"
 # Debug: confirm the new landing page source is present in the build context
 RUN head -20 frontend/app/page.tsx
 RUN cd frontend && rm -rf .next .next/cache && npm install && npm run build
