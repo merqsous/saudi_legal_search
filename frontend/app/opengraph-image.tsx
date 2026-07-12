@@ -47,6 +47,22 @@ export default function OGImage() {
         <div style={{ fontSize: 20, color: '#0d9488', marginTop: 16 }}>
           albaheth.app
         </div>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginTop: 32,
+            padding: '12px 40px',
+            borderRadius: 12,
+            background: '#0d9488',
+            fontSize: 24,
+            fontWeight: 600,
+            color: 'white',
+          }}
+        >
+          Search Now →
+        </div>
       </div>
     ),
     size
