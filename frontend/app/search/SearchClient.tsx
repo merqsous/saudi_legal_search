@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, Loader2, ExternalLink, Scale, Filter, X, ChevronDown, Sparkles, LogOut, LayoutDashboard, CheckCircle, MapPin, Building2, Gavel } from 'lucide-react';
+import { judgmentUrl } from '@/lib/slug';
 
 interface AuthUser {
   id: number;
@@ -511,7 +512,7 @@ function ResultCard({ result, query }: { result: SearchResult; query: string }) 
 
   return (
     <a
-      href={`/judgment/${result.judgment_id}`}
+      href={judgmentUrl(result.judgment_id, { court_type: result.court_type, court_level: result.court_level, city: result.city, judgment_number: result.judgment_number })}
       className="block bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-shadow"
     >
       <div className="flex items-start justify-between gap-4">

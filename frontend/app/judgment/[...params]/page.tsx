@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { judgmentSlug } from '@/lib/slug';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -60,8 +61,9 @@ async function getRelatedJudgments(id: string): Promise<RelatedJudgment[]> {
   }
 }
 
-export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
-  const data = await getJudgment(params.id);
+export async function generateMetadata({ params }: { params: { params: string[] } }): Promise<Metadata> {
+  const id = params.params[0];
+  const data = await getJudgment(id);
   if (!data) {
     return {
       title: 'الحكم غير موجود | الباحث',
@@ -69,51 +71,46 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
     };
   }
   const j = data.judgment;
+  const slug = judgmentSlug(j);
+  const canonicalUrl = `https://albaheth.app/judgment/${id}${slug ? `/${slug}` : ''}`;
   const titleParts = [
     `حكم ${j.court_type || 'قضائي'}`,
     j.court_level ? `محكمة ${j.court_level}` : '',
     j.city ? `في ${j.city}` : '',
-    j.judgment_number ? `رقم ${j.judgment_number}` : `رقم ${params.id}`,
+    j.judgment_number ? `رقم ${j.judgment_number}` : `رقم ${id}`,
   ].filter(Boolean);
   const title = `${titleParts.join(' ')} | الباحث`;
-  const description = `الحكم ${j.court_type || 'القضائي'} ${j.court_level ? `(${j.court_level})` : ''} ${j.city ? `في ${j.city}` : ''} رقم ${j.judgment_number || params.id}. اقرأ نص الحكم كاملاً على الباحث - محرك بحث الأحكام القضائية السعودية.`;
+  const description = `الحكم ${j.court_type || 'القضائي'} ${j.court_level ? `(${j.court_level})` : ''} ${j.city ? `في ${j.city}` : ''} رقم ${j.judgment_number || id}. اقرأ نص الحكم كاملاً على الباحث - محرك بحث الأحكام القضائية السعودية.`;
   return {
     title,
     description,
-    keywords: [
-      'حكم قضائي',
-      'أحكام سعودية',
-      j.court_type || '',
-      j.court_level || '',
-      j.city || '',
-      j.judgment_year || '',
-      'قانون سعودي',
-      'محكمة',
-    ].filter(Boolean),
     openGraph: {
       title,
       description,
-      url: `https://albaheth.app/judgment/${params.id}`,
+      url: canonicalUrl,
       siteName: 'الباحث',
       locale: 'ar_SA',
       type: 'article',
     },
     alternates: {
-      canonical: `https://albaheth.app/judgment/${params.id}`,
+      canonical: canonicalUrl,
     },
     robots: 'index, follow',
   };
 }
 
-export default async function JudgmentPage({ params }: { params: { id: string } }) {
-  const data = await getJudgment(params.id);
+export default async function JudgmentPage({ params }: { params: { params: string[] } }) {
+  const id = params.params[0];
+  const data = await getJudgment(id);
   if (!data) notFound();
 
   const j = data.judgment;
   const chunks = data.chunks;
-  const related = await getRelatedJudgments(params.id);
+  const related = await getRelatedJudgments(id);
 
   const fullText = j.full_text || chunks.map((c) => c.chunk_text).join('\n\n');
+  const slug = judgmentSlug(j);
+  const canonicalUrl = `https://albaheth.app/judgment/${id}${slug ? `/${slug}` : ''}`;
 
   // Breadcrumb items
   const breadcrumbs = [
@@ -121,7 +118,7 @@ export default async function JudgmentPage({ params }: { params: { id: string } 
     { name: 'بحث الأحكام', url: 'https://albaheth.app/search' },
   ];
   if (j.court_type) breadcrumbs.push({ name: j.court_type, url: 'https://albaheth.app/search' });
-  breadcrumbs.push({ name: `حكم رقم ${j.judgment_number || j.id}`, url: `https://albaheth.app/judgment/${params.id}` });
+  breadcrumbs.push({ name: `حكم رقم ${j.judgment_number || j.id}`, url: canonicalUrl });
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100" dir="rtl">
@@ -222,7 +219,7 @@ export default async function JudgmentPage({ params }: { params: { id: string } 
               <a
                 href={j.details_url}
                 target="_blank"
-                rel="noopener noreferrer"
+                rel="noopener noreferrer nofollow"
                 className="text-primary-600 hover:text-primary-700 text-sm font-medium"
               >
                 المصدر الأصلي
@@ -239,7 +236,7 @@ export default async function JudgmentPage({ params }: { params: { id: string } 
               {related.map((r) => (
                 <a
                   key={r.id}
-                  href={`/judgment/${r.id}`}
+                  href={`/judgment/${r.id}/${judgmentSlug(r)}`}
                   className="block bg-white rounded-xl border border-slate-200 p-4 hover:border-primary-300 hover:shadow-sm transition-all"
                 >
                   <div className="flex items-center gap-2 mb-2">
@@ -296,7 +293,7 @@ export default async function JudgmentPage({ params }: { params: { id: string } 
             '@type': 'LegalDocument',
             name: `حكم رقم ${j.judgment_number || j.id} ${j.court_type ? `- ${j.court_type}` : ''}`,
             description: `حكم قضائي سعودي ${j.court_type ? `(${j.court_type})` : ''} ${j.court_level ? `- ${j.court_level}` : ''} ${j.city ? `في ${j.city}` : ''}`,
-            url: `https://albaheth.app/judgment/${params.id}`,
+            url: canonicalUrl,
             datePublished: j.judgment_date_hijri || '',
             jurisdiction: {
               '@type': 'AdministrativeArea',

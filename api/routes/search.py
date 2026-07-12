@@ -510,10 +510,20 @@ def get_ai_answer(
 def get_judgment_ids(limit: int = Query(50000, ge=1, le=100000)):
     """Return all judgment IDs and scraped_at dates for sitemap generation."""
     rows = query_all(
-        "SELECT id, scraped_at FROM judgments ORDER BY id DESC LIMIT %s;",
+        """
+        SELECT j.id, j.scraped_at, j.judgment_number,
+               ct.name_ar AS court_type, cl.name_ar AS court_level,
+               l.city_ar AS city
+        FROM judgments j
+        LEFT JOIN cases c ON j.case_id = c.id
+        LEFT JOIN court_types ct ON c.court_type_id = ct.id
+        LEFT JOIN locations l ON c.location_id = l.id
+        LEFT JOIN court_levels cl ON j.court_level_id = cl.id
+        ORDER BY j.id DESC LIMIT %s;
+        """,
         [limit],
     )
-    return {"ids": [{"id": r["id"], "scraped_at": r["scraped_at"]} for r in rows]}
+    return {"ids": [dict(r) for r in rows]}
 
 
 @router.get("/judgments/{judgment_id}")
