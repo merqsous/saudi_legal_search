@@ -22,7 +22,7 @@ export default function LandingPage() {
             الباحث — محرك بحث الأحكام القضائية السعودية
           </h1>
           <p className="text-lg text-slate-600 mb-4 max-w-2xl mx-auto leading-relaxed">
-            ابحث في آلاف الأحكام القضائية السعودية من محاكم الدرجة الأولى ومحكمة الاستئناف. منصة قانونية متخصصة للمحامين والمستشارين والباحثين في القانون السعودي ونظام ناجز.
+            ابحث في آلاف الأحكام القضائية السعودية من محاكم الدرجة الأولى ومحكمة الاستئناف. منصة قانونية متخصصة للمحامين والمستشارين والباحثين في القانون السعودي.
           </p>
           <p className="text-base text-slate-500 mb-8 max-w-2xl mx-auto">
             تجربة مجانية تتيح لك 3 عمليات بحث بدون تسجيل. ابحث بالمعنى لا بالكلمة المفتاحية فقط.
@@ -71,7 +71,7 @@ export default function LandingPage() {
 
       <footer className="border-t border-slate-200 bg-white">
         <div className="max-w-5xl mx-auto px-4 py-6 text-center text-sm text-slate-500">
-          الباحث — محرك بحث ذكي في الأحكام القضائية السعودية | محاكم الدرجة الأولى والاستئناف | ناجز
+          الباحث — محرك بحث ذكي في الأحكام القضائية السعودية | محاكم الدرجة الأولى والاستئناف
           <div className="mt-2">
             <a href="mailto:albahethapp@gmail.com" className="text-primary-600 hover:text-primary-700">albahethapp@gmail.com</a>
           </div>

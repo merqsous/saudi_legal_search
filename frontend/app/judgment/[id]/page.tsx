@@ -58,7 +58,6 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
       j.court_type || '',
       j.court_level || '',
       j.city || '',
-      'ناجز',
       'قانون سعودي',
     ],
     openGraph: {
@@ -164,7 +163,7 @@ export default async function JudgmentPage({ params }: { params: { id: string } 
                 rel="noopener noreferrer"
                 className="text-primary-600 hover:text-primary-700 text-sm font-medium"
               >
-                المصدر الأصلي على ناجز
+                المصدر الأصلي
               </a>
             </div>
           )}
