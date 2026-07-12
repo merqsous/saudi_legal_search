@@ -521,9 +521,6 @@ def get_judgment(judgment_id: int):
             j.local_folder,
             j.full_text,
             j.scraped_at,
-            j.appealed_judgment_number,
-            j.parent_judgment_id,
-            j.appeal_outcome,
             c.case_number,
             c.case_year,
             ct.name_ar AS court_type,
@@ -532,7 +529,7 @@ def get_judgment(judgment_id: int):
             cl.name_ar AS court_level,
             cl.code AS court_level_code
         FROM judgments j
-        JOIN cases c ON j.case_id = c.id
+        LEFT JOIN cases c ON j.case_id = c.id
         LEFT JOIN court_types ct ON c.court_type_id = ct.id
         LEFT JOIN locations l ON c.location_id = l.id
         LEFT JOIN court_levels cl ON j.court_level_id = cl.id
@@ -555,28 +552,6 @@ def get_judgment(judgment_id: int):
     )
 
     judgment["sections"] = sections
-
-    if judgment.get("parent_judgment_id"):
-        parent = query_one(
-            """
-            SELECT id, judgment_number, judgment_year, judgment_type, details_url
-            FROM judgments WHERE id = %s;
-            """,
-            (judgment["parent_judgment_id"],),
-        )
-        judgment["parent_judgment"] = parent
-    else:
-        judgment["parent_judgment"] = None
-
-    children = query_all(
-        """
-        SELECT id, judgment_number, judgment_year, judgment_type, appeal_outcome, details_url
-        FROM judgments WHERE parent_judgment_id = %s
-        ORDER BY id;
-        """,
-        (judgment_id,),
-    )
-    judgment["appeal_judgments"] = children
 
     return judgment
 
@@ -666,18 +641,16 @@ def get_judgment_detail(judgment_id: int):
     judgment = query_one(
         """
         SELECT j.id, j.judgment_number, j.judgment_year, j.judgment_type,
-               j.judgment_date_hijri, j.details_url, j.judgment_text,
+               j.judgment_date_hijri, j.details_url, j.full_text,
                c.case_number, c.case_year,
                ct.name_ar AS court_type, ct.code AS court_type_code,
                l.city_ar AS city,
-               cl.name_ar AS court_level, cl.code AS court_level_code,
-               js.section_name_ar AS section_name
+               cl.name_ar AS court_level, cl.code AS court_level_code
         FROM judgments j
         LEFT JOIN cases c ON j.case_id = c.id
         LEFT JOIN court_types ct ON c.court_type_id = ct.id
         LEFT JOIN locations l ON c.location_id = l.id
         LEFT JOIN court_levels cl ON j.court_level_id = cl.id
-        LEFT JOIN judgment_sections js ON j.section_id = js.id
         WHERE j.id = %s;
         """,
         [judgment_id],
@@ -687,8 +660,8 @@ def get_judgment_detail(judgment_id: int):
 
     # Get related chunks (snippets) for the judgment content
     chunks = query_all(
-        """SELECT id, chunk_text, chunk_index FROM judgment_chunks
-           WHERE judgment_id = %s ORDER BY chunk_index LIMIT 100;""",
+        """SELECT id, chunk_text, chunk_order FROM judgment_chunks
+           WHERE judgment_id = %s ORDER BY chunk_order LIMIT 100;""",
         [judgment_id],
     )
 

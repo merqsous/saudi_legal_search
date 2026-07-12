@@ -11,7 +11,7 @@ interface JudgmentData {
   judgment_type: string | null;
   judgment_date_hijri: string | null;
   details_url: string | null;
-  judgment_text: string | null;
+  full_text: string | null;
   case_number: string | null;
   case_year: string | null;
   court_type: string | null;
@@ -19,13 +19,12 @@ interface JudgmentData {
   city: string | null;
   court_level: string | null;
   court_level_code: string | null;
-  section_name: string | null;
 }
 
 interface Chunk {
   id: number;
   chunk_text: string;
-  chunk_index: number;
+  chunk_order: number;
 }
 
 async function getJudgment(id: string): Promise<{ judgment: JudgmentData; chunks: Chunk[] } | null> {
@@ -84,7 +83,7 @@ export default async function JudgmentPage({ params }: { params: { id: string } 
   const j = data.judgment;
   const chunks = data.chunks;
 
-  const fullText = j.judgment_text || chunks.map((c) => c.chunk_text).join('\n\n');
+  const fullText = j.full_text || chunks.map((c) => c.chunk_text).join('\n\n');
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100" dir="rtl">
@@ -117,11 +116,6 @@ export default async function JudgmentPage({ params }: { params: { id: string } 
             {j.city && (
               <span className="inline-flex items-center px-3 py-1 rounded-lg text-sm font-medium bg-slate-100 text-slate-700">
                 {j.city}
-              </span>
-            )}
-            {j.section_name && (
-              <span className="inline-flex items-center px-3 py-1 rounded-lg text-sm font-medium bg-emerald-50 text-emerald-700">
-                {j.section_name}
               </span>
             )}
             {j.judgment_date_hijri && (
