@@ -27,6 +27,16 @@ interface Chunk {
   chunk_order: number;
 }
 
+interface RelatedJudgment {
+  id: number;
+  judgment_number: string | null;
+  judgment_year: string | null;
+  judgment_date_hijri: string | null;
+  court_type: string | null;
+  court_level: string | null;
+  city: string | null;
+}
+
 async function getJudgment(id: string): Promise<{ judgment: JudgmentData; chunks: Chunk[] } | null> {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
   try {
@@ -35,6 +45,18 @@ async function getJudgment(id: string): Promise<{ judgment: JudgmentData; chunks
     return res.json();
   } catch {
     return null;
+  }
+}
+
+async function getRelatedJudgments(id: string): Promise<RelatedJudgment[]> {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+  try {
+    const res = await fetch(`${apiUrl}/api/judgments/related/${id}?limit=5`, { next: { revalidate: 0 } });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.results || [];
+  } catch {
+    return [];
   }
 }
 
@@ -47,8 +69,14 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
     };
   }
   const j = data.judgment;
-  const title = `الحكم رقم ${j.judgment_number || params.id} ${j.court_type ? `- ${j.court_type}` : ''} ${j.court_level ? `- ${j.court_level}` : ''} | الباحث`;
-  const description = `قراءة الحكم رقم ${j.judgment_number || params.id} ${j.court_type ? `المنطوق ${j.court_type}` : ''} ${j.court_level ? `(${j.court_level})` : ''} ${j.city ? `في ${j.city}` : ''} على الباحث - محرك بحث الأحكام القضائية السعودية.`;
+  const titleParts = [
+    `حكم ${j.court_type || 'قضائي'}`,
+    j.court_level ? `محكمة ${j.court_level}` : '',
+    j.city ? `في ${j.city}` : '',
+    j.judgment_number ? `رقم ${j.judgment_number}` : `رقم ${params.id}`,
+  ].filter(Boolean);
+  const title = `${titleParts.join(' ')} | الباحث`;
+  const description = `الحكم ${j.court_type || 'القضائي'} ${j.court_level ? `(${j.court_level})` : ''} ${j.city ? `في ${j.city}` : ''} رقم ${j.judgment_number || params.id}. اقرأ نص الحكم كاملاً على الباحث - محرك بحث الأحكام القضائية السعودية.`;
   return {
     title,
     description,
@@ -58,8 +86,10 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
       j.court_type || '',
       j.court_level || '',
       j.city || '',
+      j.judgment_year || '',
       'قانون سعودي',
-    ],
+      'محكمة',
+    ].filter(Boolean),
     openGraph: {
       title,
       description,
@@ -81,8 +111,17 @@ export default async function JudgmentPage({ params }: { params: { id: string } 
 
   const j = data.judgment;
   const chunks = data.chunks;
+  const related = await getRelatedJudgments(params.id);
 
   const fullText = j.full_text || chunks.map((c) => c.chunk_text).join('\n\n');
+
+  // Breadcrumb items
+  const breadcrumbs = [
+    { name: 'الباحث', url: 'https://albaheth.app' },
+    { name: 'بحث الأحكام', url: 'https://albaheth.app/search' },
+  ];
+  if (j.court_type) breadcrumbs.push({ name: j.court_type, url: 'https://albaheth.app/search' });
+  breadcrumbs.push({ name: `حكم رقم ${j.judgment_number || j.id}`, url: `https://albaheth.app/judgment/${params.id}` });
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100" dir="rtl">
@@ -92,7 +131,7 @@ export default async function JudgmentPage({ params }: { params: { id: string } 
             <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary-600 text-white">
               <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20"/><path d="M2 12h20"/><path d="M7 12l5-7 5 7"/><path d="M7 12l5 7 5-7"/></svg>
             </div>
-            <h1 className="text-xl font-bold text-slate-900">الباحث</h1>
+            <span className="text-xl font-bold text-slate-900">الباحث</span>
           </a>
           <a href="/search" className="text-sm font-medium text-primary-600 hover:text-primary-700">
             البحث
@@ -100,16 +139,39 @@ export default async function JudgmentPage({ params }: { params: { id: string } 
         </div>
       </header>
 
+      {/* Breadcrumbs */}
+      <nav className="max-w-4xl mx-auto px-4 py-3" aria-label="breadcrumb">
+        <ol className="flex flex-wrap items-center gap-1 text-sm text-slate-500">
+          {breadcrumbs.map((crumb, i) => (
+            <li key={i} className="flex items-center gap-1">
+              {i < breadcrumbs.length - 1 ? (
+                <>
+                  <a href={crumb.url} className="hover:text-primary-600 transition-colors">{crumb.name}</a>
+                  <span className="text-slate-300">/</span>
+                </>
+              ) : (
+                <span className="text-slate-700 font-medium">{crumb.name}</span>
+              )}
+            </li>
+          ))}
+        </ol>
+      </nav>
+
       <main className="max-w-4xl mx-auto px-4 py-8">
         <article className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8">
           <h1 className="text-2xl md:text-3xl font-bold text-slate-900 mb-4 leading-relaxed">
-            الحكم رقم {j.judgment_number || j.id} {j.court_type ? ` - ${j.court_type}` : ''}
+            حكم {j.court_type || 'قضائي'} {j.court_level ? `— محكمة ${j.court_level}` : ''} {j.city ? `في ${j.city}` : ''} رقم {j.judgment_number || j.id}
           </h1>
 
           <div className="flex flex-wrap gap-2 mb-6">
             {j.court_level && (
               <span className="inline-flex items-center px-3 py-1 rounded-lg text-sm font-medium bg-amber-50 text-amber-700">
                 {j.court_level}
+              </span>
+            )}
+            {j.court_type && (
+              <span className="inline-flex items-center px-3 py-1 rounded-lg text-sm font-medium bg-blue-50 text-blue-700">
+                {j.court_type}
               </span>
             )}
             {j.city && (
@@ -169,6 +231,42 @@ export default async function JudgmentPage({ params }: { params: { id: string } 
           )}
         </article>
 
+        {/* Related Judgments - Internal Linking */}
+        {related.length > 0 && (
+          <section className="mt-8">
+            <h2 className="text-lg font-bold text-slate-900 mb-4">أحكام ذات صلة</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {related.map((r) => (
+                <a
+                  key={r.id}
+                  href={`/judgment/${r.id}`}
+                  className="block bg-white rounded-xl border border-slate-200 p-4 hover:border-primary-300 hover:shadow-sm transition-all"
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    {r.court_level && (
+                      <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded">
+                        {r.court_level}
+                      </span>
+                    )}
+                    {r.court_type && (
+                      <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
+                        {r.court_type}
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="font-bold text-slate-900 text-sm mb-1">
+                    حكم رقم {r.judgment_number || r.id}
+                  </h3>
+                  <div className="flex items-center gap-2 text-xs text-slate-500">
+                    {r.city && <span>{r.city}</span>}
+                    {r.judgment_date_hijri && <span>{r.judgment_date_hijri}</span>}
+                  </div>
+                </a>
+              ))}
+            </div>
+          </section>
+        )}
+
         <section className="mt-8 bg-gradient-to-l from-primary-50 to-white border border-primary-200 rounded-xl p-6 text-center">
           <h2 className="text-lg font-bold text-slate-900 mb-2">ابحث في آلاف الأحكام</h2>
           <p className="text-sm text-slate-600 mb-4">
@@ -189,14 +287,15 @@ export default async function JudgmentPage({ params }: { params: { id: string } 
         </div>
       </footer>
 
+      {/* LegalDocument Structured Data */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
             '@context': 'https://schema.org',
             '@type': 'LegalDocument',
-            name: `الحكم رقم ${j.judgment_number || j.id}`,
-            description: `حكم قضائي سعودي ${j.court_type ? `(${j.court_type})` : ''} ${j.court_level ? `- ${j.court_level}` : ''}`,
+            name: `حكم رقم ${j.judgment_number || j.id} ${j.court_type ? `- ${j.court_type}` : ''}`,
+            description: `حكم قضائي سعودي ${j.court_type ? `(${j.court_type})` : ''} ${j.court_level ? `- ${j.court_level}` : ''} ${j.city ? `في ${j.city}` : ''}`,
             url: `https://albaheth.app/judgment/${params.id}`,
             datePublished: j.judgment_date_hijri || '',
             jurisdiction: {
@@ -209,6 +308,23 @@ export default async function JudgmentPage({ params }: { params: { id: string } 
               name: 'وزارة العدل السعودية',
             },
             isBasedOn: j.details_url || '',
+          }),
+        }}
+      />
+
+      {/* BreadcrumbList Structured Data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'BreadcrumbList',
+            itemListElement: breadcrumbs.map((crumb, i) => ({
+              '@type': 'ListItem',
+              position: i + 1,
+              name: crumb.name,
+              item: crumb.url,
+            })),
           }),
         }}
       />

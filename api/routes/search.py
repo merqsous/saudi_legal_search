@@ -669,3 +669,43 @@ def get_judgment_detail(judgment_id: int):
         "judgment": dict(judgment),
         "chunks": [dict(c) for c in chunks],
     }
+
+
+@router.get("/judgments/related/{judgment_id}")
+def get_related_judgments(judgment_id: int, limit: int = Query(5, ge=1, le=20)):
+    """Return related judgments for internal linking on judgment pages."""
+    # First get the current judgment's court_type and court_level
+    current = query_one(
+        """
+        SELECT j.court_level_id, c.court_type_id
+        FROM judgments j
+        LEFT JOIN cases c ON j.case_id = c.id
+        WHERE j.id = %s;
+        """,
+        [judgment_id],
+    )
+    if not current:
+        return {"results": []}
+
+    # Find judgments with same court_type or court_level, excluding current
+    related = query_all(
+        """
+        SELECT j.id, j.judgment_number, j.judgment_year, j.judgment_date_hijri,
+               ct.name_ar AS court_type, cl.name_ar AS court_level,
+               l.city_ar AS city
+        FROM judgments j
+        LEFT JOIN cases c ON j.case_id = c.id
+        LEFT JOIN court_types ct ON c.court_type_id = ct.id
+        LEFT JOIN locations l ON c.location_id = l.id
+        LEFT JOIN court_levels cl ON j.court_level_id = cl.id
+        WHERE j.id != %s
+          AND (
+            (c.court_type_id = %s AND c.court_type_id IS NOT NULL)
+            OR (j.court_level_id = %s AND j.court_level_id IS NOT NULL)
+          )
+        ORDER BY j.id DESC
+        LIMIT %s;
+        """,
+        [judgment_id, current.get("court_type_id"), current.get("court_level_id"), limit],
+    )
+    return {"results": [dict(r) for r in related]}
