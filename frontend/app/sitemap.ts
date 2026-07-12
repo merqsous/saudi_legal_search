@@ -16,11 +16,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const res = await fetch(`${apiUrl}/api/judgments/ids`, { next: { revalidate: 0 } });
     if (!res.ok) return staticPages;
     const data = await res.json();
-    const ids: number[] = data.ids || [];
+    const ids: { id: number; scraped_at: string | null }[] = data.ids || [];
 
-    const judgmentUrls: MetadataRoute.Sitemap = ids.map((id) => ({
-      url: `${baseUrl}/judgment/${id}`,
-      lastModified: new Date(),
+    const judgmentUrls: MetadataRoute.Sitemap = ids.map((item) => ({
+      url: `${baseUrl}/judgment/${item.id}`,
+      lastModified: item.scraped_at ? new Date(item.scraped_at) : new Date(),
       changeFrequency: 'weekly',
       priority: 0.7,
     }));

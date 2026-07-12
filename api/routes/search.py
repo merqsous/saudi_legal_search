@@ -627,12 +627,12 @@ def get_stats():
 
 @router.get("/judgments/ids")
 def get_judgment_ids(limit: int = Query(50000, ge=1, le=100000)):
-    """Return all judgment IDs for sitemap generation."""
-    ids = query_all(
-        "SELECT id FROM judgments ORDER BY id DESC LIMIT %s;",
+    """Return all judgment IDs and scraped_at dates for sitemap generation."""
+    rows = query_all(
+        "SELECT id, scraped_at FROM judgments ORDER BY id DESC LIMIT %s;",
         [limit],
     )
-    return {"ids": [r["id"] for r in ids]}
+    return {"ids": [{"id": r["id"], "scraped_at": r["scraped_at"]} for r in rows]}
 
 
 @router.get("/judgment/{judgment_id}")

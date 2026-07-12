@@ -37,6 +37,7 @@ export const metadata: Metadata = {
     type: 'website',
   },
   robots: 'index, follow',
+  other: { 'google': 'notranslate' },
   alternates: {
     canonical: 'https://albaheth.app',
   },
