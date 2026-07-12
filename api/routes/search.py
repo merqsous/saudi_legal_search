@@ -506,6 +506,16 @@ def get_ai_answer(
     return {"ai_answer": generate_ai_answer(q, search_result["results"])}
 
 
+@router.get("/judgments/ids")
+def get_judgment_ids(limit: int = Query(50000, ge=1, le=100000)):
+    """Return all judgment IDs and scraped_at dates for sitemap generation."""
+    rows = query_all(
+        "SELECT id, scraped_at FROM judgments ORDER BY id DESC LIMIT %s;",
+        [limit],
+    )
+    return {"ids": [{"id": r["id"], "scraped_at": r["scraped_at"]} for r in rows]}
+
+
 @router.get("/judgments/{judgment_id}")
 def get_judgment(judgment_id: int):
     judgment = query_one(
@@ -623,16 +633,6 @@ def get_stats():
         "by_court_type": by_court_type,
         "by_court_level": by_court_level,
     }
-
-
-@router.get("/judgments/ids")
-def get_judgment_ids(limit: int = Query(50000, ge=1, le=100000)):
-    """Return all judgment IDs and scraped_at dates for sitemap generation."""
-    rows = query_all(
-        "SELECT id, scraped_at FROM judgments ORDER BY id DESC LIMIT %s;",
-        [limit],
-    )
-    return {"ids": [{"id": r["id"], "scraped_at": r["scraped_at"]} for r in rows]}
 
 
 @router.get("/judgment/{judgment_id}")
