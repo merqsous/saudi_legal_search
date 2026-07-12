@@ -10,7 +10,7 @@ export default function LandingPage() {
             <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary-600 text-white">
               <Scale className="w-5 h-5" />
             </div>
-            <h1 className="text-xl font-bold text-slate-900">الباحث</h1>
+            <span className="text-xl font-bold text-slate-900">الباحث</span>
           </div>
           <LandingAuth />
         </div>
@@ -18,11 +18,14 @@ export default function LandingPage() {
 
       <main className="max-w-5xl mx-auto px-4 py-16">
         <div className="text-center mb-12">
-          <h2 className="text-4xl md:text-5xl font-bold text-slate-900 mb-6 leading-tight">
-            محرك بحث ذكي في<br />الأحكام القضائية السعودية
-          </h2>
-          <p className="text-lg text-slate-600 mb-8 max-w-2xl mx-auto leading-relaxed">
-            ابحث بذكاء في آلاف الأحكام من محاكم الدرجة الأولى ومحكمة الاستئناف. تجربة مجانية تتيح لك 3 عمليات بحث.
+          <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-6 leading-tight">
+            الباحث — محرك بحث الأحكام القضائية السعودية
+          </h1>
+          <p className="text-lg text-slate-600 mb-4 max-w-2xl mx-auto leading-relaxed">
+            ابحث في آلاف الأحكام القضائية السعودية من محاكم الدرجة الأولى ومحكمة الاستئناف. منصة قانونية متخصصة للمحامين والمستشارين والباحثين في القانون السعودي ونظام ناجز.
+          </p>
+          <p className="text-base text-slate-500 mb-8 max-w-2xl mx-auto">
+            تجربة مجانية تتيح لك 3 عمليات بحث بدون تسجيل. ابحث بالمعنى لا بالكلمة المفتاحية فقط.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <a
@@ -68,7 +71,7 @@ export default function LandingPage() {
 
       <footer className="border-t border-slate-200 bg-white">
         <div className="max-w-5xl mx-auto px-4 py-6 text-center text-sm text-slate-500">
-          الباحث — بحث في الأحكام القضائية السعودية
+          الباحث — محرك بحث ذكي في الأحكام القضائية السعودية | محاكم الدرجة الأولى والاستئناف | ناجز
           <div className="mt-2">
             <a href="mailto:albahethapp@gmail.com" className="text-primary-600 hover:text-primary-700">albahethapp@gmail.com</a>
           </div>
