@@ -30,12 +30,14 @@ export default function OGImage() {
             marginBottom: 32,
           }}
         >
-          <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M16 16l3-8 3 8c-2-1.5-4-1.5-6 0" />
-            <path d="M2 16l3-8 3 8c-2-1.5-4-1.5-6 0" />
-            <path d="M7 21h10" />
-            <path d="M12 3v18" />
-            <path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2" />
+          <svg width="56" height="56" viewBox="0 0 1200 1200" fill="none" stroke="white" strokeWidth="30" strokeLinecap="round">
+            <circle cx="480" cy="460" r="240" />
+            <line x1="660" y1="640" x2="900" y2="880" strokeWidth="48" />
+            <line x1="480" y1="300" x2="480" y2="580" strokeWidth="14" />
+            <line x1="360" y1="380" x2="600" y2="380" strokeWidth="14" />
+            <path d="M320 380 Q380 470 440 380" strokeWidth="12" />
+            <path d="M520 380 Q580 470 640 380" strokeWidth="12" />
+            <line x1="420" y1="580" x2="540" y2="580" strokeWidth="16" />
           </svg>
         </div>
         <div style={{ fontSize: 56, fontWeight: 700, color: 'white', marginBottom: 16 }}>

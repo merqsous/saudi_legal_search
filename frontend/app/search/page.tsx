@@ -25,8 +25,8 @@ export default function SearchPage() {
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100" dir="rtl">
       <noscript>
         <div className="max-w-3xl mx-auto px-4 py-16 text-center">
-          <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-primary-600 text-white mb-4 mx-auto">
-            <Scale className="w-8 h-8" />
+          <div className="flex items-center justify-center w-16 h-16 rounded-2xl mb-4 mx-auto">
+            <img src="/logo-square.png" alt="الباحث" className="w-16 h-16 rounded-2xl" />
           </div>
           <h1 className="text-3xl font-bold text-slate-900 mb-4">بحث الأحكام القضائية السعودية</h1>
           <p className="text-lg text-slate-600 mb-8">

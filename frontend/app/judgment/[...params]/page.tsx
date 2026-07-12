@@ -125,9 +125,7 @@ export default async function JudgmentPage({ params }: { params: { params: strin
       <header className="bg-white border-b border-slate-200">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <a href="/" className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary-600 text-white">
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20"/><path d="M2 12h20"/><path d="M7 12l5-7 5 7"/><path d="M7 12l5 7 5-7"/></svg>
-            </div>
+            <img src="/logo-square.png" alt="الباحث" className="w-10 h-10 rounded-lg" />
             <span className="text-xl font-bold text-slate-900">الباحث</span>
           </a>
           <a href="/search" className="text-sm font-medium text-primary-600 hover:text-primary-700">

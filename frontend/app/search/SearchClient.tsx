@@ -189,9 +189,7 @@ export default function SearchClient() {
       {/* Header */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center gap-3">
-          <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary-600 text-white">
-            <Scale className="w-5 h-5" />
-          </div>
+          <img src="/logo-square.png" alt="الباحث" className="w-10 h-10 rounded-lg" />
           <h1 className="text-xl font-bold text-slate-900">الباحث</h1>
           <div className="flex-1" />
           {authUser && (
