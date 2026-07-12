@@ -1,12 +1,6 @@
 import { Scale, Search, CheckCircle } from 'lucide-react';
 import LandingAuth from './components/LandingAuth';
 
-export const metadata = {
-  title: 'الباحث - محرك بحث الأحكام القضائية السعودية | ناجز | قضاء | قانون',
-  description:
-    'ابحث في آلاف الأحكام القضائية السعودية من محاكم الدرجة الأولى ومحكمة الاستئناف. منصة قانونية متخصصة للمحامين والمستشارين والباحثين في القانون السعودي ونظام ناجز.',
-};
-
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100" dir="rtl">
