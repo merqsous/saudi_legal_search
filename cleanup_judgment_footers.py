@@ -1,8 +1,13 @@
 """Clean portal footer and junk text from judgment content."""
+import os
 import re
 import time
 from psycopg2.extras import execute_values
-from api.db import query_all, get_db
+
+
+MAX_RETRIES = 5
+RETRY_BASE_DELAY = 2  # seconds
+PAGE_DELAY = 0.5  # seconds between pages to avoid proxy rate limits
 
 
 # Common footer markers from the Saudi Najiz portal that appear at the end of judgment text
@@ -90,91 +95,102 @@ def clean_chunk_text(text: str) -> str:
     return cleaned
 
 
-def update_batch(table: str, columns: tuple, rows: list, dry_run: bool) -> int:
-    """Update a small batch of rows using a fresh short-lived connection."""
-    if not rows or dry_run:
-        return len(rows)
+def get_db_with_retry():
+    """Open a DB connection with retry + exponential backoff."""
+    import psycopg2
+    from api.config import DB_NAME, DB_USER, DB_PASSWORD, DB_HOST, DB_PORT
 
-    id_col, text_col = columns
-    update_sql = (
-        f"UPDATE {table} AS t SET {text_col} = v.{text_col} "
-        f"FROM (VALUES %s) AS v({id_col}, {text_col}) "
-        f"WHERE t.{id_col} = v.{id_col};"
-    )
+    for attempt in range(MAX_RETRIES):
+        try:
+            conn = psycopg2.connect(
+                dbname=DB_NAME,
+                user=DB_USER,
+                password=DB_PASSWORD,
+                host=DB_HOST,
+                port=DB_PORT,
+                connect_timeout=30,
+            )
+            conn.autocommit = True
+            return conn
+        except (psycopg2.OperationalError, psycopg2.InterfaceError) as e:
+            delay = RETRY_BASE_DELAY * (2 ** attempt)
+            print(f"  Connection failed (attempt {attempt + 1}/{MAX_RETRIES}): {e}")
+            if attempt < MAX_RETRIES - 1:
+                print(f"  Retrying in {delay}s...")
+                time.sleep(delay)
+            else:
+                raise
 
-    # Use a new connection for each batch so the proxy doesn't kill a long-lived one
-    with get_db() as conn:
-        cur = conn.cursor()
-        execute_values(cur, update_sql, rows, template="(%s, %s)")
-        updated = cur.rowcount
-        cur.close()
-    return updated
 
+def clean_all_judgments(dry_run: bool = True, fetch_size: int = 5000, update_size: int = 1000) -> dict:
+    """Clean footer text from all judgments and chunks using paginated fetch and per-page connections."""
+    from psycopg2.extras import RealDictCursor
 
-def clean_all_judgments(dry_run: bool = True, fetch_size: int = 5000, update_size: int = 200) -> dict:
-    """Clean footer text from all judgments and chunks using paginated fetch and short-lived connections."""
     results = {"judgments_updated": 0, "chunks_updated": 0, "samples": []}
 
-    # --- Clean judgments.full_text ---
-    print("Cleaning judgments.full_text...")
-    last_id = 0
-    total = 0
-    while True:
-        rows = query_all(
-            "SELECT id, full_text FROM judgments WHERE id > %s AND full_text IS NOT NULL AND full_text != '' ORDER BY id LIMIT %s;",
-            (last_id, fetch_size),
-        )
+    update_sql_template = (
+        "UPDATE {table} AS t SET {text_col} = v.{text_col} "
+        "FROM (VALUES %s) AS v(id, {text_col}) "
+        "WHERE t.id = v.id;"
+    )
+
+    def clean_page(conn, table, text_col, last_id, results_key, samples):
+        select_sql = (
+            "SELECT id, {text_col} FROM {table} WHERE id > %s AND {text_col} IS NOT NULL AND {text_col} != '' ORDER BY id LIMIT %s;"
+        ).format(table=table, text_col=text_col)
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute(select_sql, (last_id, fetch_size))
+        rows = cur.fetchall()
+        cur.close()
+
         if not rows:
-            break
+            return None
 
         batch_rows = []
-        for j in rows:
-            original = j["full_text"]
-            cleaned = clean_judgment_text(original)
+        for r in rows:
+            original = r[text_col]
+            cleaned = clean_judgment_text(original) if text_col == "full_text" else clean_chunk_text(original)
             if cleaned != original:
-                results["judgments_updated"] += 1
-                batch_rows.append((j["id"], cleaned))
-                if len(results["samples"]) < 3:
-                    results["samples"].append({"id": j["id"], "before": original[-200:], "after": cleaned[-200:]})
+                results[results_key] += 1
+                batch_rows.append((r["id"], cleaned))
+                if len(samples) < 3:
+                    samples.append({"id": r["id"], "before": original[-200:], "after": cleaned[-200:]})
 
-        if not dry_run:
-            # Process in small update-size batches to avoid large network queries
-            for i in range(0, len(batch_rows), update_size):
-                chunk = batch_rows[i : i + update_size]
-                update_batch("judgments", ("id", "full_text"), chunk, dry_run)
+        if not dry_run and batch_rows:
+            update_sql = update_sql_template.format(table=table, text_col=text_col)
+            cur = conn.cursor()
+            execute_values(cur, update_sql, batch_rows, template="(%s, %s)", page_size=update_size)
+            cur.close()
 
-        total += len(rows)
-        last_id = rows[-1]["id"]
-        print(f"  Processed {total} judgments...")
+        return rows
 
-    # --- Clean judgment_chunks.chunk_text ---
-    print("Cleaning judgment_chunks.chunk_text...")
-    last_id = 0
-    total = 0
-    while True:
-        rows = query_all(
-            "SELECT id, chunk_text FROM judgment_chunks WHERE id > %s AND chunk_text IS NOT NULL AND chunk_text != '' ORDER BY id LIMIT %s;",
-            (last_id, fetch_size),
-        )
-        if not rows:
-            break
+    def process_table(table, text_col, results_key, samples, start_id=0):
+        label = f"{table}.{text_col}"
+        last_id = start_id
+        total = 0
+        print(f"Cleaning {label}...")
+        while True:
+            conn = get_db_with_retry()
+            try:
+                rows = clean_page(conn, table, text_col, last_id, results_key, samples)
+            finally:
+                conn.close()
+            if rows is None:
+                break
+            total += len(rows)
+            last_id = rows[-1]["id"]
+            print(f"  Processed {total} rows from {label}... (last_id={last_id})")
+            time.sleep(PAGE_DELAY)
+        return last_id, total
 
-        batch_rows = []
-        for c in rows:
-            original = c["chunk_text"]
-            cleaned = clean_chunk_text(original)
-            if cleaned != original:
-                results["chunks_updated"] += 1
-                batch_rows.append((c["id"], cleaned))
+    # Allow resuming chunks from a specific ID via env var
+    chunks_start_id = int(os.environ.get("CHUNKS_START_ID", "0"))
 
-        if not dry_run:
-            for i in range(0, len(batch_rows), update_size):
-                chunk = batch_rows[i : i + update_size]
-                update_batch("judgment_chunks", ("id", "chunk_text"), chunk, dry_run)
+    # Clean judgments.full_text
+    process_table("judgments", "full_text", "judgments_updated", results["samples"])
 
-        total += len(rows)
-        last_id = rows[-1]["id"]
-        print(f"  Processed {total} chunks...")
+    # Clean judgment_chunks.chunk_text
+    process_table("judgment_chunks", "chunk_text", "chunks_updated", [], start_id=chunks_start_id)
 
     return results
 
