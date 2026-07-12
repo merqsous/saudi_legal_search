@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://albaheth.app'),
   title: 'الباحث - محرك بحث الأحكام القضائية السعودية | ناجز | قضاء | قانون',
   description:
     'ابحث في آلاف الأحكام القضائية السعودية من محاكم الدرجة الأولى ومحكمة الاستئناف. منصة قانونية متخصصة للمحامين والمستشارين والباحثين في القانون السعودي ونظام ناجز.',
