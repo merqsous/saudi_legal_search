@@ -160,14 +160,13 @@ export default function SearchClient() {
         localStorage.setItem('anonymous_search_count', String(newCount));
       }
 
-      if (!isAnonymous) {
-        setAiLoading(true);
-        fetch(`/api/ai-answer?${new URLSearchParams({ q: query, limit: '20' })}`)
-          .then((r) => r.json())
-          .then((d) => setAiAnswer(d.ai_answer ?? null))
-          .catch(() => setAiAnswer(null))
-          .finally(() => setAiLoading(false));
-      }
+      // AI answer for all users
+      setAiLoading(true);
+      fetch(`/api/ai-answer?${new URLSearchParams({ q: query, limit: '20' })}`)
+        .then((r) => r.json())
+        .then((d) => setAiAnswer(d.ai_answer ?? null))
+        .catch(() => setAiAnswer(null))
+        .finally(() => setAiLoading(false));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Search failed');
       setResults([]);
