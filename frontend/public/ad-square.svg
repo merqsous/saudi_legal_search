@@ -1,0 +1,35 @@
+<svg width="1200" height="1200" viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="1200" fill="#0f766e"/>
+  
+  <!-- Decorative circles -->
+  <circle cx="200" cy="200" r="150" fill="none" stroke="white" stroke-width="3" opacity="0.1"/>
+  <circle cx="1000" cy="1000" r="200" fill="none" stroke="white" stroke-width="3" opacity="0.1"/>
+  
+  <!-- Logo icon -->
+  <g transform="translate(600 380)">
+    <circle r="130" fill="none" stroke="white" stroke-width="20"/>
+    <line x1="100" y1="100" x2="200" y2="200" stroke="white" stroke-width="30" stroke-linecap="round"/>
+    <line x1="0" y1="-80" x2="0" y2="80" stroke="white" stroke-width="10" stroke-linecap="round"/>
+    <line x1="-70" y1="-30" x2="70" y2="-30" stroke="white" stroke-width="10" stroke-linecap="round"/>
+    <path d="M-90 -30 Q-50 30 -10 -30" fill="none" stroke="white" stroke-width="8" stroke-linecap="round"/>
+    <path d="M10 -30 Q50 30 90 -30" fill="none" stroke="white" stroke-width="8" stroke-linecap="round"/>
+    <line x1="-35" y1="80" x2="35" y2="80" stroke="white" stroke-width="12" stroke-linecap="round"/>
+  </g>
+  
+  <text x="600" y="700" text-anchor="middle" font-family="Arial, sans-serif" font-size="80" font-weight="bold" fill="white">الباحث</text>
+  <text x="600" y="780" text-anchor="middle" font-family="Arial, sans-serif" font-size="36" fill="white" opacity="0.8">محرك بحث الأحكام القضائية السعودية</text>
+  
+  <!-- Feature pills -->
+  <g transform="translate(600 880)">
+    <rect x="-380" y="-30" width="220" height="60" rx="30" fill="white" opacity="0.15"/>
+    <text x="-270" y="8" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="white">بحث دلالي ذكي</text>
+    
+    <rect x="-130" y="-30" width="260" height="60" rx="30" fill="white" opacity="0.15"/>
+    <text x="0" y="8" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="white">تجربة مجانية</text>
+    
+    <rect x="160" y="-30" width="220" height="60" rx="30" fill="white" opacity="0.15"/>
+    <text x="270" y="8" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="white">آلاف الأحكام</text>
+  </g>
+  
+  <text x="600" y="1020" text-anchor="middle" font-family="Arial, sans-serif" font-size="32" fill="white" opacity="0.6">albaheth.app</text>
+</svg>

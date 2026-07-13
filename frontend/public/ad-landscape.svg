@@ -1,0 +1,26 @@
+<svg width="1200" height="628" viewBox="0 0 1200 628" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="628" fill="#0f766e"/>
+  
+  <!-- Decorative circles -->
+  <circle cx="100" cy="500" r="180" fill="none" stroke="white" stroke-width="3" opacity="0.1"/>
+  <circle cx="1100" cy="100" r="120" fill="none" stroke="white" stroke-width="3" opacity="0.1"/>
+  
+  <!-- Logo icon -->
+  <g transform="translate(180 280)">
+    <circle r="90" fill="none" stroke="white" stroke-width="16"/>
+    <line x1="70" y1="70" x2="140" y2="140" stroke="white" stroke-width="22" stroke-linecap="round"/>
+    <line x1="0" y1="-55" x2="0" y2="55" stroke="white" stroke-width="8" stroke-linecap="round"/>
+    <line x1="-50" y1="-20" x2="50" y2="-20" stroke="white" stroke-width="8" stroke-linecap="round"/>
+    <path d="M-65 -20 Q-35 25 -5 -20" fill="none" stroke="white" stroke-width="6" stroke-linecap="round"/>
+    <path d="M5 -20 Q35 25 65 -20" fill="none" stroke="white" stroke-width="6" stroke-linecap="round"/>
+    <line x1="-25" y1="55" x2="25" y2="55" stroke="white" stroke-width="9" stroke-linecap="round"/>
+  </g>
+  
+  <text x="340" y="250" font-family="Arial, sans-serif" font-size="64" font-weight="bold" fill="white">الباحث</text>
+  <text x="340" y="310" font-family="Arial, sans-serif" font-size="30" fill="white" opacity="0.8">محرك بحث الأحكام القضائية السعودية</text>
+  <text x="340" y="370" font-family="Arial, sans-serif" font-size="24" fill="white" opacity="0.6">بحث دلالي ذكي — تجربة مجانية — albaheth.app</text>
+  
+  <!-- CTA button -->
+  <rect x="340" y="420" width="280" height="60" rx="30" fill="white" opacity="0.9"/>
+  <text x="480" y="460" text-anchor="middle" font-family="Arial, sans-serif" font-size="26" font-weight="bold" fill="#0f766e">ابدأ البحث الآن</text>
+</svg>
