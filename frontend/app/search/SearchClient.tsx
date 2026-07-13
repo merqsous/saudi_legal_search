@@ -144,6 +144,16 @@ export default function SearchClient() {
       setTotal(data.total);
       setAiAnswer(null);
 
+      // Google Ads conversion tracking
+      if (typeof window !== 'undefined' && (window as any).gtag) {
+        (window as any).gtag('event', 'conversion', {
+          send_to: 'AW-18318854762/AtLpCLyzsc8cEOqUjp9E',
+          value: 1.0,
+          currency: 'USD',
+          transaction_id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        });
+      }
+
       if (isAnonymous) {
         const newCount = anonymousSearchCount + 1;
         setAnonymousSearchCount(newCount);
