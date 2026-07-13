@@ -120,10 +120,11 @@ def generate_ai_answer(query: str, results: list[dict]) -> str | None:
         )
     context = "\n\n".join(context_parts)
 
+    user_question = query.strip() if query.strip() else "الأحكام المعروضة"
     prompt = (
         "أنت مساعد قانوني سعودي متخصص. بناءً على الأحكام القضائية التالية، "
         "أجب على سؤال المستخدم بشكل مباشر وواضح.\n\n"
-        f"سؤال المستخدم: {query}\n\n"
+        f"سؤال المستخدم: {user_question}\n\n"
         f"الأحكام المرتبطة:\n{context}\n\n"
         "اكتب إجابة مختصرة (3-5 أسطر) تلخص الموقف القانوني، "
         "واشرح المبدأ القانوني المستخلص من هذه الأحكام. "
@@ -499,10 +500,15 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset):
 
 @router.get("/ai-answer")
 def get_ai_answer(
-    q: str = Query(..., description="Search query"),
+    q: str = Query("", description="Search query"),
+    court_type: str | None = Query(None),
+    city: str | None = Query(None),
+    year: str | None = Query(None),
+    court_level: str | None = Query(None),
+    section: str | None = Query(None),
     limit: int = Query(20, ge=1, le=100),
 ):
-    search_result = _do_search(q, None, None, None, None, limit, 0)
+    search_result = _do_search(q, court_type, city, year, court_level, section, limit, 0)
     return {"ai_answer": generate_ai_answer(q, search_result["results"])}
 
 

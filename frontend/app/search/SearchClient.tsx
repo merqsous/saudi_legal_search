@@ -162,7 +162,13 @@ export default function SearchClient() {
 
       // AI answer for all users
       setAiLoading(true);
-      fetch(`/api/ai-answer?${new URLSearchParams({ q: query, limit: '20' })}`)
+      const aiParams = new URLSearchParams({ q: query, limit: '20' });
+      if (selectedCourtType) aiParams.set('court_type', selectedCourtType);
+      if (selectedCity) aiParams.set('city', selectedCity);
+      if (selectedYear) aiParams.set('year', selectedYear);
+      if (selectedCourtLevel) aiParams.set('court_level', selectedCourtLevel);
+      if (selectedSection) aiParams.set('section', selectedSection);
+      fetch(`/api/ai-answer?${aiParams.toString()}`)
         .then((r) => r.json())
         .then((d) => setAiAnswer(d.ai_answer ?? null))
         .catch(() => setAiAnswer(null))
