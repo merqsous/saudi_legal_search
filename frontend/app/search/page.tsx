@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { Suspense } from 'react';
 import { Scale, Search } from 'lucide-react';
 import SearchClient from './SearchClient';
 
@@ -64,7 +65,9 @@ export default function SearchPage() {
         </p>
       </div>
 
-      <SearchClient />
+      <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Search className="w-8 h-8 text-primary-600 animate-pulse" /></div>}>
+        <SearchClient />
+      </Suspense>
     </div>
   );
 }

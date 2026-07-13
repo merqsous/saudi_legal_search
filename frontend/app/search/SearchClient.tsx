@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Search, Loader2, ExternalLink, Scale, Filter, X, ChevronDown, Sparkles, LogOut, LayoutDashboard, CheckCircle, MapPin, Building2, Gavel } from 'lucide-react';
 import { judgmentUrl } from '@/lib/slug';
 
@@ -48,6 +48,7 @@ interface Filters {
 
 export default function SearchClient() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [total, setTotal] = useState(0);
@@ -93,7 +94,23 @@ export default function SearchClient() {
       .then((r) => r.json())
       .then((data) => setFilters(data))
       .catch(() => {});
-  }, [router]);
+
+    // Auto-search from URL params (e.g. ?court_level=appeal)
+    const urlQuery = searchParams.get('q') || '';
+    const urlCourtType = searchParams.get('court_type') || '';
+    const urlCity = searchParams.get('city') || '';
+    const urlYear = searchParams.get('year') || '';
+    const urlCourtLevel = searchParams.get('court_level') || '';
+    const urlSection = searchParams.get('section') || '';
+    if (urlQuery || urlCourtType || urlCity || urlYear || urlCourtLevel || urlSection) {
+      setQuery(urlQuery);
+      setSelectedCourtType(urlCourtType);
+      setSelectedCity(urlCity);
+      setSelectedYear(urlYear);
+      setSelectedCourtLevel(urlCourtLevel);
+      setSelectedSection(urlSection);
+    }
+  }, [router, searchParams]);
 
   const doSearch = useCallback(async () => {
     const hasQuery = query.trim().length > 0;
@@ -148,6 +165,16 @@ export default function SearchClient() {
       setLoading(false);
     }
   }, [query, selectedCourtType, selectedCity, selectedYear, selectedCourtLevel, selectedSection, isAnonymous, anonymousSearchCount, hasReachedAnonymousLimit, authUser?.phone]);
+
+  // Auto-trigger search when URL params populated the filters
+  const [autoSearched, setAutoSearched] = useState(false);
+  useEffect(() => {
+    const hasUrlParams = searchParams.get('court_type') || searchParams.get('court_level') || searchParams.get('city') || searchParams.get('q') || searchParams.get('section');
+    if (hasUrlParams && !autoSearched && (selectedCourtType || selectedCourtLevel || selectedCity || query || selectedSection)) {
+      setAutoSearched(true);
+      doSearch();
+    }
+  }, [searchParams, autoSearched, selectedCourtType, selectedCourtLevel, selectedCity, query, selectedSection, doSearch]);
 
   const formatAiAnswer = (text: string) => {
     const parts = text.split(/(\(\d+\))/g);
