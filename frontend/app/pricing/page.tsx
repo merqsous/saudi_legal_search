@@ -26,7 +26,7 @@ export default function PricingPage() {
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100" dir="rtl">
       <header className="bg-white border-b border-slate-200">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
-          <a href="/" className="flex items-center gap-3">
+          <a href="https://albaheth.app" className="flex items-center gap-3">
             <img src="/logo-square.png" alt="الباحث" className="w-10 h-10 rounded-xl" />
           </a>
           <div className="flex items-center gap-4">

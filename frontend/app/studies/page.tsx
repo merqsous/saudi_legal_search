@@ -140,7 +140,9 @@ export default function StudiesPage() {
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100" dir="rtl">
       <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center gap-3">
-          <img src="/logo-square.png" alt="الباحث" className="w-10 h-10 rounded-xl" />
+          <a href="https://albaheth.app" className="flex items-center gap-3">
+            <img src="/logo-square.png" alt="الباحث" className="w-10 h-10 rounded-xl" />
+          </a>
           <div className="flex-1" />
           {authUser && (
             <div className="flex items-center gap-3">
