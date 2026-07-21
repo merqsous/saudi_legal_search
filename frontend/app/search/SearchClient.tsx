@@ -97,7 +97,7 @@ export default function SearchClient() {
     if (savedToken) {
       setAuthToken(savedToken);
       // Load existing favorites
-      fetch('http://localhost:8000/api/favorites', { headers: { Authorization: `Bearer ${savedToken}` } })
+      fetch('/api/favorites', { headers: { Authorization: `Bearer ${savedToken}` } })
         .then((r) => {
           if (r.status === 401) {
             // Token expired — clear it
@@ -254,7 +254,7 @@ export default function SearchClient() {
       return next;
     });
     try {
-      await fetch(`http://localhost:8000/api/favorites/${judgmentId}`, {
+      await fetch(`/api/favorites/${judgmentId}`, {
         method: isFav ? 'DELETE' : 'POST',
         headers: { Authorization: `Bearer ${authToken}` },
       });
@@ -272,7 +272,7 @@ export default function SearchClient() {
     setStudyContent(null);
     setStudyId(null);
     try {
-      const res = await fetch('http://localhost:8000/api/legal-study/generate', {
+      const res = await fetch('/api/legal-study/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
         body: JSON.stringify({
@@ -615,14 +615,14 @@ export default function SearchClient() {
                     {studyId && !studyLoading && (
                       <>
                         <a
-                          href={`http://localhost:8000/api/legal-study/${studyId}/export/docx?token=${authToken}`}
+                          href={`/api/legal-study/${studyId}/export/docx?token=${authToken}`}
                           className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-600 text-white rounded-lg text-xs font-medium hover:bg-primary-700"
                         >
                           <Download className="w-3.5 h-3.5" />
                           Word
                         </a>
                         <a
-                          href={`http://localhost:8000/api/legal-study/${studyId}/export/pdf?token=${authToken}`}
+                          href={`/api/legal-study/${studyId}/export/pdf?token=${authToken}`}
                           className="flex items-center gap-1.5 px-3 py-1.5 border border-primary-600 text-primary-600 rounded-lg text-xs font-medium hover:bg-primary-50"
                         >
                           <Download className="w-3.5 h-3.5" />

@@ -42,7 +42,7 @@ export default function StudiesPage() {
     }
     if (savedToken) {
       setAuthToken(savedToken);
-      fetch('http://localhost:8000/api/legal-study/history', { headers: { Authorization: `Bearer ${savedToken}` } })
+      fetch('/api/legal-study/history', { headers: { Authorization: `Bearer ${savedToken}` } })
         .then((r) => r.json())
         .then((d) => setStudies(d.studies || []))
         .catch(() => {})
@@ -57,7 +57,7 @@ export default function StudiesPage() {
     setStudyLoading(true);
     setSelectedStudy(null);
     try {
-      const res = await fetch(`http://localhost:8000/api/legal-study/${id}`, { headers: { Authorization: `Bearer ${authToken}` } });
+      const res = await fetch(`/api/legal-study/${id}`, { headers: { Authorization: `Bearer ${authToken}` } });
       const data = await res.json();
       setSelectedStudy(data);
     } catch {}
@@ -69,7 +69,7 @@ export default function StudiesPage() {
     setStudies((prev) => prev.filter((s) => s.id !== id));
     if (selectedStudy?.id === id) setSelectedStudy(null);
     try {
-      await fetch(`http://localhost:8000/api/legal-study/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${authToken}` } });
+      await fetch(`/api/legal-study/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${authToken}` } });
     } catch {}
   };
 
@@ -178,14 +178,14 @@ export default function StudiesPage() {
               </button>
               <div className="flex items-center gap-2">
                 <a
-                  href={`http://localhost:8000/api/legal-study/${selectedStudy.id}/export/docx?token=${authToken}`}
+                  href={`/api/legal-study/${selectedStudy.id}/export/docx?token=${authToken}`}
                   className="flex items-center gap-1.5 px-3 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700"
                 >
                   <Download className="w-4 h-4" />
                   Word
                 </a>
                 <a
-                  href={`http://localhost:8000/api/legal-study/${selectedStudy.id}/export/pdf?token=${authToken}`}
+                  href={`/api/legal-study/${selectedStudy.id}/export/pdf?token=${authToken}`}
                   className="flex items-center gap-1.5 px-3 py-2 border border-primary-600 text-primary-600 rounded-lg text-sm font-medium hover:bg-primary-50"
                 >
                   <Download className="w-4 h-4" />

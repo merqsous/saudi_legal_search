@@ -44,7 +44,7 @@ export default function FavoritesPage() {
     }
     if (savedToken) {
       setAuthToken(savedToken);
-      fetch('http://localhost:8000/api/favorites', { headers: { Authorization: `Bearer ${savedToken}` } })
+      fetch('/api/favorites', { headers: { Authorization: `Bearer ${savedToken}` } })
         .then((r) => r.json())
         .then((d) => setFavorites(d.favorites || []))
         .catch(() => {})
@@ -58,7 +58,7 @@ export default function FavoritesPage() {
     if (!authToken) return;
     setFavorites((prev) => prev.filter((f) => f.judgment_id !== judgmentId));
     try {
-      await fetch(`http://localhost:8000/api/favorites/${judgmentId}`, {
+      await fetch(`/api/favorites/${judgmentId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${authToken}` },
       });
