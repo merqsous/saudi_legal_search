@@ -427,7 +427,10 @@ def export_pdf(study_id: int, authorization: str = Header(None), token: str = Qu
 </html>"""
 
     buffer = io.BytesIO()
-    HTML(string=html).write_pdf(buffer)
+    try:
+        HTML(string=html).write_pdf(buffer)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"PDF generation failed: {e}")
     buffer.seek(0)
 
     filename = f"legal_study_{study_id}.pdf"
