@@ -1,0 +1,12 @@
+{
+  "name": "Albaheth",
+  "short_name": "Albaheth",
+  "description": "AI-powered legal research",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0B4B2A",
+  "icons": [
+    {"src": "/albaheth-icon-512x512.png", "sizes": "512x512", "type": "image/png"}
+  ]
+}

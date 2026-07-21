@@ -1,4 +1,4 @@
-import { Search, CheckCircle, Scale } from 'lucide-react';
+import { Search, CheckCircle, Scale, Sparkles, Crown } from 'lucide-react';
 import LandingAuth from './components/LandingAuth';
 
 export default function LandingPage() {
@@ -42,6 +42,22 @@ export default function LandingPage() {
           </div>
         </div>
 
+        {/* Launch Offer Banner */}
+        <div className="bg-primary-600 rounded-2xl p-6 mb-12 text-center max-w-3xl mx-auto">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <Sparkles className="w-6 h-6 text-white" />
+            <h2 className="text-2xl font-bold text-white">عرض الإطلاق — خصم 50% لأول 10 مشتركين</h2>
+            <Crown className="w-6 h-6 text-white" />
+          </div>
+          <p className="text-white text-lg mb-4">باقة سنوية بـ 745 ريال فقط بدلاً من 1,490 ريال</p>
+          <a
+            href="/pricing"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-white text-primary-600 rounded-xl font-bold hover:bg-primary-50 transition-colors"
+          >
+            عرض الباقات والأسعار
+          </a>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
           <div className="bg-white rounded-2xl p-6 border border-slate-200 text-center">
             <div className="w-12 h-12 bg-primary-50 text-primary-600 rounded-xl flex items-center justify-center mx-auto mb-4">
@@ -69,6 +85,15 @@ export default function LandingPage() {
 
       <footer className="border-t border-slate-200 bg-white">
         <div className="max-w-5xl mx-auto px-4 py-6 text-center text-sm text-slate-500">
+          <div className="flex items-center justify-center gap-4 mb-2">
+            <a href="/about" className="text-slate-600 hover:text-primary-600">عن الباحث</a>
+            <a href="/pricing" className="text-slate-600 hover:text-primary-600">الأسعار</a>
+            <a href="/faq" className="text-slate-600 hover:text-primary-600">الأسئلة الشائعة</a>
+            <a href="/studies" className="text-slate-600 hover:text-primary-600">الدراسات القانونية</a>
+            <a href="/favorites" className="text-slate-600 hover:text-primary-600">المفضلة</a>
+            <a href="/terms" className="text-slate-600 hover:text-primary-600">الشروط</a>
+            <a href="/privacy" className="text-slate-600 hover:text-primary-600">الخصوصية</a>
+          </div>
           الباحث — محرك بحث ذكي في الأحكام القضائية السعودية | محاكم الدرجة الأولى والاستئناف
           <div className="mt-2">
             <a href="mailto:albahethapp@gmail.com" className="text-primary-600 hover:text-primary-700">albahethapp@gmail.com</a>

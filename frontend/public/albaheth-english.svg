@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 220" role="img" aria-labelledby="title desc">
+  <title id="title">Albaheth English logo</title>
+  <desc id="desc">Dark green Albaheth wordmark with a subtle research line and legal AI tagline.</desc>
+  <g fill="none" fill-rule="evenodd">
+    <text x="410" y="130" text-anchor="middle" fill="#0B4B2A"
+      font-family="Georgia, 'Times New Roman', serif" font-size="112" letter-spacing="-3">Albaheth</text>
+    <path d="M255 154 C355 133 466 133 570 151" stroke="#2E7D4F" stroke-width="5" stroke-linecap="round"/>
+    <text x="410" y="201" text-anchor="middle" fill="#0B4B2A"
+      font-family="Arial, Helvetica, sans-serif" font-size="21" letter-spacing="7">AI-POWERED LEGAL RESEARCH</text>
+  </g>
+</svg>

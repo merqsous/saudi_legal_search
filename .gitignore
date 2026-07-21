@@ -36,6 +36,7 @@ saudi_legal_scraper/import_log.txt
 saudi_legal_scraper/data/weekly_scrape_log.json
 saudi_legal_scraper/data/weekly_failed_*.json
 logs/
+cleanup_run*.log
 
 # DB exports
 data/

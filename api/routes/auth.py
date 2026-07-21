@@ -122,6 +122,49 @@ def init_auth_tables():
         cur.execute("""
             CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id ON user_sessions(user_id);
         """)
+        # Create subscriptions table for payments
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS user_subscriptions (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                plan VARCHAR(20) NOT NULL,
+                status VARCHAR(20) NOT NULL DEFAULT 'active',
+                amount_paid INTEGER,
+                payment_id VARCHAR(255),
+                started_at TIMESTAMP DEFAULT NOW(),
+                expires_at TIMESTAMP
+            );
+        """)
+        cur.execute("""
+            CREATE INDEX IF NOT EXISTS idx_user_subscriptions_user_id ON user_subscriptions(user_id);
+        """)
+        # Create favorites table
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS favorites (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                judgment_id INTEGER NOT NULL,
+                favorited_at TIMESTAMP DEFAULT NOW(),
+                UNIQUE(user_id, judgment_id)
+            );
+        """)
+        cur.execute("""
+            CREATE INDEX IF NOT EXISTS idx_favorites_user_id ON favorites(user_id);
+        """)
+        # Create legal studies table
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS legal_studies (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                query TEXT NOT NULL,
+                content TEXT NOT NULL,
+                citations JSONB,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        """)
+        cur.execute("""
+            CREATE INDEX IF NOT EXISTS idx_legal_studies_user_id ON legal_studies(user_id);
+        """)
         cur.close()
 
 
@@ -374,6 +417,7 @@ def admin_login(req: LoginRequest, request: Request):
         cur.close()
 
     token = secrets.token_urlsafe(32)
+    create_session(token, user_id, phone)
     _sessions[token] = {"user_id": user_id, "phone": phone}
 
     user_data = query_one("SELECT id, phone, first_name, last_name FROM users WHERE id = %s", [user_id])

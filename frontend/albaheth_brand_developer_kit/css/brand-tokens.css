@@ -1,0 +1,22 @@
+:root {
+  --albaheth-green-950: #062b18;
+  --albaheth-green-900: #0b4b2a;
+  --albaheth-green-700: #1f6a40;
+  --albaheth-green-600: #2e7d4f;
+  --albaheth-green-100: #dfeee5;
+  --albaheth-green-50: #f4f9f6;
+  --albaheth-ink: #17231c;
+  --albaheth-muted: #65756b;
+  --albaheth-line: #dbe5de;
+  --albaheth-white: #ffffff;
+  --albaheth-sand: #f4f1e8;
+
+  --albaheth-font-arabic: "Noto Kufi Arabic", "Noto Sans Arabic", Tahoma, Arial, sans-serif;
+  --albaheth-font-display: Georgia, "Times New Roman", serif;
+  --albaheth-font-ui: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --albaheth-radius-sm: 10px;
+  --albaheth-radius-md: 18px;
+  --albaheth-radius-lg: 30px;
+  --albaheth-shadow: 0 20px 60px rgba(6, 43, 24, 0.10);
+}

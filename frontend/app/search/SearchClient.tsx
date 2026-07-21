@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Search, Loader2, ExternalLink, Scale, Filter, X, ChevronDown, Sparkles, LogOut, LayoutDashboard, CheckCircle, MapPin, Building2, Gavel } from 'lucide-react';
+import { Search, Loader2, ExternalLink, Scale, Filter, X, ChevronDown, Sparkles, LogOut, LayoutDashboard, CheckCircle, MapPin, Building2, Gavel, Bookmark, FileText, Download, BookOpen } from 'lucide-react';
 import { judgmentUrl } from '@/lib/slug';
 
 interface AuthUser {
@@ -65,7 +65,14 @@ export default function SearchClient() {
   const [aiAnswer, setAiAnswer] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [authToken, setAuthToken] = useState<string | null>(null);
   const [anonymousSearchCount, setAnonymousSearchCount] = useState(0);
+  const [favoritedIds, setFavoritedIds] = useState<Set<number>>(new Set());
+  const [studyLoading, setStudyLoading] = useState(false);
+  const [studyContent, setStudyContent] = useState<string | null>(null);
+  const [studyCitations, setStudyCitations] = useState<any[]>([]);
+  const [studyId, setStudyId] = useState<number | null>(null);
+  const [showStudy, setShowStudy] = useState(false);
   const isAnonymous = !authUser;
   const hasReachedAnonymousLimit = isAnonymous && anonymousSearchCount >= 3;
 
@@ -83,8 +90,31 @@ export default function SearchClient() {
 
   useEffect(() => {
     const saved = localStorage.getItem('auth_user');
+    const savedToken = localStorage.getItem('auth_token');
     if (saved) {
       try { setAuthUser(JSON.parse(saved)); } catch {}
+    }
+    if (savedToken) {
+      setAuthToken(savedToken);
+      // Load existing favorites
+      fetch('http://localhost:8000/api/favorites', { headers: { Authorization: `Bearer ${savedToken}` } })
+        .then((r) => {
+          if (r.status === 401) {
+            // Token expired — clear it
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('auth_user');
+            setAuthToken(null);
+            setAuthUser(null);
+            return null;
+          }
+          return r.json();
+        })
+        .then((d) => {
+          if (d?.favorites) {
+            setFavoritedIds(new Set(d.favorites.map((f: any) => f.judgment_id)));
+          }
+        })
+        .catch(() => {});
     }
     const anonCount = localStorage.getItem('anonymous_search_count');
     if (anonCount) {
@@ -211,6 +241,105 @@ export default function SearchClient() {
     if (e.key === 'Enter') doSearch();
   };
 
+  const toggleFavorite = async (judgmentId: number) => {
+    if (!authToken) {
+      router.push('/?signup=1');
+      return;
+    }
+    const isFav = favoritedIds.has(judgmentId);
+    setFavoritedIds((prev) => {
+      const next = new Set(prev);
+      if (isFav) next.delete(judgmentId);
+      else next.add(judgmentId);
+      return next;
+    });
+    try {
+      await fetch(`http://localhost:8000/api/favorites/${judgmentId}`, {
+        method: isFav ? 'DELETE' : 'POST',
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+    } catch {}
+  };
+
+  const generateStudy = async () => {
+    if (!authToken) {
+      router.push('/?signup=1');
+      return;
+    }
+    if (results.length === 0) return;
+    setStudyLoading(true);
+    setShowStudy(true);
+    setStudyContent(null);
+    setStudyId(null);
+    try {
+      const res = await fetch('http://localhost:8000/api/legal-study/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({
+          query,
+          court_type: selectedCourtType || null,
+          city: selectedCity || null,
+          year: selectedYear || null,
+          court_level: selectedCourtLevel || null,
+          section: selectedSection || null,
+        }),
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      setStudyContent(data.content);
+      setStudyCitations(data.citations || []);
+      setStudyId(data.id);
+    } catch (e) {
+      setStudyContent(`فشل في توليد الدراسة القانونية. ${e instanceof Error ? e.message : 'حاول مرة أخرى.'}`);
+    } finally {
+      setStudyLoading(false);
+    }
+  };
+
+  const formatStudyContent = (text: string) => {
+    const lines = text.split('\n').filter(l => l.trim());
+    return lines.map((line, i) => {
+      const trimmed = line.trim();
+      // Markdown headings: ##, ###, ####
+      if (/^#{2,4}\s+/.test(trimmed)) {
+        return <h3 key={i} className="font-bold text-primary-900 text-base mt-4 mb-2" dir="rtl">{trimmed.replace(/^#{1,4}\s+/, '')}</h3>;
+      }
+      // Markdown heading: #
+      if (/^#\s+/.test(trimmed)) {
+        return <h2 key={i} className="font-bold text-primary-900 text-lg mt-5 mb-3" dir="rtl">{trimmed.replace(/^#\s+/, '')}</h2>;
+      }
+      // Numbered heading: 1. 2. etc
+      if (/^\d+\.\s+/.test(trimmed)) {
+        // Strip markdown bold from numbered items and render with inline bold
+        const cleanText = trimmed.replace(/^\d+\.\s+/, '');
+        const parts = cleanText.split(/(\*\*.+?\*\*)/g);
+        const rendered = parts.map((part, j) => {
+          if (/^\*\*.+\*\*$/.test(part)) {
+            return <strong key={j} className="font-bold text-primary-800">{part.replace(/^\*\*(.+)\*\*$/, '$1')}</strong>;
+          }
+          return <span key={j}>{part}</span>;
+        });
+        return <h3 key={i} className="font-bold text-primary-900 text-base mt-4 mb-2" dir="rtl">{rendered}</h3>;
+      }
+      // Bold line: **text**
+      if (/^\*\*.+\*\*$/.test(trimmed)) {
+        return <p key={i} className="font-bold text-primary-800 text-sm mt-2 mb-1" dir="rtl">{trimmed.replace(/^\*\*(.+)\*\*$/, '$1')}</p>;
+      }
+      // Regular paragraph with inline bold
+      const parts = trimmed.split(/(\*\*.+?\*\*)/g);
+      const rendered = parts.map((part, j) => {
+        if (/^\*\*.+\*\*$/.test(part)) {
+          return <strong key={j} className="font-bold text-primary-800">{part.replace(/^\*\*(.+)\*\*$/, '$1')}</strong>;
+        }
+        return <span key={j}>{part}</span>;
+      });
+      return <p key={i} className="text-sm text-slate-700 leading-relaxed mb-2" dir="rtl">{rendered}</p>;
+    });
+  };
+
   const clearFilters = () => {
     setSelectedCourtType('');
     setSelectedCity('');
@@ -245,6 +374,20 @@ export default function SearchClient() {
                   لوحة التحكم
                 </button>
               )}
+              <button
+                onClick={() => router.push('/favorites')}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-slate-600 hover:text-primary-600 font-medium"
+              >
+                <Bookmark className="w-4 h-4" />
+                المفضلة
+              </button>
+              <button
+                onClick={() => router.push('/studies')}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-slate-600 hover:text-primary-600 font-medium"
+              >
+                <FileText className="w-4 h-4" />
+                الدراسات
+              </button>
               <span className="text-sm text-slate-600">{authUser.first_name} {authUser.last_name}</span>
               <button onClick={handleLogout} className="text-slate-400 hover:text-slate-600">
                 <LogOut className="w-5 h-5" />
@@ -442,9 +585,107 @@ export default function SearchClient() {
             <p className="text-sm text-slate-500 mb-4">
               {total} نتيجة
             </p>
+
+            {/* Legal Study Button */}
+            {!isAnonymous && (
+              <div className="mb-4">
+                <button
+                  onClick={generateStudy}
+                  disabled={studyLoading}
+                  className="w-full py-3 bg-gradient-to-l from-primary-600 to-primary-700 text-white rounded-xl font-bold hover:from-primary-700 hover:to-primary-800 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+                >
+                  {studyLoading ? (
+                    <><Loader2 className="w-5 h-5 animate-spin" /> جاري توليد الدراسة القانونية...</>
+                  ) : (
+                    <><BookOpen className="w-5 h-5" /> توليد دراسة قانونية شاملة</>
+                  )}
+                </button>
+              </div>
+            )}
+
+            {/* Legal Study Panel */}
+            {showStudy && (
+              <div className="mb-6 bg-white border-2 border-primary-200 rounded-xl p-6 shadow-md">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-primary-600" />
+                    <h2 className="text-lg font-bold text-slate-900">دراسة قانونية</h2>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {studyId && !studyLoading && (
+                      <>
+                        <a
+                          href={`http://localhost:8000/api/legal-study/${studyId}/export/docx?token=${authToken}`}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-600 text-white rounded-lg text-xs font-medium hover:bg-primary-700"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          Word
+                        </a>
+                        <a
+                          href={`http://localhost:8000/api/legal-study/${studyId}/export/pdf?token=${authToken}`}
+                          className="flex items-center gap-1.5 px-3 py-1.5 border border-primary-600 text-primary-600 rounded-lg text-xs font-medium hover:bg-primary-50"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          PDF
+                        </a>
+                      </>
+                    )}
+                    <button
+                      onClick={() => setShowStudy(false)}
+                      className="p-1.5 text-slate-400 hover:text-slate-600"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+                {studyLoading ? (
+                  <div className="flex flex-col items-center py-12">
+                    <Loader2 className="w-8 h-8 text-primary-600 animate-spin mb-3" />
+                    <p className="text-sm text-slate-500">جاري توليد الدراسة القانونية الشاملة...</p>
+                  </div>
+                ) : studyContent ? (
+                  <>
+                    <div className="prose prose-sm max-w-none mb-4" dir="rtl">
+                      {formatStudyContent(studyContent)}
+                    </div>
+                    {studyCitations.length > 0 && (
+                      <div className="mt-4 pt-4 border-t border-slate-200">
+                        <h3 className="font-bold text-primary-900 text-sm mb-3">الأحكام المرجعية</h3>
+                        <div className="space-y-2">
+                          {studyCitations.map((cite, i) => (
+                            <div key={i} className="text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-lg p-2">
+                              <span className="font-medium text-slate-700">{i + 1}.</span>{' '}
+                              رقم الحكم: {cite.judgment_number || 'غير محدد'} —
+                              المحكمة: {cite.court_type || ''} {cite.court_level || ''} —
+                              المدينة: {cite.city || ''}
+                              {cite.case_number && ` | رقم القضية: ${cite.case_number}/${cite.case_year || ''}`}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <div className="mt-4 pt-4 border-t border-slate-200">
+                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                        <p className="text-xs text-amber-700 leading-relaxed">
+                          ⚠️ هذه الدراسة القانونية تم توليدها بواسطة نظام الباحث. مسؤولية التحقق من صحة المعلومات والوقائع تقع على المستخدم.
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                ) : null}
+              </div>
+            )}
+
             <div className="space-y-3">
               {results.map((result, idx) => (
-                <ResultCard key={`${result.judgment_id}-${idx}`} result={result} query={query} />
+                <ResultCard
+                  key={`${result.judgment_id}-${idx}`}
+                  result={result}
+                  query={query}
+                  favorited={favoritedIds.has(result.judgment_id)}
+                  onToggleFavorite={() => toggleFavorite(result.judgment_id)}
+                  isLoggedIn={!!authToken}
+                />
               ))}
             </div>
             {isAnonymous && (
@@ -521,7 +762,13 @@ function FilterSelect({
   );
 }
 
-function ResultCard({ result, query }: { result: SearchResult; query: string }) {
+function ResultCard({ result, query, favorited, onToggleFavorite, isLoggedIn }: {
+  result: SearchResult;
+  query: string;
+  favorited: boolean;
+  onToggleFavorite: () => void;
+  isLoggedIn: boolean;
+}) {
   const relevance = result.distance != null ? Math.max(0, Math.min(1, 1.0 - result.distance * 0.5)) : null;
 
   const highlightSnippet = (text: string, q: string) => {
@@ -551,34 +798,43 @@ function ResultCard({ result, query }: { result: SearchResult; query: string }) 
   };
 
   return (
-    <a
-      href={judgmentUrl(result.judgment_id, { court_type: result.court_type, court_level: result.court_level, city: result.city, judgment_number: result.judgment_number })}
-      className="block bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-shadow"
-    >
+    <div className="block bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
-          {/* Badges */}
+          {/* Badges + Favorite */}
           <div className="flex flex-wrap items-center gap-2 mb-2">
-            {result.court_type && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-primary-50 text-primary-700">
-                {result.court_type}
-              </span>
-            )}
-            {result.city && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-600">
-                {result.city}
-              </span>
-            )}
-            {result.court_level && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-amber-50 text-amber-700">
-                {result.court_level}
-              </span>
-            )}
-            {result.section_name && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-emerald-50 text-emerald-700">
-                {result.section_name}
-              </span>
-            )}
+            <a
+              href={judgmentUrl(result.judgment_id, { court_type: result.court_type, court_level: result.court_level, city: result.city, judgment_number: result.judgment_number })}
+              className="flex flex-wrap items-center gap-2"
+            >
+              {result.court_type && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-primary-50 text-primary-700">
+                  {result.court_type}
+                </span>
+              )}
+              {result.city && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-600">
+                  {result.city}
+                </span>
+              )}
+              {result.court_level && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-amber-50 text-amber-700">
+                  {result.court_level}
+                </span>
+              )}
+              {result.section_name && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-emerald-50 text-emerald-700">
+                  {result.section_name}
+                </span>
+              )}
+            </a>
+            <button
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleFavorite(); }}
+              className={`ml-auto p-1 transition-colors ${favorited ? 'text-primary-600' : 'text-slate-300 hover:text-primary-600'}`}
+              title={favorited ? 'إزالة من المفضلة' : 'إضافة للمفضلة'}
+            >
+              <Bookmark className="w-4 h-4" fill={favorited ? 'currentColor' : 'none'} />
+            </button>
           </div>
 
           {/* البيانات الأساسية */}
@@ -607,9 +863,13 @@ function ResultCard({ result, query }: { result: SearchResult; query: string }) 
           </div>
 
           {/* Snippet */}
-          <p className="text-sm text-slate-700 leading-relaxed arabic-text" dir="rtl">
-            {highlightSnippet(result.snippet, query)}
-          </p>
+          <a
+            href={judgmentUrl(result.judgment_id, { court_type: result.court_type, court_level: result.court_level, city: result.city, judgment_number: result.judgment_number })}
+          >
+            <p className="text-sm text-slate-700 leading-relaxed arabic-text" dir="rtl">
+              {highlightSnippet(result.snippet, query)}
+            </p>
+          </a>
 
           {/* Link */}
           {result.details_url && (
@@ -650,6 +910,6 @@ function ResultCard({ result, query }: { result: SearchResult; query: string }) 
           </div>
         )}
       </div>
-    </a>
+    </div>
   );
 }
