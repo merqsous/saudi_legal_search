@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { Suspense } from 'react';
 import { CheckCircle, Sparkles, Crown, Users } from 'lucide-react';
 import PaymentButtons from './PaymentButtons';
 
@@ -141,12 +142,14 @@ export default function PricingPage() {
                 أحكام ذات صلة لكل قضية
               </li>
             </ul>
+            <Suspense fallback={<div className="w-full py-3 border-2 border-primary-600 text-primary-600 rounded-xl font-bold text-center">اشترك الآن - 149 ريال/شهر</div>}>
             <PaymentButtons
               plan="monthly"
               amount={14900}
               label="اشترك الآن - 149 ريال/شهر"
               variant="outline"
             />
+            </Suspense>
           </div>
 
           {/* Annual Plan with 50% discount */}
@@ -189,12 +192,14 @@ export default function PricingPage() {
                 دعم فني مخصص
               </li>
             </ul>
+            <Suspense fallback={<div className="w-full py-3 bg-primary-600 text-white rounded-xl font-bold text-center">اشترك بخصم 50%</div>}>
             <PaymentButtons
               plan="annual"
               amount={74500}
               label="اشترك بخصم 50%"
               variant="primary"
             />
+            </Suspense>
           </div>
         </div>
 
