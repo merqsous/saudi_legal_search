@@ -5,7 +5,7 @@
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#0B4B2A",
+  "theme_color": "#147A4D",
   "icons": [
     {"src": "/albaheth-icon-512x512.png", "sizes": "512x512", "type": "image/png"}
   ]

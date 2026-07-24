@@ -7,8 +7,7 @@ export default function LandingPage() {
       <header className="bg-white border-b border-slate-200">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
           <a href="https://albaheth.app" className="flex items-center gap-3">
-            <img src="/logo-square.png" alt="الباحث" className="w-10 h-10 rounded-lg" />
-            <span className="text-xl font-bold text-slate-900">الباحث</span>
+            <img src="/logo-rounded.png" alt="الباحث" className="w-10 h-10 rounded-lg" />
           </a>
           <LandingAuth />
         </div>

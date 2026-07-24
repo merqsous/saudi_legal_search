@@ -307,12 +307,12 @@ def export_pdf(study_id: int, authorization: str = Header(None), token: str = Qu
         if not line:
             continue
         if _is_heading(line):
-            body_parts.append(f'<h3 style="color:#0B4B2A;font-size:14pt;font-weight:bold;margin-top:12px;margin-bottom:6px;">{_strip_markdown(line)}</h3>')
+            body_parts.append(f'<h3 style="color:#147A4D;font-size:14pt;font-weight:bold;margin-top:12px;margin-bottom:6px;">{_strip_markdown(line)}</h3>')
         elif _is_numbered_heading(line):
             clean = _strip_markdown(line)
-            body_parts.append(f'<h3 style="color:#0B4B2A;font-size:13pt;font-weight:bold;margin-top:12px;margin-bottom:6px;">{clean}</h3>')
+            body_parts.append(f'<h3 style="color:#147A4D;font-size:13pt;font-weight:bold;margin-top:12px;margin-bottom:6px;">{clean}</h3>')
         elif _is_bold_line(line):
-            body_parts.append(f'<p style="color:#2E7D4F;font-size:12pt;font-weight:bold;margin:4px 0;">{_strip_markdown(line)}</p>')
+            body_parts.append(f'<p style="color:#147A4D;font-size:12pt;font-weight:bold;margin:4px 0;">{_strip_markdown(line)}</p>')
         else:
             # Handle inline bold
             html_line = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', line)
@@ -338,7 +338,7 @@ def export_pdf(study_id: int, authorization: str = Header(None), token: str = Qu
     @bottom-center {{
       content: "Albaheth — AI-Powered Legal Research | albaheth.app";
       font-size: 8pt;
-      color: #0B4B2A;
+      color: #147A4D;
     }}
   }}
   body {{
@@ -349,26 +349,26 @@ def export_pdf(study_id: int, authorization: str = Header(None), token: str = Qu
   }}
   .header {{
     text-align: center;
-    border-bottom: 2px solid #0B4B2A;
+    border-bottom: 2px solid #147A4D;
     padding-bottom: 10px;
     margin-bottom: 20px;
   }}
   .header h1 {{
-    color: #0B4B2A;
+    color: #147A4D;
     font-size: 14pt;
     margin: 0;
   }}
   .title {{
     text-align: center;
     font-size: 22pt;
-    color: #0B4B2A;
+    color: #147A4D;
     font-weight: bold;
     margin-bottom: 4px;
   }}
   .subtitle {{
     text-align: center;
     font-size: 14pt;
-    color: #2E7D4F;
+    color: #147A4D;
     font-weight: bold;
     margin-bottom: 4px;
   }}
@@ -379,14 +379,14 @@ def export_pdf(study_id: int, authorization: str = Header(None), token: str = Qu
     margin-bottom: 20px;
   }}
   .citations-heading {{
-    color: #0B4B2A;
+    color: #147A4D;
     font-size: 16pt;
     font-weight: bold;
     margin-top: 20px;
     margin-bottom: 8px;
   }}
   .disclaimer-heading {{
-    color: #0B4B2A;
+    color: #147A4D;
     font-size: 12pt;
     font-weight: bold;
     margin-top: 20px;
