@@ -22,6 +22,10 @@ export const metadata: Metadata = {
     description: 'ابحث في آلاف الأحكام القضائية السعودية من محاكم الدرجة الأولى ومحكمة الاستئناف.',
     images: ['/opengraph-image'],
   },
+  icons: {
+    icon: '/logo-icon.png',
+    apple: '/logo-icon.png',
+  },
   robots: 'index, follow',
   other: {
     'google': 'notranslate',

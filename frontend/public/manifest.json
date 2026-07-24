@@ -7,6 +7,7 @@
   "background_color": "#ffffff",
   "theme_color": "#147A4D",
   "icons": [
-    {"src": "/albaheth-icon-512x512.png", "sizes": "512x512", "type": "image/png"}
+    {"src": "/logo-icon.png", "sizes": "400x400", "type": "image/png"},
+    {"src": "/logo-icon-512.png", "sizes": "512x512", "type": "image/png"}
   ]
 }
