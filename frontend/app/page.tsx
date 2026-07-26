@@ -98,39 +98,6 @@ export default function LandingPage() {
         </div>
       </footer>
 
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify([
-            {
-              '@context': 'https://schema.org',
-              '@type': 'WebSite',
-              name: 'الباحث',
-              alternateName: 'AlBaheth',
-              url: 'https://albaheth.app',
-              description: 'محرك بحث ذكي في الأحكام القضائية السعودية',
-              inLanguage: 'ar-SA',
-              potentialAction: {
-                '@type': 'SearchAction',
-                target: {
-                  '@type': 'EntryPoint',
-                  urlTemplate: 'https://albaheth.app/search?q={search_term_string}',
-                },
-                'query-input': 'required name=search_term_string',
-              },
-            },
-            {
-              '@context': 'https://schema.org',
-              '@type': 'Organization',
-              name: 'الباحث',
-              url: 'https://albaheth.app',
-              email: 'albahethapp@gmail.com',
-              description: 'منصة قانونية متخصصة للبحث في الأحكام القضائية السعودية',
-              areaServed: 'SA',
-            },
-          ]),
-        }}
-      />
     </div>
   );
 }

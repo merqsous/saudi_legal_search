@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Phone, Loader2, User, MessageCircle, CheckCircle } from 'lucide-react';
+import { X, Phone, Loader2, User, CheckCircle } from 'lucide-react';
+import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from 'firebase/auth';
+import { auth } from '../lib/firebase';
 
 interface AuthModalProps {
   onClose: () => void;
@@ -20,6 +22,7 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
   const [error, setError] = useState<string | null>(null);
   const [devCode, setDevCode] = useState<string | null>(null);
   const [needsName, setNeedsName] = useState(false);
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
 
   const formatPhone = (val: string) => {
     let cleaned = val.replace(/\D/g, '');
@@ -30,6 +33,36 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
     return cleaned;
   };
 
+  const toInternational = (localPhone: string) => {
+    let cleaned = localPhone.replace(/\D/g, '');
+    if (cleaned.startsWith('0')) cleaned = '966' + cleaned.slice(1);
+    return '+' + cleaned;
+  };
+
+  useEffect(() => {
+    if (!(window as any).recaptchaVerifier) {
+      try {
+        (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'send-code-button', {
+          size: 'invisible',
+          callback: () => {},
+          'expired-callback': () => {
+            if ((window as any).recaptchaWidgetId !== undefined && (window as any).grecaptcha) {
+              (window as any).grecaptcha.reset((window as any).recaptchaWidgetId);
+            }
+          },
+        });
+        (window as any).recaptchaVerifier.render().then((widgetId: number) => {
+          (window as any).recaptchaWidgetId = widgetId;
+          (window as any).recaptchaReady = true;
+        }).catch((err: any) => {
+          console.error('reCAPTCHA render error:', err);
+        });
+      } catch (e) {
+        console.error('reCAPTCHA setup error:', e);
+      }
+    }
+  }, []);
+
   const handleSendCode = async () => {
     setError(null);
     if (phone.length !== 10 || !phone.startsWith('05')) {
@@ -39,18 +72,32 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
 
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/send-code', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'فشل إرسال الرمز');
-
-      if (data.dev_code) setDevCode(data.dev_code);
+      if (!(window as any).recaptchaVerifier) {
+        setError('يرجى إعادة المحاولة');
+        return;
+      }
+      if (!(window as any).recaptchaReady) {
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+      }
+      const internationalPhone = toInternational(phone);
+      const result = await signInWithPhoneNumber(auth, internationalPhone, (window as any).recaptchaVerifier);
+      setConfirmationResult(result);
       setStep('verify');
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'فشل إرسال الرمز');
+    } catch (e: any) {
+      if ((window as any).recaptchaVerifier) {
+        (window as any).recaptchaVerifier.clear();
+        (window as any).recaptchaVerifier = null;
+        (window as any).recaptchaReady = false;
+      }
+      if (e.code === 'auth/too-many-requests') {
+        setError('طلبات كثيرة، حاول لاحقاً');
+      } else if (e.code === 'auth/captcha-check-failed') {
+        setError('فشل التحقق، أعد المحاولة');
+      } else if (e.code === 'auth/invalid-app-credential') {
+        setError('فشل التحقق، أعد المحاولة');
+      } else {
+        setError(e instanceof Error ? e.message : 'فشل إرسال الرمز');
+      }
     } finally {
       setLoading(false);
     }
@@ -65,12 +112,19 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
 
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/verify-code', {
+      if (!confirmationResult) {
+        setError('لم يتم إرسال الرمز، أعد المحاولة');
+        setLoading(false);
+        return;
+      }
+
+      await confirmationResult.confirm(code);
+
+      const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           phone,
-          code,
           first_name: needsName ? firstName : undefined,
           last_name: needsName ? lastName : undefined,
         }),
@@ -78,20 +132,19 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'فشل التحقق');
 
-      if (data.status === 'new_user' && !data.token) {
-        setNeedsName(true);
-        setStep('name');
-        setLoading(false);
-        return;
-      }
-
       if (data.token) {
         localStorage.setItem('auth_token', data.token);
         localStorage.setItem('auth_user', JSON.stringify(data.user));
         onAuthSuccess(data.user);
       }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'فشل التحقق');
+    } catch (e: any) {
+      if (e.code === 'auth/invalid-verification-code') {
+        setError('رمز التحقق غير صحيح');
+      } else if (e.code === 'auth/code-expired') {
+        setError('انتهت صلاحية الرمز، أعد المحاولة');
+      } else {
+        setError(e instanceof Error ? e.message : 'فشل التحقق');
+      }
     } finally {
       setLoading(false);
     }
@@ -106,12 +159,11 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
 
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/verify-code', {
+      const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           phone,
-          code,
           first_name: firstName.trim(),
           last_name: lastName.trim(),
         }),
@@ -142,9 +194,7 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
         </button>
 
         <div className="flex items-center gap-2 mb-6">
-          <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary-600 text-white">
-            <MessageCircle className="w-5 h-5" />
-          </div>
+          <img src="/logo-rounded.png" alt="الباحث" className="w-10 h-10 rounded-xl" />
           <h2 className="text-lg font-bold text-slate-900">تسجيل الدخول</h2>
         </div>
 
@@ -157,26 +207,26 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
         {/* Step 1: Phone */}
         {step === 'phone' && (
           <div className="space-y-4">
-            <p className="text-sm text-slate-600">أدخل رقم هاتفك السعودي لتصلك رمز التحقق عبر واتساب</p>
+            <p className="text-sm text-slate-600">أدخل رقم هاتفك السعودي لتصلك رمز التحقق عبر SMS</p>
             <div className="relative">
               <Phone className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
               <input
-                type="tel"
+                type="text"
                 value={phone}
                 onChange={(e) => setPhone(formatPhone(e.target.value))}
                 onKeyDown={(e) => e.key === 'Enter' && handleSendCode()}
                 placeholder="0501234567"
                 className="w-full pr-11 pl-4 py-3 text-base bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
-                dir="ltr"
-                inputMode="numeric"
+                style={{ direction: 'ltr' }}
               />
             </div>
             <button
+              id="send-code-button"
               onClick={handleSendCode}
               disabled={loading}
               className="w-full py-3 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <MessageCircle className="w-5 h-5" />}
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
               إرسال الرمز
             </button>
           </div>
@@ -194,7 +244,7 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
                 رمز التحقق (وضع التطوير): <span className="font-bold">{devCode}</span>
               </div>
             )}
-            <p className="text-sm text-slate-600">أدخل رمز التحقق المرسل عبر واتساب</p>
+            <p className="text-sm text-slate-600">أدخل رمز التحقق المرسل إلى هاتفك</p>
             <input
               type="text"
               value={code}
@@ -202,8 +252,7 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
               onKeyDown={(e) => e.key === 'Enter' && handleVerifyCode()}
               placeholder="000000"
               className="w-full px-4 py-3 text-2xl text-center tracking-[0.5em] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
-              dir="ltr"
-              inputMode="numeric"
+              style={{ direction: 'ltr' }}
             />
             <button
               onClick={handleVerifyCode}
@@ -214,7 +263,7 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
               تحقق
             </button>
             <button
-              onClick={() => { setStep('phone'); setCode(''); setDevCode(null); }}
+              onClick={() => { setStep('phone'); setCode(''); setDevCode(null); setConfirmationResult(null); }}
               className="w-full text-sm text-slate-500 hover:text-slate-700"
             >
               تغيير الرقم
@@ -234,7 +283,7 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
                 onChange={(e) => setFirstName(e.target.value)}
                 placeholder="الاسم الأول"
                 className="w-full pr-11 pl-4 py-3 text-base bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
-                dir="rtl"
+                style={{ direction: 'rtl' }}
               />
             </div>
             <div className="relative">
@@ -246,7 +295,7 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
                 onKeyDown={(e) => e.key === 'Enter' && handleRegister()}
                 placeholder="الاسم الأخير"
                 className="w-full pr-11 pl-4 py-3 text-base bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
-                dir="rtl"
+                style={{ direction: 'rtl' }}
               />
             </div>
             <button

@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Phone, Loader2, User, CheckCircle, ShieldCheck, ArrowLeft, X } from 'lucide-react';
+import { Phone, Loader2, User, CheckCircle, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from 'firebase/auth';
+import { auth } from '../../lib/firebase';
 
 type Step = 'phone' | 'name' | 'verify';
 
@@ -17,9 +19,8 @@ export default function LandingAuth() {
   const [error, setError] = useState<string | null>(null);
   const [isNewUser, setIsNewUser] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
-  const [captchaAnswer, setCaptchaAnswer] = useState('');
-  const [captchaQuestion, setCaptchaQuestion] = useState('');
-  const [captchaExpected, setCaptchaExpected] = useState(0);
+  const [code, setCode] = useState('');
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem('auth_user');
@@ -42,12 +43,48 @@ export default function LandingAuth() {
     return cleaned;
   };
 
-  const generateCaptcha = () => {
-    const a = Math.floor(Math.random() * 9) + 1;
-    const b = Math.floor(Math.random() * 9) + 1;
-    setCaptchaQuestion(`${a} + ${b} = ?`);
-    setCaptchaExpected(a + b);
-    setCaptchaAnswer('');
+  const toInternational = (localPhone: string) => {
+    let cleaned = localPhone.replace(/\D/g, '');
+    if (cleaned.startsWith('0')) cleaned = '966' + cleaned.slice(1);
+    return '+' + cleaned;
+  };
+
+  useEffect(() => {
+    if (showAuth && step === 'phone' && !(window as any).recaptchaVerifier) {
+      try {
+        (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'sign-in-button', {
+          size: 'invisible',
+          callback: () => {},
+          'expired-callback': () => {
+            if ((window as any).recaptchaWidgetId !== undefined && (window as any).grecaptcha) {
+              (window as any).grecaptcha.reset((window as any).recaptchaWidgetId);
+            }
+          },
+        });
+        (window as any).recaptchaVerifier.render().then((widgetId: number) => {
+          (window as any).recaptchaWidgetId = widgetId;
+          (window as any).recaptchaReady = true;
+        }).catch((err: any) => {
+          console.error('reCAPTCHA render error:', err);
+        });
+      } catch (e) {
+        console.error('reCAPTCHA setup error:', e);
+      }
+    }
+  }, [showAuth, step]);
+
+  const sendOtp = async () => {
+    if (!(window as any).recaptchaVerifier) {
+      setError('يرجى إعادة المحاولة');
+      return;
+    }
+    if (!(window as any).recaptchaReady) {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+    }
+    const internationalPhone = toInternational(phone);
+    const result = await signInWithPhoneNumber(auth, internationalPhone, (window as any).recaptchaVerifier);
+    setConfirmationResult(result);
+    setStep('verify');
   };
 
   const ADMIN_PHONE = '0514789632';
@@ -84,48 +121,63 @@ export default function LandingAuth() {
 
     setLoading(true);
     try {
-      const checkRes = await fetch('/api/auth/check-user', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone }),
-      });
-      const checkData = await checkRes.json();
-
-      if (checkData.is_new) {
-        setIsNewUser(true);
-        setStep('name');
-      } else {
-        setIsNewUser(false);
-        generateCaptcha();
-        setStep('verify');
+      setIsNewUser(false);
+      await sendOtp();
+    } catch (e: any) {
+      if ((window as any).recaptchaVerifier) {
+        (window as any).recaptchaVerifier.clear();
+        (window as any).recaptchaVerifier = null;
+        (window as any).recaptchaReady = false;
       }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'فشل');
+      if (e.code === 'auth/too-many-requests') {
+        setError('طلبات كثيرة، حاول لاحقاً');
+      } else if (e.code === 'auth/captcha-check-failed') {
+        setError('فشل التحقق، أعد المحاولة');
+      } else if (e.code === 'auth/invalid-phone-number') {
+        setError('رقم الهاتف غير صحيح');
+      } else if (e.code === 'auth/invalid-app-credential') {
+        setError('فشل التحقق، أعد المحاولة');
+      } else {
+        setError(e instanceof Error ? e.message : 'فشل إرسال الرمز');
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleNameSubmit = () => {
+  const handleNameSubmit = async () => {
     setError(null);
     if (!firstName.trim() || !lastName.trim()) {
       setError('يرجى إدخال الاسم الأول والأخير');
       return;
     }
-    generateCaptcha();
-    setStep('verify');
+    setLoading(true);
+    try {
+      await sendOtp();
+    } catch {
+      setError('فشل إرسال رمز التحقق');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleLogin = async () => {
+  const handleVerifyCode = async () => {
     setError(null);
-    if (parseInt(captchaAnswer) !== captchaExpected) {
-      setError('الإجابة غير صحيحة. حاول مرة أخرى.');
-      generateCaptcha();
+    if (code.length !== 6) {
+      setError('الرمز يجب أن يتكون من 6 أرقام');
       return;
     }
 
     setLoading(true);
     try {
+      if (!confirmationResult) {
+        setError('لم يتم إرسال الرمز، أعد المحاولة');
+        setLoading(false);
+        return;
+      }
+
+      await confirmationResult.confirm(code);
+
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -170,7 +222,13 @@ export default function LandingAuth() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" dir="rtl">
           <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-6 relative">
             <button
-              onClick={() => { setShowAuth(false); setStep('phone'); setError(null); }}
+              onClick={() => {
+                setShowAuth(false); setStep('phone'); setError(null); setCode('');
+                if ((window as any).recaptchaVerifier) {
+                  (window as any).recaptchaVerifier.clear();
+                  (window as any).recaptchaVerifier = null;
+                }
+              }}
               className="absolute top-4 left-4 text-slate-400 hover:text-slate-600"
             >
               <X className="w-5 h-5" />
@@ -183,7 +241,7 @@ export default function LandingAuth() {
               </h2>
               <p className="text-xs text-slate-500 mt-1">
                 {step === 'phone' && 'أدخل رقم هاتفك للدخول أو إنشاء حساب'}
-                {step === 'verify' && 'تأكيد أنك لست روبوت'}
+                {step === 'verify' && 'أدخل رمز التحقق المرسل إلى هاتفك'}
                 {step === 'name' && 'أكمل بياناتك للتسجيل'}
               </p>
             </div>
@@ -199,18 +257,18 @@ export default function LandingAuth() {
                 <div className="relative">
                   <Phone className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                   <input
-                    type="tel"
+                    type="text"
                     value={phone}
                     onChange={(e) => setPhone(formatPhone(e.target.value))}
                     onKeyDown={(e) => e.key === 'Enter' && handlePhoneSubmit()}
                     placeholder="0501234567"
                     className="w-full pr-11 pl-4 py-3 text-base bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    dir="ltr"
-                    inputMode="numeric"
+                    style={{ direction: 'ltr' }}
                     autoFocus
                   />
                 </div>
                 <button
+                  id="sign-in-button"
                   onClick={handlePhoneSubmit}
                   disabled={loading}
                   className="w-full py-3 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 disabled:opacity-50 flex items-center justify-center gap-2"
@@ -231,7 +289,7 @@ export default function LandingAuth() {
                     onChange={(e) => setFirstName(e.target.value)}
                     placeholder="الاسم الأول"
                     className="w-full pr-11 pl-4 py-3 text-base bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    dir="rtl"
+                    style={{ direction: 'rtl' }}
                     autoFocus
                   />
                 </div>
@@ -244,7 +302,7 @@ export default function LandingAuth() {
                     onKeyDown={(e) => e.key === 'Enter' && handleNameSubmit()}
                     placeholder="الاسم الأخير"
                     className="w-full pr-11 pl-4 py-3 text-base bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    dir="rtl"
+                    style={{ direction: 'rtl' }}
                   />
                 </div>
                 <button
@@ -252,43 +310,38 @@ export default function LandingAuth() {
                   disabled={loading}
                   className="w-full py-3 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  <CheckCircle className="w-5 h-5" />
-                  متابعة
+                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
+                  إرسال رمز التحقق
                 </button>
               </div>
             )}
 
             {step === 'verify' && (
               <div className="space-y-4">
-                <div className="flex items-center gap-2 text-sm text-slate-600 bg-slate-50 rounded-lg p-3">
-                  <ShieldCheck className="w-5 h-5 text-primary-600" />
-                  <span>أكد أنك لست روبوت</span>
-                </div>
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center">
-                  <p className="text-sm text-slate-500 mb-2">حل العملية الحسابية التالية:</p>
-                  <p className="text-2xl font-bold text-slate-900" dir="ltr">{captchaQuestion}</p>
+                <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 rounded-lg p-3">
+                  <CheckCircle className="w-4 h-4" />
+                  <span>تم إرسال رمز التحقق إلى {phone}</span>
                 </div>
                 <input
                   type="text"
-                  value={captchaAnswer}
-                  onChange={(e) => setCaptchaAnswer(e.target.value.replace(/\D/g, '').slice(0, 3))}
-                  onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-                  placeholder="الإجابة"
-                  className="w-full px-4 py-3 text-xl text-center bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  dir="ltr"
-                  inputMode="numeric"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  onKeyDown={(e) => e.key === 'Enter' && handleVerifyCode()}
+                  placeholder="000000"
+                  className="w-full px-4 py-3 text-2xl text-center tracking-[0.5em] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  style={{ direction: 'ltr' }}
                   autoFocus
                 />
                 <button
-                  onClick={handleLogin}
+                  onClick={handleVerifyCode}
                   disabled={loading}
                   className="w-full py-3 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
-                  دخول
+                  تحقق
                 </button>
                 <button
-                  onClick={() => { setStep('phone'); setCaptchaAnswer(''); setError(null); }}
+                  onClick={() => { setStep('phone'); setCode(''); setError(null); }}
                   className="w-full text-sm text-slate-500 hover:text-slate-700"
                 >
                   تغيير الرقم
