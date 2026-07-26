@@ -121,6 +121,20 @@ export default function LandingAuth() {
 
     setLoading(true);
     try {
+      const checkRes = await fetch('/api/auth/check-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone }),
+      });
+      const checkData = await checkRes.json();
+
+      if (checkData.is_new) {
+        setIsNewUser(true);
+        setStep('name');
+        setLoading(false);
+        return;
+      }
+
       setIsNewUser(false);
       await sendOtp();
     } catch (e: any) {
@@ -154,8 +168,19 @@ export default function LandingAuth() {
     setLoading(true);
     try {
       await sendOtp();
-    } catch {
-      setError('فشل إرسال رمز التحقق');
+    } catch (e: any) {
+      if ((window as any).recaptchaVerifier) {
+        (window as any).recaptchaVerifier.clear();
+        (window as any).recaptchaVerifier = null;
+        (window as any).recaptchaReady = false;
+      }
+      if (e.code === 'auth/too-many-requests') {
+        setError('طلبات كثيرة، حاول لاحقاً');
+      } else if (e.code === 'auth/invalid-app-credential') {
+        setError('فشل التحقق، أعد المحاولة');
+      } else {
+        setError(e instanceof Error ? e.message : 'فشل إرسال رمز التحقق');
+      }
     } finally {
       setLoading(false);
     }
@@ -242,7 +267,7 @@ export default function LandingAuth() {
               <p className="text-xs text-slate-500 mt-1">
                 {step === 'phone' && 'أدخل رقم هاتفك للدخول أو إنشاء حساب'}
                 {step === 'verify' && 'أدخل رمز التحقق المرسل إلى هاتفك'}
-                {step === 'name' && 'أكمل بياناتك للتسجيل'}
+                {step === 'name' && 'أدخل اسمك لإكمال إنشاء الحساب'}
               </p>
             </div>
 

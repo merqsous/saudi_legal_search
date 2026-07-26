@@ -72,17 +72,22 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
 
     setLoading(true);
     try {
-      if (!(window as any).recaptchaVerifier) {
-        setError('يرجى إعادة المحاولة');
+      const checkRes = await fetch('/api/auth/check-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone }),
+      });
+      const checkData = await checkRes.json();
+
+      if (checkData.is_new) {
+        setNeedsName(true);
+        setStep('name');
+        setLoading(false);
         return;
       }
-      if (!(window as any).recaptchaReady) {
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-      }
-      const internationalPhone = toInternational(phone);
-      const result = await signInWithPhoneNumber(auth, internationalPhone, (window as any).recaptchaVerifier);
-      setConfirmationResult(result);
-      setStep('verify');
+
+      setNeedsName(false);
+      await sendOtp();
     } catch (e: any) {
       if ((window as any).recaptchaVerifier) {
         (window as any).recaptchaVerifier.clear();
@@ -101,6 +106,20 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const sendOtp = async () => {
+    if (!(window as any).recaptchaVerifier) {
+      setError('يرجى إعادة المحاولة');
+      return;
+    }
+    if (!(window as any).recaptchaReady) {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+    }
+    const internationalPhone = toInternational(phone);
+    const result = await signInWithPhoneNumber(auth, internationalPhone, (window as any).recaptchaVerifier);
+    setConfirmationResult(result);
+    setStep('verify');
   };
 
   const handleVerifyCode = async () => {
@@ -159,25 +178,20 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
 
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          phone,
-          first_name: firstName.trim(),
-          last_name: lastName.trim(),
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'فشل التسجيل');
-
-      if (data.token) {
-        localStorage.setItem('auth_token', data.token);
-        localStorage.setItem('auth_user', JSON.stringify(data.user));
-        onAuthSuccess(data.user);
+      await sendOtp();
+    } catch (e: any) {
+      if ((window as any).recaptchaVerifier) {
+        (window as any).recaptchaVerifier.clear();
+        (window as any).recaptchaVerifier = null;
+        (window as any).recaptchaReady = false;
       }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'فشل التسجيل');
+      if (e.code === 'auth/too-many-requests') {
+        setError('طلبات كثيرة، حاول لاحقاً');
+      } else if (e.code === 'auth/invalid-app-credential') {
+        setError('فشل التحقق، أعد المحاولة');
+      } else {
+        setError(e instanceof Error ? e.message : 'فشل إرسال رمز التحقق');
+      }
     } finally {
       setLoading(false);
     }
@@ -274,7 +288,7 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
         {/* Step 3: Name (new users) */}
         {step === 'name' && (
           <div className="space-y-4">
-            <p className="text-sm text-slate-600">أدخل اسمك لإكمال التسجيل</p>
+            <p className="text-sm text-slate-600">أدخل اسمك لإكمال إنشاء الحساب</p>
             <div className="relative">
               <User className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
               <input
@@ -304,7 +318,7 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
               className="w-full py-3 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
-              تسجيل
+              إرسال رمز التحقق
             </button>
           </div>
         )}
