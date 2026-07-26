@@ -51,38 +51,62 @@ export default function LandingAuth() {
 
   useEffect(() => {
     if (showAuth && !(window as any).recaptchaVerifier) {
+      const container = document.getElementById('recaptcha-container');
+      if (!container) {
+        console.error('reCAPTCHA container not found in DOM');
+        return;
+      }
       try {
+        console.log('[AUTH] Initializing reCAPTCHA...');
         (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
           size: 'invisible',
-          callback: () => {},
+          callback: (token: string) => {
+            console.log('[AUTH] reCAPTCHA solved, token length:', token?.length);
+          },
           'expired-callback': () => {
+            console.log('[AUTH] reCAPTCHA expired');
             if ((window as any).recaptchaWidgetId !== undefined && (window as any).grecaptcha) {
               (window as any).grecaptcha.reset((window as any).recaptchaWidgetId);
             }
           },
+          'error-callback': (err: any) => {
+            console.error('[AUTH] reCAPTCHA error-callback:', err);
+          }
         });
         (window as any).recaptchaVerifier.render().then((widgetId: number) => {
           (window as any).recaptchaWidgetId = widgetId;
           (window as any).recaptchaReady = true;
+          console.log('[AUTH] reCAPTCHA rendered, widgetId:', widgetId);
         }).catch((err: any) => {
-          console.error('reCAPTCHA render error:', err);
+          console.error('[AUTH] reCAPTCHA render error:', err);
         });
       } catch (e) {
-        console.error('reCAPTCHA setup error:', e);
+        console.error('[AUTH] reCAPTCHA setup error:', e);
       }
     }
   }, [showAuth]);
 
   const sendOtp = async () => {
     if (!(window as any).recaptchaVerifier) {
+      console.error('[AUTH] No recaptchaVerifier available');
       setError('يرجى إعادة المحاولة');
       return;
     }
+    // Poll for reCAPTCHA ready up to 5 seconds
+    for (let i = 0; i < 10; i++) {
+      if ((window as any).recaptchaReady) break;
+      console.log('[AUTH] Waiting for reCAPTCHA ready...', i);
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
     if (!(window as any).recaptchaReady) {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      console.error('[AUTH] reCAPTCHA not ready after 5s');
+      setError('فشل تحميل التحقق، أعد المحاولة');
+      return;
     }
     const internationalPhone = toInternational(phone);
+    console.log('[AUTH] Sending OTP to:', internationalPhone);
     const result = await signInWithPhoneNumber(auth, internationalPhone, (window as any).recaptchaVerifier);
+    console.log('[AUTH] OTP sent successfully, confirmationResult:', !!result);
     setConfirmationResult(result);
     setStep('verify');
   };
@@ -138,6 +162,7 @@ export default function LandingAuth() {
       setIsNewUser(false);
       await sendOtp();
     } catch (e: any) {
+      console.error('[AUTH] handlePhoneSubmit error:', e?.code, e?.message, e);
       if ((window as any).recaptchaVerifier) {
         (window as any).recaptchaVerifier.clear();
         (window as any).recaptchaVerifier = null;
@@ -151,6 +176,12 @@ export default function LandingAuth() {
         setError('رقم الهاتف غير صحيح');
       } else if (e.code === 'auth/invalid-app-credential') {
         setError('فشل التحقق، أعد المحاولة');
+      } else if (e.code === 'auth/operation-not-allowed') {
+        setError('المصادقة بالهاتف غير مفعلة في Firebase');
+      } else if (e.code === 'auth/quota-exceeded') {
+        setError('تم تجاوز حصة الرسائل، حاول لاحقاً');
+      } else if (e.code === 'auth/network-request-failed') {
+        setError('خطأ في الشبكة، تحقق من اتصالك');
       } else {
         setError(e instanceof Error ? e.message : 'فشل إرسال الرمز');
       }
