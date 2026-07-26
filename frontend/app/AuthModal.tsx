@@ -42,7 +42,7 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
   useEffect(() => {
     if (!(window as any).recaptchaVerifier) {
       try {
-        (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'send-code-button', {
+        (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container-modal', {
           size: 'invisible',
           callback: () => {},
           'expired-callback': () => {
@@ -235,7 +235,6 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
               />
             </div>
             <button
-              id="send-code-button"
               onClick={handleSendCode}
               disabled={loading}
               className="w-full py-3 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 disabled:opacity-50 flex items-center justify-center gap-2"
@@ -323,6 +322,7 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
           </div>
         )}
       </div>
+      <div id="recaptcha-container-modal" style={{ direction: 'ltr' }} />
     </div>
   );
 }

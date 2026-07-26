@@ -50,9 +50,9 @@ export default function LandingAuth() {
   };
 
   useEffect(() => {
-    if (showAuth && step === 'phone' && !(window as any).recaptchaVerifier) {
+    if (showAuth && !(window as any).recaptchaVerifier) {
       try {
-        (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'sign-in-button', {
+        (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
           size: 'invisible',
           callback: () => {},
           'expired-callback': () => {
@@ -71,7 +71,7 @@ export default function LandingAuth() {
         console.error('reCAPTCHA setup error:', e);
       }
     }
-  }, [showAuth, step]);
+  }, [showAuth]);
 
   const sendOtp = async () => {
     if (!(window as any).recaptchaVerifier) {
@@ -293,7 +293,6 @@ export default function LandingAuth() {
                   />
                 </div>
                 <button
-                  id="sign-in-button"
                   onClick={handlePhoneSubmit}
                   disabled={loading}
                   className="w-full py-3 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 disabled:opacity-50 flex items-center justify-center gap-2"
@@ -380,6 +379,7 @@ export default function LandingAuth() {
           </div>
         </div>
       )}
+      <div id="recaptcha-container" style={{ direction: 'ltr' }} />
     </>
   );
 }
