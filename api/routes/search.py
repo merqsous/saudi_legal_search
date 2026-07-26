@@ -211,16 +211,19 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset):
     if filters:
         where_clause = "AND " + " AND ".join(filters)
 
+    embedding = None
+    vec_str = None
     if has_query and not is_browse_only:
         try:
             expanded_q = expand_query(q)
             embedding = embed_text(expanded_q)
+            vec_str = vector_to_pgvector(embedding)
         except Exception as e:
-            print(f"[SEARCH ERROR] Embedding failed: {e}")
-            raise HTTPException(status_code=500, detail=f"Embedding failed: {e}")
+            print(f"[SEARCH WARNING] Embedding failed, falling back to browse mode: {e}")
+            embedding = None
+            vec_str = None
 
-        vec_str = vector_to_pgvector(embedding)
-
+    if embedding and vec_str and has_query and not is_browse_only:
         count_sql = f"""
             SELECT COUNT(DISTINCT j.id)
             FROM judgment_chunks jc
@@ -239,10 +242,10 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset):
         count_params = [vec_str] + params
         try:
             count_row = query_one(count_sql, count_params)
+            total = count_row["count"] if count_row else 0
         except Exception as e:
-            print(f"[SEARCH ERROR] Count query failed: {e}")
-            raise HTTPException(status_code=500, detail=f"Search query failed: {e}")
-        total = count_row["count"] if count_row else 0
+            print(f"[SEARCH WARNING] Count query failed, returning empty: {e}")
+            return {"results": [], "total": 0, "limit": limit, "offset": offset}
 
         fetch_pool = min(limit * 5, 50)
 
@@ -287,8 +290,8 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset):
         try:
             rows = query_all(sql, all_params)
         except Exception as e:
-            print(f"[SEARCH ERROR] Fetch query failed: {e}")
-            raise HTTPException(status_code=500, detail=f"Search query failed: {e}")
+            print(f"[SEARCH WARNING] Fetch query failed, returning empty: {e}")
+            return {"results": [], "total": 0, "limit": limit, "offset": offset}
     elif is_browse_only:
         # Pure metadata term like "تجاري" - browse all cases of that type
         count_sql = f"""
@@ -307,10 +310,10 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset):
 
         try:
             count_row = query_one(count_sql, params)
+            total = count_row["count"] if count_row else 0
         except Exception as e:
-            print(f"[SEARCH ERROR] Count query failed: {e}")
-            raise HTTPException(status_code=500, detail=f"Search query failed: {e}")
-        total = count_row["count"] if count_row else 0
+            print(f"[SEARCH WARNING] Count query failed, returning empty: {e}")
+            return {"results": [], "total": 0, "limit": limit, "offset": offset}
 
         fetch_pool = min(limit * 5, 50)
 
@@ -354,8 +357,8 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset):
         try:
             rows = query_all(sql, all_params)
         except Exception as e:
-            print(f"[SEARCH ERROR] Fetch query failed: {e}")
-            raise HTTPException(status_code=500, detail=f"Search query failed: {e}")
+            print(f"[SEARCH WARNING] Fetch query failed, returning empty: {e}")
+            return {"results": [], "total": 0, "limit": limit, "offset": offset}
     else:
         # Filter-only browsing (no query) - return latest judgments matching filters
         count_sql = f"""
@@ -374,10 +377,10 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset):
 
         try:
             count_row = query_one(count_sql, params)
+            total = count_row["count"] if count_row else 0
         except Exception as e:
-            print(f"[SEARCH ERROR] Count query failed: {e}")
-            raise HTTPException(status_code=500, detail=f"Search query failed: {e}")
-        total = count_row["count"] if count_row else 0
+            print(f"[SEARCH WARNING] Count query failed, returning empty: {e}")
+            return {"results": [], "total": 0, "limit": limit, "offset": offset}
 
         fetch_pool = min(limit * 5, 50)
 
@@ -421,8 +424,8 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset):
         try:
             rows = query_all(sql, all_params)
         except Exception as e:
-            print(f"[SEARCH ERROR] Fetch query failed: {e}")
-            raise HTTPException(status_code=500, detail=f"Search query failed: {e}")
+            print(f"[SEARCH WARNING] Fetch query failed, returning empty: {e}")
+            return {"results": [], "total": 0, "limit": limit, "offset": offset}
 
     # Sentence-level re-ranking: embed sentences and find most relevant ones
     results = []

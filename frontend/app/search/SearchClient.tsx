@@ -168,7 +168,18 @@ export default function SearchClient() {
       const res = await fetch(`/api/search?${params.toString()}`, {
         headers: { 'X-User-Phone': authUser?.phone || '' },
       });
-      if (!res.ok) throw new Error(`API error: ${res.status}`);
+      if (!res.ok) {
+        if (res.status === 500) {
+          setError('حدث خطأ مؤقت، يرجى إعادة المحاولة');
+        } else {
+          setError(`خطأ في البحث: ${res.status}`);
+        }
+        setResults([]);
+        setTotal(0);
+        setLoading(false);
+        setHasSearched(true);
+        return;
+      }
       const data: SearchResponse = await res.json();
       setResults(data.results);
       setTotal(data.total);
