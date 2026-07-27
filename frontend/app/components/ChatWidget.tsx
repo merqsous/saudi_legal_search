@@ -233,7 +233,7 @@ export default function ChatWidget() {
                   </div>
                 )}
 
-                <form onSubmit={handleStartChat} className="space-y-3">
+                <form onSubmit={handleStartChat} noValidate className="space-y-3">
                   {!isRegistered && (
                     <>
                       <input
@@ -314,7 +314,7 @@ export default function ChatWidget() {
 
           {/* Input bar (only when chat exists) */}
           {hasChat && (
-            <form onSubmit={handleSend} className="flex items-center gap-2 p-3 border-t border-slate-200 bg-white flex-shrink-0">
+            <form onSubmit={handleSend} noValidate className="flex items-center gap-2 p-3 border-t border-slate-200 bg-white flex-shrink-0">
               <input
                 type="text"
                 value={inputText}
