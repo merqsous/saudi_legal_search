@@ -35,7 +35,7 @@ export const metadata: Metadata = {
 
 export default function SearchPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100" dir="rtl">
+    <div className="min-h-screen bg-slate-50" dir="rtl">
       <noscript>
         <div className="max-w-3xl mx-auto px-4 py-16 text-center">
           <div className="flex items-center justify-center w-16 h-16 rounded-2xl mb-4 mx-auto">

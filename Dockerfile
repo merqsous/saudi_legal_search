@@ -60,8 +60,8 @@ COPY saudi_legal_scraper/schema.sql ./schema.sql
 COPY frontend/ ./frontend/
 # Bust Docker layer cache on every deploy so frontend always rebuilds from source
 RUN date
-# Force rebuild - fix init_support_tables crash
-RUN echo "deploy bcde27e-fix-init"
+# Force rebuild - professional redesign
+RUN echo "deploy 5a3200e-redesign"
 # Debug: confirm the new landing page source is present in the build context
 RUN head -20 frontend/app/page.tsx
 RUN cd frontend && rm -rf .next .next/cache && npm install && npm run build

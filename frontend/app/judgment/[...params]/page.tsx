@@ -122,7 +122,7 @@ export default async function JudgmentPage({ params }: { params: { params: strin
   breadcrumbs.push({ name: `حكم رقم ${j.judgment_number || j.id}`, url: canonicalUrl });
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100" dir="rtl">
+    <div className="min-h-screen bg-slate-50" dir="rtl">
       <Header />
 
       {/* Breadcrumbs */}

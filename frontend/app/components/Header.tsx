@@ -48,12 +48,13 @@ function HeaderInner({ showSearchLink = true }: { showSearchLink?: boolean }) {
 
   return (
     <>
-    <header className="bg-white border-b border-slate-200 sticky top-0 z-20">
-      <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+    <header className="bg-white/80 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-20">
+      <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
         {/* Logo + Account (right side in RTL) */}
         <div className="flex items-center gap-3">
-          <a href="/" className="flex items-center gap-3">
-            <img src="/logo-rounded.png" alt="الباحث" className="w-10 h-10 rounded-xl" width={40} height={40} />
+          <a href="/" className="flex items-center gap-2.5">
+            <img src="/logo-rounded.png" alt="الباحث" className="w-9 h-9 rounded-lg" width={36} height={36} />
+            <span className="hidden sm:block text-lg font-bold text-slate-900">الباحث</span>
           </a>
           {authUser && (
             <div className="hidden sm:flex items-center gap-2 mr-2">
@@ -112,7 +113,7 @@ function HeaderInner({ showSearchLink = true }: { showSearchLink?: boolean }) {
           ) : (
             <button
               onClick={() => setShowAuthModal(true)}
-              className="px-4 py-2 text-sm font-medium bg-primary-600 text-white rounded-xl hover:bg-primary-700"
+              className="px-5 py-2 text-sm font-semibold bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all hover:shadow-md hover:shadow-primary-600/20"
             >
               تسجيل الدخول
             </button>
@@ -164,10 +165,11 @@ function HeaderInner({ showSearchLink = true }: { showSearchLink?: boolean }) {
 export default function Header({ showSearchLink = true }: { showSearchLink?: boolean }) {
   return (
     <Suspense fallback={
-      <header className="bg-white border-b border-slate-200">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
-          <a href="/" className="flex items-center gap-3">
-            <img src="/logo-rounded.png" alt="الباحث" className="w-10 h-10 rounded-xl" width={40} height={40} />
+      <header className="bg-white/80 backdrop-blur-md border-b border-slate-200/80">
+        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+          <a href="/" className="flex items-center gap-2.5">
+            <img src="/logo-rounded.png" alt="الباحث" className="w-9 h-9 rounded-lg" width={36} height={36} />
+            <span className="text-lg font-bold text-slate-900">الباحث</span>
           </a>
         </div>
       </header>
