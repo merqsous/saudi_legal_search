@@ -27,8 +27,16 @@ app.include_router(support.router, prefix="/api", tags=["support"])
 
 @app.on_event("startup")
 def startup():
-    auth.init_auth_tables()
-    support.init_support_tables()
+    try:
+        auth.init_auth_tables()
+    except Exception as e:
+        import logging
+        logging.error(f"init_auth_tables failed: {e}")
+    try:
+        support.init_support_tables()
+    except Exception as e:
+        import logging
+        logging.error(f"init_support_tables failed: {e}")
 
 
 @app.get("/")

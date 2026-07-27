@@ -8,45 +8,53 @@ router = APIRouter()
 
 
 def init_support_tables():
-    with get_db() as conn:
-        cur = conn.cursor()
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS support_tickets (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-                subject VARCHAR(200) NOT NULL,
-                message TEXT NOT NULL,
-                status VARCHAR(20) NOT NULL DEFAULT 'open',
-                chat_token VARCHAR(64),
-                created_at TIMESTAMP DEFAULT NOW(),
-                updated_at TIMESTAMP DEFAULT NOW()
-            );
-        """)
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS support_replies (
-                id SERIAL PRIMARY KEY,
-                ticket_id INTEGER REFERENCES support_tickets(id) ON DELETE CASCADE,
-                user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
-                message TEXT NOT NULL,
-                is_admin BOOLEAN DEFAULT FALSE,
-                created_at TIMESTAMP DEFAULT NOW()
-            );
-        """)
-        cur.execute("""
-            CREATE INDEX IF NOT EXISTS idx_support_tickets_user_id ON support_tickets(user_id);
-        """)
-        cur.execute("""
-            CREATE INDEX IF NOT EXISTS idx_support_replies_ticket_id ON support_replies(ticket_id);
-        """)
-        cur.execute("""
-            CREATE INDEX IF NOT EXISTS idx_support_tickets_chat_token ON support_tickets(chat_token);
-        """)
-        # Add chat_token column if missing (existing table)
-        try:
-            cur.execute("ALTER TABLE support_tickets ADD COLUMN IF NOT EXISTS chat_token VARCHAR(64)")
-        except Exception:
-            pass
-        cur.close()
+    try:
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS support_tickets (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                    subject VARCHAR(200) NOT NULL,
+                    message TEXT NOT NULL,
+                    status VARCHAR(20) NOT NULL DEFAULT 'open',
+                    chat_token VARCHAR(64),
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    updated_at TIMESTAMP DEFAULT NOW()
+                );
+            """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS support_replies (
+                    id SERIAL PRIMARY KEY,
+                    ticket_id INTEGER REFERENCES support_tickets(id) ON DELETE CASCADE,
+                    user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                    message TEXT NOT NULL,
+                    is_admin BOOLEAN DEFAULT FALSE,
+                    created_at TIMESTAMP DEFAULT NOW()
+                );
+            """)
+            cur.execute("""
+                CREATE INDEX IF NOT EXISTS idx_support_tickets_user_id ON support_tickets(user_id);
+            """)
+            cur.execute("""
+                CREATE INDEX IF NOT EXISTS idx_support_replies_ticket_id ON support_replies(ticket_id);
+            """)
+            # Add chat_token column if missing (for existing table from older deploy)
+            try:
+                cur.execute("ALTER TABLE support_tickets ADD COLUMN IF NOT EXISTS chat_token VARCHAR(64)")
+            except Exception:
+                pass
+            # Create chat_token index only if column exists
+            try:
+                cur.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_support_tickets_chat_token ON support_tickets(chat_token);
+                """)
+            except Exception:
+                pass
+            cur.close()
+    except Exception as e:
+        import logging
+        logging.error(f"init_support_tables failed: {e}")
 
 
 def _require_auth(authorization: str) -> dict:
