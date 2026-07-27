@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Scale, LogOut, Loader2, Users, Search, Database, TrendingUp, Clock, ArrowRight } from 'lucide-react';
+import { Scale, LogOut, Loader2, Users, Search, Database, TrendingUp, Clock, ArrowRight, MessageSquare, Send, ChevronRight, CheckCircle, X } from 'lucide-react';
 
 interface AdminStats {
   total_judgments: number;
@@ -48,11 +48,36 @@ interface AdminStats {
   }[];
 }
 
+interface SupportTicket {
+  id: number;
+  subject: string;
+  message: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  first_name: string;
+  last_name: string;
+  phone: string;
+}
+
+interface SupportReply {
+  id: number;
+  message: string;
+  is_admin: boolean;
+  created_at: string;
+}
+
 export default function AdminPage() {
   const router = useRouter();
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
+  const [supportLoading, setSupportLoading] = useState(false);
+  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
+  const [ticketReplies, setTicketReplies] = useState<SupportReply[]>([]);
+  const [adminReply, setAdminReply] = useState('');
+  const [replySubmitting, setReplySubmitting] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem('auth_user');
@@ -82,7 +107,79 @@ export default function AdminPage() {
       .then((data) => setStats(data))
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
+
+    fetchSupportTickets(token);
   }, [router]);
+
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
+
+  const fetchSupportTickets = async (t: string | null) => {
+    if (!t) return;
+    setSupportLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/support/admin/tickets`, {
+        headers: { Authorization: `Bearer ${t}` },
+      });
+      const data = await res.json();
+      setSupportTickets(data.tickets || []);
+    } catch {
+      // silent fail
+    } finally {
+      setSupportLoading(false);
+    }
+  };
+
+  const openSupportTicket = async (ticket: SupportTicket) => {
+    const t = localStorage.getItem('auth_token');
+    if (!t) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/support/admin/ticket/${ticket.id}`, {
+        headers: { Authorization: `Bearer ${t}` },
+      });
+      const data = await res.json();
+      setSelectedTicket(data.ticket);
+      setTicketReplies(data.replies || []);
+    } catch {
+      setError('فشل تحميل التذكرة');
+    }
+  };
+
+  const handleAdminReply = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adminReply.trim() || !selectedTicket) return;
+    const t = localStorage.getItem('auth_token');
+    if (!t) return;
+    setReplySubmitting(true);
+    try {
+      await fetch(`${API_BASE}/api/support/admin/ticket/${selectedTicket.id}/reply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${t}` },
+        body: JSON.stringify({ message: adminReply.trim() }),
+      });
+      setAdminReply('');
+      openSupportTicket(selectedTicket);
+      fetchSupportTickets(t);
+    } catch {
+      setError('فشل إرسال الرد');
+    } finally {
+      setReplySubmitting(false);
+    }
+  };
+
+  const handleCloseTicket = async (ticketId: number) => {
+    const t = localStorage.getItem('auth_token');
+    if (!t) return;
+    try {
+      await fetch(`${API_BASE}/api/support/admin/ticket/${ticketId}/close`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${t}` },
+      });
+      setSelectedTicket(null);
+      fetchSupportTickets(t);
+    } catch {
+      setError('فشل إغلاق التذكرة');
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('auth_token');
@@ -350,6 +447,131 @@ export default function AdminPage() {
               </tbody>
             </table>
           </div>
+        </div>
+
+        {/* Support Tickets */}
+        <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200 mt-8">
+          <div className="flex items-center gap-2 mb-4">
+            <MessageSquare className="w-5 h-5 text-primary-600" />
+            <h2 className="text-lg font-bold text-slate-900">تذاكر الدعم الفني</h2>
+            {supportTickets.filter(t => t.status === 'open').length > 0 && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-red-50 text-red-600">
+                {supportTickets.filter(t => t.status === 'open').length} جديدة
+              </span>
+            )}
+          </div>
+
+          {selectedTicket ? (
+            <div>
+              <button
+                onClick={() => setSelectedTicket(null)}
+                className="text-sm text-slate-500 hover:text-slate-700 mb-4 flex items-center gap-1"
+              >
+                <ChevronRight className="w-4 h-4" /> رجوع للقائمة
+              </button>
+
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-lg font-bold text-slate-900">{selectedTicket.subject}</h3>
+                  <span className={`text-xs px-2 py-0.5 rounded font-medium ${selectedTicket.status === 'open' ? 'bg-amber-50 text-amber-700' : selectedTicket.status === 'answered' ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-600'}`}>
+                    {selectedTicket.status === 'open' ? 'مفتوحة' : selectedTicket.status === 'answered' ? 'تم الرد' : 'مغلقة'}
+                  </span>
+                </div>
+                <p className="text-sm text-slate-500 mb-2">
+                  من: {selectedTicket.first_name} {selectedTicket.last_name} — {selectedTicket.phone}
+                </p>
+                <p className="text-sm text-slate-400 mb-3">{formatDate(selectedTicket.created_at)}</p>
+                <div className="bg-slate-50 rounded-xl p-4 text-slate-700 leading-relaxed text-sm">
+                  {selectedTicket.message}
+                </div>
+              </div>
+
+              <div className="space-y-3 mb-6">
+                {ticketReplies.map((reply) => (
+                  <div
+                    key={reply.id}
+                    className={`rounded-xl p-4 ${reply.is_admin ? 'bg-primary-50 border border-primary-200' : 'bg-slate-50 border border-slate-200'}`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`text-xs font-bold ${reply.is_admin ? 'text-primary-700' : 'text-slate-600'}`}>
+                        {reply.is_admin ? 'فريق الدعم' : 'المستخدم'}
+                      </span>
+                      <span className="text-xs text-slate-400">{formatDate(reply.created_at)}</span>
+                    </div>
+                    <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap">{reply.message}</p>
+                  </div>
+                ))}
+              </div>
+
+              {selectedTicket.status !== 'closed' && (
+                <div className="flex gap-2">
+                  <form onSubmit={handleAdminReply} className="flex-1 flex gap-2">
+                    <input
+                      type="text"
+                      value={adminReply}
+                      onChange={(e) => setAdminReply(e.target.value)}
+                      placeholder="اكتب ردك..."
+                      className="flex-1 rounded-xl border border-slate-200 p-3 text-sm focus:outline-none focus:border-primary-500"
+                    />
+                    <button
+                      type="submit"
+                      disabled={replySubmitting || !adminReply.trim()}
+                      className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 disabled:opacity-50"
+                    >
+                      {replySubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                      رد
+                    </button>
+                  </form>
+                  <button
+                    onClick={() => handleCloseTicket(selectedTicket.id)}
+                    className="flex items-center gap-1 px-3 py-2 bg-slate-100 text-slate-600 rounded-lg text-sm hover:bg-slate-200"
+                  >
+                    <X className="w-4 h-4" />
+                    إغلاق
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : supportLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 text-primary-600 animate-spin" />
+            </div>
+          ) : supportTickets.length === 0 ? (
+            <p className="text-sm text-slate-400 text-center py-8">لا توجد تذاكر دعم</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 text-slate-500 text-xs">
+                    <th className="text-right py-3 px-2">الموضوع</th>
+                    <th className="text-right py-3 px-2">المستخدم</th>
+                    <th className="text-right py-3 px-2">الهاتف</th>
+                    <th className="text-right py-3 px-2">الحالة</th>
+                    <th className="text-right py-3 px-2">التاريخ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {supportTickets.map((t) => (
+                    <tr
+                      key={t.id}
+                      onClick={() => openSupportTicket(t)}
+                      className="border-b border-slate-100 last:border-0 cursor-pointer hover:bg-slate-50"
+                    >
+                      <td className="py-3 px-2 text-slate-700 font-medium">{t.subject}</td>
+                      <td className="py-3 px-2 text-slate-600">{t.first_name} {t.last_name}</td>
+                      <td className="py-3 px-2 text-slate-500" dir="ltr">{t.phone}</td>
+                      <td className="py-3 px-2">
+                        <span className={`text-xs px-2 py-0.5 rounded font-medium ${t.status === 'open' ? 'bg-amber-50 text-amber-700' : t.status === 'answered' ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-600'}`}>
+                          {t.status === 'open' ? 'مفتوحة' : t.status === 'answered' ? 'تم الرد' : 'مغلقة'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-2 text-slate-500">{formatDate(t.created_at)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </main>
     </div>

@@ -79,6 +79,9 @@ function HeaderInner({ showSearchLink = true }: { showSearchLink?: boolean }) {
           )}
           <a href="/pricing" className="hidden sm:block text-sm font-medium text-slate-600 hover:text-primary-600">الأسعار</a>
           <a href="/about" className="hidden md:block text-sm font-medium text-slate-600 hover:text-primary-600">عن الباحث</a>
+          {authUser && (
+            <a href="/support" className="hidden sm:block text-sm font-medium text-slate-600 hover:text-primary-600">الدعم</a>
+          )}
 
           {authUser ? (
             <div className="flex items-center gap-2">

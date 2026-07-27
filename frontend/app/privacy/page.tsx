@@ -118,6 +118,7 @@ export default function PrivacyPage() {
             <a href="/about" className="hover:text-slate-600">عن الباحث</a>
             <a href="/pricing" className="hover:text-slate-600">الأسعار</a>
             <a href="/faq" className="hover:text-slate-600">الأسئلة الشائعة</a>
+            <a href="/support" className="hover:text-slate-600">الدعم الفني</a>
             <a href="/terms" className="hover:text-slate-600">الشروط</a>
             <a href="/privacy" className="hover:text-slate-600">الخصوصية</a>
           </div>

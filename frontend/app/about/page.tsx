@@ -116,6 +116,14 @@ export default function AboutPage() {
 
       <footer className="border-t border-slate-200 bg-white">
         <div className="max-w-4xl mx-auto px-4 py-6 text-center text-xs text-slate-400">
+          <div className="flex items-center justify-center gap-4 mb-2">
+            <a href="/about" className="hover:text-slate-600">عن الباحث</a>
+            <a href="/pricing" className="hover:text-slate-600">الأسعار</a>
+            <a href="/faq" className="hover:text-slate-600">الأسئلة الشائعة</a>
+            <a href="/support" className="hover:text-slate-600">الدعم الفني</a>
+            <a href="/terms" className="hover:text-slate-600">الشروط</a>
+            <a href="/privacy" className="hover:text-slate-600">الخصوصية</a>
+          </div>
           الباحث — محرك بحث ذكي في الأحكام القضائية السعودية
         </div>
       </footer>

@@ -141,6 +141,7 @@ export default function LandingPage() {
             <a href="/about" className="text-slate-600 hover:text-primary-600">عن الباحث</a>
             <a href="/pricing" className="text-slate-600 hover:text-primary-600">الأسعار</a>
             <a href="/faq" className="text-slate-600 hover:text-primary-600">الأسئلة الشائعة</a>
+            <a href="/support" className="text-slate-600 hover:text-primary-600">الدعم الفني</a>
             <a href="/terms" className="text-slate-600 hover:text-primary-600">الشروط</a>
             <a href="/privacy" className="text-slate-600 hover:text-primary-600">الخصوصية</a>
           </div>
