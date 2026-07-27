@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Bookmark, Loader2, ExternalLink, LogOut, LayoutDashboard, Trash2 } from 'lucide-react';
+import { Bookmark, Loader2, ExternalLink, Trash2 } from 'lucide-react';
+import Header from '../components/Header';
 import { judgmentUrl } from '@/lib/slug';
 
 interface FavoriteResult {
@@ -87,31 +88,7 @@ export default function FavoritesPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100" dir="rtl">
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center gap-3">
-          <a href="https://albaheth.app" className="flex items-center gap-3">
-            <img src="/logo-rounded.png" alt="الباحث" className="w-10 h-10 rounded-xl" />
-          </a>
-          <div className="flex-1" />
-          {authUser && (
-            <div className="flex items-center gap-3">
-              {authUser.phone === '966514789632' && (
-                <button
-                  onClick={() => router.push('/admin')}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-primary-600 hover:text-primary-700 font-medium"
-                >
-                  <LayoutDashboard className="w-4 h-4" />
-                  لوحة التحكم
-                </button>
-              )}
-              <span className="text-sm text-slate-600">{authUser.first_name} {authUser.last_name}</span>
-              <button onClick={handleLogout} className="text-slate-600 hover:text-slate-600">
-                <LogOut className="w-5 h-5" />
-              </button>
-            </div>
-          )}
-        </div>
-      </header>
+      <Header />
 
       <main className="max-w-5xl mx-auto px-4 py-8">
         <div className="flex items-center gap-2 mb-6">

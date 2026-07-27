@@ -2,6 +2,7 @@ import { Metadata } from 'next';
 import { Suspense } from 'react';
 import { CheckCircle, Sparkles, Crown, Users } from 'lucide-react';
 import PaymentButtons from './PaymentButtons';
+import Header from '../components/Header';
 
 export const metadata: Metadata = {
   title: 'الأسعار والباقات | الباحث - محرك بحث الأحكام القضائية السعودية',
@@ -24,23 +25,7 @@ export const metadata: Metadata = {
 export default function PricingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100" dir="rtl">
-      <header className="bg-white border-b border-slate-200">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
-          <a href="https://albaheth.app" className="flex items-center gap-3">
-            <img src="/logo-rounded.png" alt="الباحث" className="w-10 h-10 rounded-xl" />
-          </a>
-          <div className="flex items-center gap-4">
-            <a href="/search" className="text-sm font-medium text-slate-600 hover:text-primary-600">البحث</a>
-            <a href="/about" className="text-sm font-medium text-slate-600 hover:text-primary-600">عن الباحث</a>
-            <a
-              href="/"
-              className="px-4 py-2 text-sm font-medium bg-primary-600 text-white rounded-xl hover:bg-primary-700"
-            >
-              تسجيل الدخول
-            </a>
-          </div>
-        </div>
-      </header>
+      <Header />
 
       <main className="max-w-5xl mx-auto px-4 py-12">
         {/* Discount Banner */}

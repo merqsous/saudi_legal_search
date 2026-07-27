@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import { Search, Scale, FileText, Users } from 'lucide-react';
+import Header from '../components/Header';
 
 export const metadata: Metadata = {
   title: 'الأسئلة الشائعة | الباحث - محرك بحث الأحكام القضائية السعودية',
@@ -65,17 +66,7 @@ const faqs = [
 export default function FAQPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100" dir="rtl">
-      <header className="bg-white border-b border-slate-200">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-          <a href="https://albaheth.app" className="flex items-center gap-3">
-            <img src="/logo-rounded.png" alt="الباحث" className="w-10 h-10 rounded-xl" />
-          </a>
-          <div className="flex items-center gap-4">
-            <a href="/search" className="text-sm font-medium text-slate-600 hover:text-primary-600">البحث</a>
-            <a href="/pricing" className="text-sm font-medium text-slate-600 hover:text-primary-600">الأسعار</a>
-          </div>
-        </div>
-      </header>
+      <Header />
 
       <main className="max-w-4xl mx-auto px-4 py-12">
         <div className="text-center mb-10">

@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { judgmentSlug } from '@/lib/slug';
+import Header from '../../components/Header';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -122,16 +123,7 @@ export default async function JudgmentPage({ params }: { params: { params: strin
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100" dir="rtl">
-      <header className="bg-white border-b border-slate-200">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-          <a href="https://albaheth.app" className="flex items-center gap-3">
-            <img src="/logo-rounded.png" alt="الباحث" className="w-10 h-10 rounded-lg" />
-          </a>
-          <a href="/search" className="text-sm font-medium text-primary-600 hover:text-primary-700">
-            البحث
-          </a>
-        </div>
-      </header>
+      <Header />
 
       {/* Breadcrumbs */}
       <nav className="max-w-4xl mx-auto px-4 py-3" aria-label="breadcrumb">

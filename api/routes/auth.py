@@ -268,6 +268,62 @@ def get_me(authorization: str = Header(None)):
     return user
 
 
+class UpdateProfileRequest(BaseModel):
+    first_name: str | None = None
+    last_name: str | None = None
+
+
+@router.put("/auth/profile")
+def update_profile(req: UpdateProfileRequest, authorization: str = Header(None)):
+    """Update user profile (first name, last name)."""
+    if not authorization:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+    token = authorization.replace("Bearer ", "")
+    session = _sessions.get(token) or get_session(token)
+    if not session:
+        raise HTTPException(status_code=401, detail="جلسة غير صالحة")
+    user_id = session["user_id"]
+
+    updates = []
+    params = []
+    if req.first_name is not None:
+        updates.append("first_name = %s")
+        params.append(req.first_name.strip())
+    if req.last_name is not None:
+        updates.append("last_name = %s")
+        params.append(req.last_name.strip())
+    if not updates:
+        raise HTTPException(status_code=400, detail="لا توجد بيانات للتحديث")
+
+    params.append(user_id)
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute(f"UPDATE users SET {', '.join(updates)} WHERE id = %s", params)
+        cur.close()
+
+    user_data = query_one("SELECT id, phone, first_name, last_name FROM users WHERE id = %s", [user_id])
+    return {"status": "ok", "user": user_data}
+
+
+@router.get("/auth/payments")
+def get_payment_history(authorization: str = Header(None)):
+    """Get user's payment/subscription history."""
+    if not authorization:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+    token = authorization.replace("Bearer ", "")
+    session = _sessions.get(token) or get_session(token)
+    if not session:
+        raise HTTPException(status_code=401, detail="جلسة غير صالحة")
+    user_id = session["user_id"]
+
+    rows = query_all(
+        """SELECT id, plan, status, amount_paid, payment_id, started_at, expires_at
+           FROM user_subscriptions WHERE user_id = %s ORDER BY started_at DESC""",
+        [user_id],
+    )
+    return {"payments": [dict(r) for r in rows]}
+
+
 @router.post("/auth/check-user")
 def check_user(req: LoginRequest):
     phone = normalize_phone(req.phone)

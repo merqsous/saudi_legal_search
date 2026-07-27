@@ -1,17 +1,10 @@
 import { Search, CheckCircle, Scale, Sparkles } from 'lucide-react';
-import LandingAuth from './components/LandingAuth';
+import Header from './components/Header';
 
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100" dir="rtl">
-      <header className="bg-white border-b border-slate-200">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
-          <a href="https://albaheth.app" className="flex items-center gap-3">
-            <img src="/logo-rounded.png" alt="الباحث" className="w-10 h-10 rounded-lg" />
-          </a>
-          <LandingAuth />
-        </div>
-      </header>
+      <Header />
 
       <main className="max-w-5xl mx-auto px-4 py-16">
         <div className="text-center mb-12">

@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import Header from '../components/Header';
 
 export const metadata: Metadata = {
   title: 'سياسة الخصوصية | الباحث - محرك بحث الأحكام القضائية السعودية',
@@ -21,14 +22,7 @@ export const metadata: Metadata = {
 export default function PrivacyPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100" dir="rtl">
-      <header className="bg-white border-b border-slate-200">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-          <a href="https://albaheth.app" className="flex items-center gap-3">
-            <img src="/logo-rounded.png" alt="الباحث" className="w-10 h-10 rounded-xl" />
-          </a>
-          <a href="/search" className="text-sm font-medium text-primary-600 hover:text-primary-700">البحث</a>
-        </div>
-      </header>
+      <Header />
 
       <main className="max-w-4xl mx-auto px-4 py-12">
         <h1 className="text-3xl font-bold text-slate-900 mb-8">سياسة الخصوصية</h1>

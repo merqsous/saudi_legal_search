@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Search, Loader2, ExternalLink, Scale, Filter, X, ChevronDown, Sparkles, LogOut, LayoutDashboard, CheckCircle, MapPin, Building2, Gavel, Bookmark, FileText, Download, BookOpen } from 'lucide-react';
+import { Search, Loader2, ExternalLink, Scale, Filter, X, ChevronDown, Sparkles, LogOut, LayoutDashboard, CheckCircle, MapPin, Building2, Gavel, Bookmark, FileText, Download, BookOpen, User } from 'lucide-react';
 import { judgmentUrl } from '@/lib/slug';
 
 interface AuthUser {
@@ -356,7 +356,7 @@ export default function SearchClient() {
       {/* Header */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center gap-3">
-          <a href="https://albaheth.app" className="flex items-center gap-3">
+          <a href="/" className="flex items-center gap-3">
             <img src="/logo-rounded.png" alt="الباحث" className="w-10 h-10 rounded-lg" />
           </a>
           <div className="flex-1" />
@@ -385,7 +385,19 @@ export default function SearchClient() {
                 <FileText className="w-4 h-4" />
                 الدراسات
               </button>
-              <span className="text-sm text-slate-600">{authUser.first_name} {authUser.last_name}</span>
+              <button
+                onClick={() => router.push('/account')}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-slate-600 hover:text-primary-600 font-medium"
+              >
+                <User className="w-4 h-4" />
+                حسابي
+              </button>
+              <button
+                onClick={() => router.push('/account')}
+                className="text-sm text-slate-600 hover:text-primary-600 font-medium"
+              >
+                {authUser.first_name} {authUser.last_name}
+              </button>
               <button onClick={handleLogout} className="text-slate-400 hover:text-slate-600">
                 <LogOut className="w-5 h-5" />
               </button>

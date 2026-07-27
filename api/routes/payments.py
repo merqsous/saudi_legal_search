@@ -1,5 +1,6 @@
 import os
 import json
+import base64
 import urllib.request
 import urllib.error
 from fastapi import APIRouter, Header, HTTPException
@@ -21,6 +22,7 @@ class CreatePaymentRequest(BaseModel):
     currency: str = "SAR"
     description: str
     plan: str  # "monthly" or "annual"
+    source: dict = {"type": "creditcard"}
 
 
 class WebhookPayload(BaseModel):
@@ -45,13 +47,15 @@ def _moyasar_request(endpoint: str, data: dict, method: str = "POST") -> dict:
     secret_key = _get_secret_key()
     url = f"{BASE_URL}{endpoint}"
     body = json.dumps(data).encode("utf-8")
+    auth = base64.b64encode(f"{secret_key}:".encode("utf-8")).decode("utf-8")
     req = urllib.request.Request(
         url,
         data=body,
         method=method,
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Basic {secret_key}",
+            "Authorization": f"Basic {auth}",
+            "User-Agent": "Albaheth/1.0",
         },
     )
     try:
@@ -74,20 +78,51 @@ def create_payment(req: CreatePaymentRequest, authorization: str = Header(None))
         raise HTTPException(status_code=500, detail="Payment system not configured")
 
     # Moyasar callback URLs
-    callback_url = os.getenv("MOYASAR_CALLBACK_URL", "https://albaheth.app/pricing?payment=callback")
+    callback_url = os.getenv("MOYASAR_CALLBACK_URL", "http://localhost:3000/pricing?payment=callback")
 
     result = _moyasar_request("/payments", {
         "amount": req.amount,
         "currency": req.currency,
         "description": req.description,
         "callback_url": callback_url,
-        "source": {"type": "creditcard"},
+        "source": req.source,
         "metadata": {
             "user_id": str(user_id),
             "plan": req.plan,
         },
     })
 
+    return result
+
+
+@router.get("/payments")
+def list_payments(authorization: str = Header(None), page: int = 1):
+    """List all Moyasar payments for the authenticated user."""
+    user_id = _get_user_from_auth(authorization)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+
+    secret_key = _get_secret_key()
+    if not secret_key:
+        raise HTTPException(status_code=500, detail="Payment system not configured")
+
+    url = f"{BASE_URL}/payments?page={page}"
+    auth = base64.b64encode(f"{secret_key}:".encode("utf-8")).decode("utf-8")
+    req = urllib.request.Request(
+        url,
+        method="GET",
+        headers={"Authorization": f"Basic {auth}", "User-Agent": "Albaheth/1.0", "Accept": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(req) as response:
+            result = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        raise HTTPException(status_code=e.code, detail="Failed to fetch payments")
+
+    # Filter payments by user_id in metadata
+    all_payments = result.get("payments", [])
+    user_payments = [p for p in all_payments if p.get("metadata", {}).get("user_id") == str(user_id)]
+    result["payments"] = user_payments
     return result
 
 
@@ -103,10 +138,11 @@ def get_payment_status(payment_id: str, authorization: str = Header(None)):
         raise HTTPException(status_code=500, detail="Payment system not configured")
 
     url = f"{BASE_URL}/payments/{payment_id}"
+    auth = base64.b64encode(f"{secret_key}:".encode("utf-8")).decode("utf-8")
     req = urllib.request.Request(
         url,
         method="GET",
-        headers={"Authorization": f"Basic {secret_key}"},
+        headers={"Authorization": f"Basic {auth}", "User-Agent": "Albaheth/1.0"},
     )
     try:
         with urllib.request.urlopen(req) as response:
