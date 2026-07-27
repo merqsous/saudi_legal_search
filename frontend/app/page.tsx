@@ -1,4 +1,4 @@
-import { Search, CheckCircle, Scale, Sparkles, Crown } from 'lucide-react';
+import { Search, CheckCircle, Scale, Sparkles } from 'lucide-react';
 import LandingAuth from './components/LandingAuth';
 
 export default function LandingPage() {
@@ -22,7 +22,7 @@ export default function LandingPage() {
             ابحث في آلاف الأحكام القضائية السعودية من محاكم الدرجة الأولى ومحكمة الاستئناف. منصة قانونية متخصصة للمحامين والمستشارين والباحثين في القانون السعودي.
           </p>
           <p className="text-base text-slate-500 mb-8 max-w-2xl mx-auto">
-            تجربة مجانية تتيح لك 3 عمليات بحث بدون تسجيل. ابحث بالمعنى لا بالكلمة المفتاحية فقط.
+            سجل دخولك مجاناً وابحث بالمعنى لا بالكلمة المفتاحية فقط. باقات تبدأ من 29.99 ريال شهرياً.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <a
@@ -41,14 +41,13 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Launch Offer Banner */}
+        {/* Pricing Banner */}
         <div className="bg-primary-600 rounded-2xl p-6 mb-12 text-center max-w-3xl mx-auto">
           <div className="flex items-center justify-center gap-2 mb-2">
             <Sparkles className="w-6 h-6 text-white" />
-            <h2 className="text-2xl font-bold text-white">عرض الإطلاق — خصم 50% لأول 10 مشتركين</h2>
-            <Crown className="w-6 h-6 text-white" />
+            <h2 className="text-2xl font-bold text-white">باقات بأسعار تنافسية</h2>
           </div>
-          <p className="text-white text-lg mb-4">باقة سنوية بـ 745 ريال فقط بدلاً من 1,490 ريال</p>
+          <p className="text-white text-lg mb-4">شهري 29.99 ريال — سنوي 300 ريال — 50 بحث يومياً</p>
           <a
             href="/pricing"
             className="inline-flex items-center gap-2 px-6 py-3 bg-white text-primary-600 rounded-xl font-bold hover:bg-primary-50 transition-colors"
@@ -76,8 +75,8 @@ export default function LandingPage() {
             <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mx-auto mb-4">
               <CheckCircle className="w-6 h-6" />
             </div>
-            <h3 className="font-bold text-slate-900 mb-2">مجاني للتجربة</h3>
-            <p className="text-sm text-slate-600">3 عمليات بحث مجانية بدون تسجيل</p>
+            <h3 className="font-bold text-slate-900 mb-2">تسجيل مجاني</h3>
+            <p className="text-sm text-slate-600">سجل دخولك وابحث في الأحكام فوراً</p>
           </div>
         </div>
       </main>
