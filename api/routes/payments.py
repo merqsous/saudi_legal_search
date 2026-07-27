@@ -27,7 +27,7 @@ class CreatePaymentRequest(BaseModel):
 
 class ApplePaySessionRequest(BaseModel):
     validation_url: str
-    display_name: str = "الباحث"
+    display_name: str = "Albaheth"
     domain_name: str = ""
 
 

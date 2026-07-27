@@ -89,7 +89,7 @@ export default function PaymentButtons({ plan, amount, label, discountedLabel, v
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
         body: JSON.stringify({
           validation_url: `https://apple-pay-gateway.apple.com/paymentservices/startSession`,
-          display_name: 'الباحث',
+          display_name: 'Albaheth',
           domain_name: domainName,
         }),
       });
@@ -123,7 +123,7 @@ export default function PaymentButtons({ plan, amount, label, discountedLabel, v
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
           body: JSON.stringify({
             validation_url: event.validationURL,
-            display_name: 'الباحث',
+            display_name: 'Albaheth',
             domain_name: domainName,
           }),
         })
