@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { getAuth, initializeRecaptchaConfig } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyD1XyxcxiIAX1eNxGP9jFJWfauj1krO9-s",
@@ -14,5 +14,13 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 auth.languageCode = 'ar';
+
+if (typeof window !== 'undefined') {
+  initializeRecaptchaConfig(auth).then(() => {
+    console.log('[AUTH] reCAPTCHA config initialized');
+  }).catch((err) => {
+    console.error('[AUTH] reCAPTCHA config init failed:', err);
+  });
+}
 
 export default app;
