@@ -67,7 +67,7 @@ export default function PricingPage() {
           <div className="bg-white rounded-2xl border border-slate-200 p-6 flex flex-col">
             <div className="text-center mb-6">
               <h3 className="text-lg font-bold text-slate-900 mb-2">تجربة مجانية</h3>
-              <p className="text-sm text-slate-600">ابدأ بدون تسجيل</p>
+              <p className="text-sm text-slate-600">سجل دخولك للبدء</p>
               <div className="mt-4">
                 <span className="text-4xl font-bold text-slate-900">0</span>
                 <span className="text-slate-600 text-sm mr-1">ريال</span>
@@ -76,7 +76,7 @@ export default function PricingPage() {
             <ul className="space-y-3 mb-6 flex-1">
               <li className="flex items-center gap-2 text-sm text-slate-700">
                 <CheckCircle className="w-4 h-4 text-primary-500 shrink-0" />
-                3 عمليات بحث مجانية
+                تسجيل الدخول مطلوب للبحث
               </li>
               <li className="flex items-center gap-2 text-sm text-slate-700">
                 <CheckCircle className="w-4 h-4 text-primary-500 shrink-0" />
@@ -96,10 +96,10 @@ export default function PricingPage() {
               </li>
             </ul>
             <a
-              href="/search"
+              href="/"
               className="w-full py-3 border-2 border-primary-600 text-primary-600 rounded-xl font-bold text-center hover:bg-primary-50 transition-colors"
             >
-              ابدأ مجاناً
+              سجل دخولك مجاناً
             </a>
           </div>
 
@@ -248,7 +248,7 @@ export default function PricingPage() {
           >
             ابدأ البحث الآن
           </a>
-          <p className="text-sm text-slate-600 mt-3">تجربة مجانية بدون تسجيل — 3 عمليات بحث</p>
+          <p className="text-sm text-slate-600 mt-3">سجل دخولك للبدء — التسجيل مجاني</p>
         </div>
       </main>
 

@@ -66,7 +66,6 @@ export default function SearchClient() {
   const [aiLoading, setAiLoading] = useState(false);
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [authToken, setAuthToken] = useState<string | null>(null);
-  const [anonymousSearchCount, setAnonymousSearchCount] = useState(0);
   const [favoritedIds, setFavoritedIds] = useState<Set<number>>(new Set());
   const [studyLoading, setStudyLoading] = useState(false);
   const [studyContent, setStudyContent] = useState<string | null>(null);
@@ -74,9 +73,6 @@ export default function SearchClient() {
   const [studyId, setStudyId] = useState<number | null>(null);
   const [showStudy, setShowStudy] = useState(false);
   const isAnonymous = !authUser;
-  const hasReachedAnonymousLimit = isAnonymous && anonymousSearchCount >= 3;
-
-  const FREE_PREVIEW_LIMIT = 3;
 
   // Quick filter presets
   const quickFilters = [
@@ -116,10 +112,6 @@ export default function SearchClient() {
         })
         .catch(() => {});
     }
-    const anonCount = localStorage.getItem('anonymous_search_count');
-    if (anonCount) {
-      try { setAnonymousSearchCount(parseInt(anonCount, 10) || 0); } catch {}
-    }
     fetch('/api/filters')
       .then((r) => r.json())
       .then((data) => setFilters(data))
@@ -147,8 +139,8 @@ export default function SearchClient() {
     const hasFilters = selectedCourtType || selectedCity || selectedYear || selectedCourtLevel || selectedSection;
     if (!hasQuery && !hasFilters) return;
 
-    if (hasReachedAnonymousLimit) {
-      setError('لقد استنفدت عمليات البحث المجانية. يرجى تسجيل الدخول للمتابعة.');
+    if (isAnonymous) {
+      setError('يجب تسجيل الدخول للبحث في الأحكام القضائية.');
       return;
     }
 
@@ -162,7 +154,6 @@ export default function SearchClient() {
     if (selectedYear) params.set('year', selectedYear);
     if (selectedCourtLevel) params.set('court_level', selectedCourtLevel);
     if (selectedSection) params.set('section', selectedSection);
-    if (isAnonymous) params.set('anonymous', 'true');
 
     try {
       const res = await fetch(`/api/search?${params.toString()}`, {
@@ -195,12 +186,6 @@ export default function SearchClient() {
         });
       }
 
-      if (isAnonymous) {
-        const newCount = anonymousSearchCount + 1;
-        setAnonymousSearchCount(newCount);
-        localStorage.setItem('anonymous_search_count', String(newCount));
-      }
-
       // AI answer for all users
       setAiLoading(true);
       const aiParams = new URLSearchParams({ q: query, limit: '20' });
@@ -220,7 +205,7 @@ export default function SearchClient() {
     } finally {
       setLoading(false);
     }
-  }, [query, selectedCourtType, selectedCity, selectedYear, selectedCourtLevel, selectedSection, isAnonymous, anonymousSearchCount, hasReachedAnonymousLimit, authUser?.phone]);
+  }, [query, selectedCourtType, selectedCity, selectedYear, selectedCourtLevel, selectedSection, isAnonymous, authUser?.phone]);
 
   // Auto-trigger search when URL params populated the filters
   const [autoSearched, setAutoSearched] = useState(false);
@@ -408,22 +393,11 @@ export default function SearchClient() {
           )}
           {!authUser && (
             <div className="flex items-center gap-2">
-              {anonymousSearchCount > 0 && (
-                <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-md">
-                  {Math.max(0, FREE_PREVIEW_LIMIT - anonymousSearchCount)} بحث مجاني متبقي
-                </span>
-              )}
               <button
                 onClick={() => router.push('/')}
-                className="px-4 py-2 text-sm font-medium text-primary-600 hover:text-primary-700"
-              >
-                تسجيل الدخول
-              </button>
-              <button
-                onClick={() => router.push('/?signup=1')}
                 className="px-4 py-2 text-sm font-medium bg-primary-600 text-white rounded-lg hover:bg-primary-700"
               >
-                إنشاء حساب
+                تسجيل الدخول
               </button>
             </div>
           )}
@@ -703,14 +677,10 @@ export default function SearchClient() {
             {isAnonymous && (
               <div className="mt-6 bg-gradient-to-l from-primary-50 to-white border border-primary-200 rounded-xl p-6 text-center">
                 <h3 className="text-lg font-bold text-slate-800 mb-2">
-                  {hasReachedAnonymousLimit
-                    ? 'لقد استنفدت عمليات البحث المجانية'
-                    : 'شاهد جميع النتائج'}
+                  يجب تسجيل الدخول للبحث
                 </h3>
                 <p className="text-sm text-slate-600 mb-4">
-                  {hasReachedAnonymousLimit
-                    ? 'سجّل الدخول مجاناً للاستمرار في البحث والوصول لكل الأحكام.'
-                    : `هذه نتيجة معاينة فقط. سجّل الدخول للوصول إلى ${total} نتيجة.`}
+                  سجّل الدخول للوصول إلى آلاف الأحكام القضائية السعودية.
                 </p>
                 <div className="flex items-center justify-center gap-3">
                   <button
@@ -718,12 +688,6 @@ export default function SearchClient() {
                     className="px-5 py-2.5 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors"
                   >
                     تسجيل الدخول
-                  </button>
-                  <button
-                    onClick={() => router.push('/?signup=1')}
-                    className="px-5 py-2.5 border border-primary-600 text-primary-600 rounded-lg font-medium hover:bg-primary-50 transition-colors"
-                  >
-                    إنشاء حساب مجاني
                   </button>
                 </div>
               </div>
