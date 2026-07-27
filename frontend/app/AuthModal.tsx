@@ -1,9 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { X, Phone, Loader2, User, CheckCircle } from 'lucide-react';
-import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from 'firebase/auth';
-import { auth, recaptchaConfigPromise } from '../lib/firebase';
 
 interface AuthModalProps {
   onClose: () => void;
@@ -20,9 +18,7 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
   const [lastName, setLastName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [devCode, setDevCode] = useState<string | null>(null);
   const [needsName, setNeedsName] = useState(false);
-  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
 
   const formatPhone = (val: string) => {
     let cleaned = val.replace(/\D/g, '');
@@ -32,44 +28,6 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
     if (cleaned.length > 10) cleaned = cleaned.slice(0, 10);
     return cleaned;
   };
-
-  const toInternational = (localPhone: string) => {
-    let cleaned = localPhone.replace(/\D/g, '');
-    if (cleaned.startsWith('0')) cleaned = '966' + cleaned.slice(1);
-    return '+' + cleaned;
-  };
-
-  useEffect(() => {
-    if (!(window as any).recaptchaVerifier) {
-      const initRecaptcha = async () => {
-        try {
-          if (recaptchaConfigPromise) {
-            await recaptchaConfigPromise;
-            console.log('[AUTH MODAL] reCAPTCHA config ready');
-          }
-          (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container-modal', {
-            size: 'invisible',
-            callback: () => {},
-            'expired-callback': () => {
-              if ((window as any).recaptchaWidgetId !== undefined && (window as any).grecaptcha) {
-                (window as any).grecaptcha.reset((window as any).recaptchaWidgetId);
-              }
-            },
-          });
-          (window as any).recaptchaVerifier.render().then((widgetId: number) => {
-            (window as any).recaptchaWidgetId = widgetId;
-            (window as any).recaptchaReady = true;
-            console.log('[AUTH MODAL] reCAPTCHA rendered, widgetId:', widgetId);
-          }).catch((err: any) => {
-            console.error('[AUTH MODAL] reCAPTCHA render error:', err);
-          });
-        } catch (e) {
-          console.error('[AUTH MODAL] reCAPTCHA setup error:', e);
-        }
-      };
-      initRecaptcha();
-    }
-  }, []);
 
   const handleSendCode = async () => {
     setError(null);
@@ -97,66 +55,38 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
       setNeedsName(false);
       await sendOtp();
     } catch (e: any) {
-      if ((window as any).recaptchaVerifier) {
-        (window as any).recaptchaVerifier.clear();
-        (window as any).recaptchaVerifier = null;
-        (window as any).recaptchaReady = false;
-      }
-      if (e.code === 'auth/too-many-requests') {
-        setError('طلبات كثيرة، حاول لاحقاً');
-      } else if (e.code === 'auth/captcha-check-failed') {
-        setError('فشل التحقق، أعد المحاولة');
-      } else if (e.code === 'auth/invalid-app-credential') {
-        setError('فشل التحقق، أعد المحاولة');
-      } else {
-        setError(e instanceof Error ? e.message : 'فشل إرسال الرمز');
-      }
+      setError(e instanceof Error ? e.message : 'فشل إرسال الرمز');
     } finally {
       setLoading(false);
     }
   };
 
   const sendOtp = async () => {
-    if (!(window as any).recaptchaVerifier) {
-      setError('يرجى إعادة المحاولة');
-      return;
-    }
-    for (let i = 0; i < 10; i++) {
-      if ((window as any).recaptchaReady) break;
-      await new Promise((resolve) => setTimeout(resolve, 500));
-    }
-    if (!(window as any).recaptchaReady) {
-      setError('فشل تحميل التحقق، أعد المحاولة');
-      return;
-    }
-    const internationalPhone = toInternational(phone);
-    const result = await signInWithPhoneNumber(auth, internationalPhone, (window as any).recaptchaVerifier);
-    setConfirmationResult(result);
+    const res = await fetch('/api/auth/send-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'فشل إرسال رمز التحقق');
     setStep('verify');
   };
 
   const handleVerifyCode = async () => {
     setError(null);
-    if (code.length !== 6) {
-      setError('الرمز يجب أن يتكون من 6 أرقام');
+    if (code.length !== 4) {
+      setError('الرمز يجب أن يتكون من 4 أرقام');
       return;
     }
 
     setLoading(true);
     try {
-      if (!confirmationResult) {
-        setError('لم يتم إرسال الرمز، أعد المحاولة');
-        setLoading(false);
-        return;
-      }
-
-      await confirmationResult.confirm(code);
-
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch('/api/auth/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           phone,
+          code,
           first_name: needsName ? firstName : undefined,
           last_name: needsName ? lastName : undefined,
         }),
@@ -170,13 +100,7 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
         onAuthSuccess(data.user);
       }
     } catch (e: any) {
-      if (e.code === 'auth/invalid-verification-code') {
-        setError('رمز التحقق غير صحيح');
-      } else if (e.code === 'auth/code-expired') {
-        setError('انتهت صلاحية الرمز، أعد المحاولة');
-      } else {
-        setError(e instanceof Error ? e.message : 'فشل التحقق');
-      }
+      setError(e instanceof Error ? e.message : 'فشل التحقق');
     } finally {
       setLoading(false);
     }
@@ -193,18 +117,7 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
     try {
       await sendOtp();
     } catch (e: any) {
-      if ((window as any).recaptchaVerifier) {
-        (window as any).recaptchaVerifier.clear();
-        (window as any).recaptchaVerifier = null;
-        (window as any).recaptchaReady = false;
-      }
-      if (e.code === 'auth/too-many-requests') {
-        setError('طلبات كثيرة، حاول لاحقاً');
-      } else if (e.code === 'auth/invalid-app-credential') {
-        setError('فشل التحقق، أعد المحاولة');
-      } else {
-        setError(e instanceof Error ? e.message : 'فشل إرسال رمز التحقق');
-      }
+      setError(e instanceof Error ? e.message : 'فشل إرسال رمز التحقق');
     } finally {
       setLoading(false);
     }
@@ -265,18 +178,13 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
               <CheckCircle className="w-4 h-4" />
               <span>تم إرسال الرمز إلى {phone}</span>
             </div>
-            {devCode && (
-              <div className="text-sm text-amber-600 bg-amber-50 rounded-lg p-3 text-center" dir="ltr">
-                رمز التحقق (وضع التطوير): <span className="font-bold">{devCode}</span>
-              </div>
-            )}
             <p className="text-sm text-slate-600">أدخل رمز التحقق المرسل إلى هاتفك</p>
             <input
               type="text"
               value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
               onKeyDown={(e) => e.key === 'Enter' && handleVerifyCode()}
-              placeholder="000000"
+              placeholder="0000"
               className="w-full px-4 py-3 text-2xl text-center tracking-[0.5em] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
               style={{ direction: 'ltr' }}
             />
@@ -289,7 +197,7 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
               تحقق
             </button>
             <button
-              onClick={() => { setStep('phone'); setCode(''); setDevCode(null); setConfirmationResult(null); }}
+              onClick={() => { setStep('phone'); setCode(''); }}
               className="w-full text-sm text-slate-500 hover:text-slate-700"
             >
               تغيير الرقم
@@ -335,7 +243,6 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
           </div>
         )}
       </div>
-      <div id="recaptcha-container-modal" style={{ direction: 'ltr' }} />
     </div>
   );
 }

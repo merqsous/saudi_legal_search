@@ -422,3 +422,118 @@ def admin_login(req: LoginRequest, request: Request):
 
     user_data = query_one("SELECT id, phone, first_name, last_name FROM users WHERE id = %s", [user_id])
     return {"status": "ok", "token": token, "user": user_data}
+
+
+# --- Authentica OTP Integration ---
+
+AUTHENTICA_API_URL = "https://api.authentica.sa/api/v2"
+
+
+def _get_authentica_key() -> str:
+    return os.getenv("AUTHENTICA_API_KEY", "")
+
+
+def _authentica_request(endpoint: str, data: dict) -> dict:
+    """Make an authenticated request to Authentica API."""
+    api_key = _get_authentica_key()
+    if not api_key:
+        raise HTTPException(status_code=500, detail="Authentica API key not configured")
+    url = f"{AUTHENTICA_API_URL}{endpoint}"
+    body = _json.dumps(data).encode("utf-8")
+    req = urllib.request.Request(
+        url,
+        data=body,
+        method="POST",
+        headers={
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "X-Authorization": api_key,
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as response:
+            return _json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode("utf-8")
+        print(f"[AUTHENTICA] Error {e.code}: {error_body}")
+        raise HTTPException(status_code=e.code, detail=f"Authentica error: {error_body}")
+    except Exception as e:
+        print(f"[AUTHENTICA] Request failed: {e}")
+        raise HTTPException(status_code=500, detail="فشل الاتصال بخدمة التحقق")
+
+
+class SendOtpRequest(BaseModel):
+    phone: str
+
+
+class VerifyOtpRequest(BaseModel):
+    phone: str
+    code: str
+    first_name: str | None = None
+    last_name: str | None = None
+
+
+@router.post("/auth/send-otp")
+def send_otp(req: SendOtpRequest):
+    """Send OTP via Authentica SMS."""
+    phone = normalize_phone(req.phone)
+    if not phone:
+        raise HTTPException(status_code=400, detail="رقم الهاتف غير صحيح. يجب أن يبدأ بـ 05 ويتكون من 9 أرقام")
+
+    international_phone = "+" + phone
+    result = _authentica_request("/send-otp", {
+        "method": "sms",
+        "phone": international_phone,
+        "template": "استخدم الرمز {{otp}} للتحقق من حسابك في {{app_name}}.",
+        "app_name": "الباحث",
+    })
+    return {"status": "ok", "message": "تم إرسال رمز التحقق"}
+
+
+@router.post("/auth/verify-otp")
+def verify_otp(req: VerifyOtpRequest, request: Request):
+    """Verify OTP via Authentica and login/register user."""
+    phone = normalize_phone(req.phone)
+    if not phone:
+        raise HTTPException(status_code=400, detail="رقم الهاتف غير صحيح")
+
+    if len(req.code) != 4 or not req.code.isdigit():
+        raise HTTPException(status_code=400, detail="الرمز يجب أن يتكون من 4 أرقام")
+
+    international_phone = "+" + phone
+    result = _authentica_request("/verify-otp", {
+        "phone": international_phone,
+        "otp": req.code,
+    })
+
+    if not result.get("status") and not result.get("verified"):
+        raise HTTPException(status_code=400, detail="رمز التحقق غير صحيح")
+
+    ip = get_client_ip(request)
+    country = get_country_from_ip(ip)
+
+    user = query_one("SELECT * FROM users WHERE phone = %s", [phone])
+
+    with get_db() as conn:
+        cur = conn.cursor()
+        if user:
+            user_id = user["id"]
+            if req.first_name and req.last_name:
+                cur.execute("UPDATE users SET first_name = %s, last_name = %s WHERE id = %s",
+                            (req.first_name, req.last_name, user_id))
+        else:
+            if not req.first_name or not req.last_name:
+                raise HTTPException(status_code=400, detail="الاسم الأول والأخير مطلوبان للمستخدمين الجدد")
+            cur.execute(
+                "INSERT INTO users (phone, first_name, last_name, ip_address, country) VALUES (%s, %s, %s, %s, %s) RETURNING id",
+                (phone, req.first_name, req.last_name, ip, country),
+            )
+            user_id = cur.fetchone()[0]
+        cur.close()
+
+    token = secrets.token_urlsafe(32)
+    create_session(token, user_id, phone)
+    _sessions[token] = {"user_id": user_id, "phone": phone}
+
+    user_data = query_one("SELECT id, phone, first_name, last_name FROM users WHERE id = %s", [user_id])
+    return {"status": "ok", "token": token, "user": user_data}

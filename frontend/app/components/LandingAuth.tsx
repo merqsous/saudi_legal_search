@@ -3,8 +3,6 @@
 import { useState, useEffect } from 'react';
 import { Phone, Loader2, User, CheckCircle, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from 'firebase/auth';
-import { auth, recaptchaConfigPromise } from '../../lib/firebase';
 
 type Step = 'phone' | 'name' | 'verify';
 
@@ -20,7 +18,6 @@ export default function LandingAuth() {
   const [isNewUser, setIsNewUser] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [code, setCode] = useState('');
-  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem('auth_user');
@@ -43,70 +40,14 @@ export default function LandingAuth() {
     return cleaned;
   };
 
-  const toInternational = (localPhone: string) => {
-    let cleaned = localPhone.replace(/\D/g, '');
-    if (cleaned.startsWith('0')) cleaned = '966' + cleaned.slice(1);
-    return '+' + cleaned;
-  };
-
-  useEffect(() => {
-    if (showAuth && !(window as any).recaptchaVerifier) {
-      const initRecaptcha = async () => {
-        try {
-          if (recaptchaConfigPromise) {
-            console.log('[AUTH] Waiting for reCAPTCHA config...');
-            await recaptchaConfigPromise;
-            console.log('[AUTH] reCAPTCHA config ready');
-          }
-          console.log('[AUTH] Initializing reCAPTCHA...');
-          (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-            size: 'invisible',
-            callback: (token: string) => {
-              console.log('[AUTH] reCAPTCHA solved, token length:', token?.length);
-            },
-            'expired-callback': () => {
-              console.log('[AUTH] reCAPTCHA expired');
-            },
-            'error-callback': (err: any) => {
-              console.error('[AUTH] reCAPTCHA error-callback:', err);
-            }
-          });
-          (window as any).recaptchaVerifier.render().then((widgetId: number) => {
-            (window as any).recaptchaWidgetId = widgetId;
-            (window as any).recaptchaReady = true;
-            console.log('[AUTH] reCAPTCHA rendered, widgetId:', widgetId);
-          }).catch((err: any) => {
-            console.error('[AUTH] reCAPTCHA render error:', err);
-          });
-        } catch (e) {
-          console.error('[AUTH] reCAPTCHA setup error:', e);
-        }
-      };
-      initRecaptcha();
-    }
-  }, [showAuth]);
-
   const sendOtp = async () => {
-    if (!(window as any).recaptchaVerifier) {
-      console.error('[AUTH] No recaptchaVerifier available');
-      setError('يرجى إعادة المحاولة');
-      return;
-    }
-    for (let i = 0; i < 10; i++) {
-      if ((window as any).recaptchaReady) break;
-      console.log('[AUTH] Waiting for reCAPTCHA ready...', i);
-      await new Promise((resolve) => setTimeout(resolve, 500));
-    }
-    if (!(window as any).recaptchaReady) {
-      console.error('[AUTH] reCAPTCHA not ready after 5s');
-      setError('فشل تحميل التحقق، أعد المحاولة');
-      return;
-    }
-    const internationalPhone = toInternational(phone);
-    console.log('[AUTH] Sending OTP to:', internationalPhone);
-    const result = await signInWithPhoneNumber(auth, internationalPhone, (window as any).recaptchaVerifier);
-    console.log('[AUTH] OTP sent successfully, confirmationResult:', !!result);
-    setConfirmationResult(result);
+    const res = await fetch('/api/auth/send-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'فشل إرسال رمز التحقق');
     setStep('verify');
   };
 
@@ -161,29 +102,7 @@ export default function LandingAuth() {
       setIsNewUser(false);
       await sendOtp();
     } catch (e: any) {
-      console.error('[AUTH] handlePhoneSubmit error:', e?.code, e?.message, e);
-      if ((window as any).recaptchaVerifier) {
-        (window as any).recaptchaVerifier.clear();
-        (window as any).recaptchaVerifier = null;
-        (window as any).recaptchaReady = false;
-      }
-      if (e.code === 'auth/too-many-requests') {
-        setError('طلبات كثيرة، حاول لاحقاً');
-      } else if (e.code === 'auth/captcha-check-failed') {
-        setError('فشل التحقق، أعد المحاولة');
-      } else if (e.code === 'auth/invalid-phone-number') {
-        setError('رقم الهاتف غير صحيح');
-      } else if (e.code === 'auth/invalid-app-credential') {
-        setError('فشل التحقق، أعد المحاولة');
-      } else if (e.code === 'auth/operation-not-allowed') {
-        setError('المصادقة بالهاتف غير مفعلة في Firebase');
-      } else if (e.code === 'auth/quota-exceeded') {
-        setError('تم تجاوز حصة الرسائل، حاول لاحقاً');
-      } else if (e.code === 'auth/network-request-failed') {
-        setError('خطأ في الشبكة، تحقق من اتصالك');
-      } else {
-        setError(e instanceof Error ? e.message : 'فشل إرسال الرمز');
-      }
+      setError(e instanceof Error ? e.message : 'فشل إرسال الرمز');
     } finally {
       setLoading(false);
     }
@@ -199,18 +118,7 @@ export default function LandingAuth() {
     try {
       await sendOtp();
     } catch (e: any) {
-      if ((window as any).recaptchaVerifier) {
-        (window as any).recaptchaVerifier.clear();
-        (window as any).recaptchaVerifier = null;
-        (window as any).recaptchaReady = false;
-      }
-      if (e.code === 'auth/too-many-requests') {
-        setError('طلبات كثيرة، حاول لاحقاً');
-      } else if (e.code === 'auth/invalid-app-credential') {
-        setError('فشل التحقق، أعد المحاولة');
-      } else {
-        setError(e instanceof Error ? e.message : 'فشل إرسال رمز التحقق');
-      }
+      setError(e instanceof Error ? e.message : 'فشل إرسال رمز التحقق');
     } finally {
       setLoading(false);
     }
@@ -218,39 +126,32 @@ export default function LandingAuth() {
 
   const handleVerifyCode = async () => {
     setError(null);
-    if (code.length !== 6) {
-      setError('الرمز يجب أن يتكون من 6 أرقام');
+    if (code.length !== 4) {
+      setError('الرمز يجب أن يتكون من 4 أرقام');
       return;
     }
 
     setLoading(true);
     try {
-      if (!confirmationResult) {
-        setError('لم يتم إرسال الرمز، أعد المحاولة');
-        setLoading(false);
-        return;
-      }
-
-      await confirmationResult.confirm(code);
-
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch('/api/auth/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           phone,
+          code,
           first_name: isNewUser ? firstName.trim() : undefined,
           last_name: isNewUser ? lastName.trim() : undefined,
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'فشل تسجيل الدخول');
+      if (!res.ok) throw new Error(data.detail || 'فشل التحقق');
       if (data.token) {
         localStorage.setItem('auth_token', data.token);
         localStorage.setItem('auth_user', JSON.stringify(data.user));
         router.push('/search');
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'فشل تسجيل الدخول');
+      setError(e instanceof Error ? e.message : 'فشل التحقق');
     } finally {
       setLoading(false);
     }
@@ -279,10 +180,6 @@ export default function LandingAuth() {
             <button
               onClick={() => {
                 setShowAuth(false); setStep('phone'); setError(null); setCode('');
-                if ((window as any).recaptchaVerifier) {
-                  (window as any).recaptchaVerifier.clear();
-                  (window as any).recaptchaVerifier = null;
-                }
               }}
               className="absolute top-4 left-4 text-slate-400 hover:text-slate-600"
             >
@@ -379,9 +276,9 @@ export default function LandingAuth() {
                 <input
                   type="text"
                   value={code}
-                  onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
                   onKeyDown={(e) => e.key === 'Enter' && handleVerifyCode()}
-                  placeholder="000000"
+                  placeholder="0000"
                   className="w-full px-4 py-3 text-2xl text-center tracking-[0.5em] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
                   style={{ direction: 'ltr' }}
                   autoFocus
@@ -409,7 +306,6 @@ export default function LandingAuth() {
           </div>
         </div>
       )}
-      <div id="recaptcha-container" style={{ direction: 'ltr' }} />
     </>
   );
 }
