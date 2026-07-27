@@ -536,6 +536,10 @@ def send_otp(req: SendOtpRequest):
     if not phone:
         raise HTTPException(status_code=400, detail="رقم الهاتف غير صحيح. يجب أن يبدأ بـ 05 ويتكون من 9 أرقام")
 
+    # Admin bypass - no OTP needed
+    if phone == ADMIN_PHONE:
+        return {"status": "ok", "message": "تم إرسال رمز التحقق"}
+
     international_phone = "+" + phone
     result = _authentica_request("/send-otp", {
         "method": "sms",
@@ -556,14 +560,16 @@ def verify_otp(req: VerifyOtpRequest, request: Request):
     if len(req.code) != 4 or not req.code.isdigit():
         raise HTTPException(status_code=400, detail="الرمز يجب أن يتكون من 4 أرقام")
 
-    international_phone = "+" + phone
-    result = _authentica_request("/verify-otp", {
-        "phone": international_phone,
-        "otp": req.code,
-    })
+    # Admin bypass - skip Authentica verification
+    if phone != ADMIN_PHONE:
+        international_phone = "+" + phone
+        result = _authentica_request("/verify-otp", {
+            "phone": international_phone,
+            "otp": req.code,
+        })
 
-    if not result.get("status") and not result.get("verified"):
-        raise HTTPException(status_code=400, detail="رمز التحقق غير صحيح")
+        if not result.get("status") and not result.get("verified"):
+            raise HTTPException(status_code=400, detail="رمز التحقق غير صحيح")
 
     ip = get_client_ip(request)
     country = get_country_from_ip(ip)
