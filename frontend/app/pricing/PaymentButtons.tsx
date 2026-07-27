@@ -62,9 +62,142 @@ export default function PaymentButtons({ plan, amount, label, discountedLabel, v
     return val.replace(/\D/g, '').slice(0, 16).replace(/(.{4})/g, '$1 ').trim();
   };
 
+  const handleApplePay = async () => {
+    if (!authToken) { router.push('/?signup=1'); return; }
+
+    // Check if Apple Pay is available
+    if (!(window as any).ApplePaySession) {
+      setError('Apple Pay غير متاح على هذا الجهاز. استخدم Safari على جهاز Apple.');
+      return;
+    }
+
+    if (!(window as any).ApplePaySession.canMakePayments()) {
+      setError('Apple Pay غير متاح. تأكد من إضافة بطاقة إلى محفظة Apple.');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const domainName = window.location.hostname;
+      const validationUrl = (window as any).ApplePaySession.buildVersion ? '' : '';
+
+      // Step 1: Create Apple Pay session via backend → Moyasar
+      const sessionRes = await fetch('/api/payments/applepay/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({
+          validation_url: `https://apple-pay-gateway.apple.com/paymentservices/startSession`,
+          display_name: 'الباحث',
+          domain_name: domainName,
+        }),
+      });
+
+      if (!sessionRes.ok) {
+        const err = await sessionRes.json();
+        throw new Error(err.detail || 'فشل تهيئة Apple Pay');
+      }
+
+      const sessionData = await sessionRes.json();
+
+      // Step 2: Create Apple Pay session on client
+      const appleSession = new (window as any).ApplePaySession(3, {
+        countryCode: 'SA',
+        currencyCode: 'SAR',
+        supportedNetworks: ['visa', 'masterCard', 'mada'],
+        merchantCapabilities: ['supports3DS', 'supportsCredit', 'supportsDebit'],
+        total: {
+          label: 'الباحث',
+          amount: (amount / 100).toFixed(2),
+          type: 'final',
+        },
+      });
+
+      appleSession.begin();
+
+      // Step 3: Validate merchant
+      appleSession.onvalidatemerchant = (event: any) => {
+        fetch('/api/payments/applepay/session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+          body: JSON.stringify({
+            validation_url: event.validationURL,
+            display_name: 'الباحث',
+            domain_name: domainName,
+          }),
+        })
+          .then((r) => r.json())
+          .then((data) => {
+            appleSession.completeMerchantValidation(data);
+          })
+          .catch((e) => {
+            appleSession.abort();
+            setError('فشل التحقق من Apple Pay');
+            setLoading(false);
+          });
+      };
+
+      // Step 4: Payment authorization - get token from Apple
+      appleSession.onpaymentauthorized = async (event: any) => {
+        const token = JSON.stringify(event.payment.token.paymentData);
+
+        try {
+          const res = await fetch('/api/payments/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+            body: JSON.stringify({
+              amount,
+              currency: 'SAR',
+              description: `اشتراك ${plan === 'annual' ? 'سنوي' : 'شهري'} - الباحث`,
+              plan,
+              source: {
+                type: 'applepay',
+                token: token,
+              },
+            }),
+          });
+
+          const data = await res.json();
+
+          if (data.status === 'paid') {
+            appleSession.completePayment((window as any).ApplePaySession.STATUS_SUCCESS);
+            setSubscribed(true);
+          } else if (data.status === 'initiated') {
+            appleSession.completePayment((window as any).ApplePaySession.STATUS_SUCCESS);
+            const txUrl = data.source?.transaction_url;
+            if (txUrl) window.location.href = txUrl;
+            else setSubscribed(true);
+          } else {
+            appleSession.completePayment((window as any).ApplePaySession.STATUS_FAILURE);
+            setError(data.source?.message || 'فشل الدفع');
+          }
+        } catch (e) {
+          appleSession.completePayment((window as any).ApplePaySession.STATUS_FAILURE);
+          setError('فشل إنشاء الدفع');
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      appleSession.oncancel = () => {
+        setLoading(false);
+      };
+
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'حدث خطأ في Apple Pay');
+      setLoading(false);
+    }
+  };
+
   const handlePayment = async () => {
     if (!authToken) {
       router.push('/?signup=1');
+      return;
+    }
+
+    if (paymentMethod === 'applepay') {
+      await handleApplePay();
       return;
     }
 

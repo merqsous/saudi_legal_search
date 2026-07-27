@@ -25,6 +25,12 @@ class CreatePaymentRequest(BaseModel):
     source: dict = {"type": "creditcard"}
 
 
+class ApplePaySessionRequest(BaseModel):
+    validation_url: str
+    display_name: str = "الباحث"
+    domain_name: str = ""
+
+
 class WebhookPayload(BaseModel):
     id: str
     status: str
@@ -93,6 +99,42 @@ def create_payment(req: CreatePaymentRequest, authorization: str = Header(None))
     })
 
     return result
+
+
+@router.post("/payments/applepay/session")
+def initiate_applepay_session(req: ApplePaySessionRequest, authorization: str = Header(None)):
+    """Initiate Apple Pay session via Moyasar."""
+    user_id = _get_user_from_auth(authorization)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+
+    publishable_key = os.getenv("MOYASAR_PUBLIC_KEY", "")
+    if not publishable_key:
+        raise HTTPException(status_code=500, detail="Payment system not configured")
+
+    url = f"{BASE_URL}/applepay/initiate"
+    body = json.dumps({
+        "validation_url": req.validation_url,
+        "display_name": req.display_name,
+        "domain_name": req.domain_name,
+        "publishable_api_key": publishable_key,
+    }).encode("utf-8")
+    req_obj = urllib.request.Request(
+        url,
+        data=body,
+        method="POST",
+        headers={
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "User-Agent": "Albaheth/1.0",
+        },
+    )
+    try:
+        with urllib.request.urlopen(req_obj) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode("utf-8")
+        raise HTTPException(status_code=e.code, detail=f"Apple Pay error: {error_body}")
 
 
 @router.get("/payments")
