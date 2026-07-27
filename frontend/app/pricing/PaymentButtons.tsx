@@ -293,7 +293,7 @@ export default function PaymentButtons({ plan, amount, label, discountedLabel, v
             paymentMethod === 'applepay' ? 'border-primary-600 bg-primary-50' : 'border-slate-200'
           }`}
         >
-          <img src="/Apple_Pay_Mark_RGB_041619.svg" alt="Apple Pay" className="h-5 w-auto" />
+          <img src="/apple-pay-icon.svg" alt="Apple Pay" className="w-5 h-5" />
           <span className="text-xs font-medium text-slate-600">Apple Pay</span>
         </button>
         <button
