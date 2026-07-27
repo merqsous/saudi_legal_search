@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { CreditCard, Loader2, CheckCircle, Lock, User } from 'lucide-react';
 
@@ -21,6 +21,8 @@ export default function PaymentButtons({ plan, amount, label, discountedLabel, v
   const [subscribed, setSubscribed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [showSamsungForm, setShowSamsungForm] = useState(false);
+  const samsungFormRef = useRef<HTMLDivElement>(null);
 
   // Card form fields
   const [cardName, setCardName] = useState('');
@@ -57,6 +59,43 @@ export default function PaymentButtons({ plan, amount, label, discountedLabel, v
         .finally(() => setLoading(false));
     }
   }, [searchParams, authToken]);
+
+  // Load Moyasar Form SDK for Samsung Pay
+  useEffect(() => {
+    if (showSamsungForm && samsungFormRef.current) {
+      const initSamsungForm = () => {
+        if ((window as any).Moyasar) {
+          (window as any).Moyasar.init({
+            element: '.mysr-form-samsung',
+            amount,
+            currency: 'SAR',
+            description: `اشتراك ${plan === 'annual' ? 'سنوي' : 'شهري'} - الباحث`,
+            publishable_api_key: process.env.NEXT_PUBLIC_MOYASAR_KEY || 'pk_test_9RMKuKUhtCwefPM8XeBjVpsdSKPwd6PkaaaRt8Ss',
+            callback_url: window.location.origin + '/pricing?payment=callback',
+            methods: ['samsungpay'],
+            samsung_pay: {
+              service_id: process.env.NEXT_PUBLIC_SAMSUNG_SERVICE_ID || '',
+              order_number: `${plan}-${Date.now()}`,
+              country: 'SA',
+              label: 'Albaheth',
+              environment: 'PRODUCTION',
+            },
+          });
+        }
+      };
+
+      const existingScript = document.querySelector('script[src="https://cdn.moyasar.com/moyasar.js"]');
+      if (existingScript) {
+        initSamsungForm();
+      } else {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.moyasar.com/moyasar.js';
+        script.async = true;
+        script.onload = initSamsungForm;
+        document.body.appendChild(script);
+      }
+    }
+  }, [showSamsungForm, amount, plan]);
 
   const formatCardNumber = (val: string) => {
     return val.replace(/\D/g, '').slice(0, 16).replace(/(.{4})/g, '$1 ').trim();
@@ -202,7 +241,7 @@ export default function PaymentButtons({ plan, amount, label, discountedLabel, v
     }
 
     if (paymentMethod === 'samsungpay') {
-      setError('Samsung Pay يتطلب إعداد حساب Samsung Developer. استخدم البطاقة أو Apple Pay.');
+      setShowSamsungForm(true);
       return;
     }
 
@@ -382,6 +421,13 @@ export default function PaymentButtons({ plan, amount, label, discountedLabel, v
               />
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Samsung Pay form (Moyasar Form SDK) */}
+      {showSamsungForm && paymentMethod === 'samsungpay' && (
+        <div className="space-y-3">
+          <div ref={samsungFormRef} className="mysr-form-samsung" />
         </div>
       )}
 
