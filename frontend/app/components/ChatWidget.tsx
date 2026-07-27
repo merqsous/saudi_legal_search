@@ -251,7 +251,8 @@ export default function ChatWidget() {
                         className="w-full rounded-lg border border-slate-200 p-2.5 text-sm focus:outline-none focus:border-primary-500"
                       />
                       <input
-                        type="tel"
+                        type="text"
+                        inputMode="tel"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
                         placeholder="رقم الجوال (05XXXXXXXX)"
