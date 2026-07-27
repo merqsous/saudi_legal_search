@@ -87,7 +87,8 @@ export default function RootLayout({
               "name": "الباحث",
               "url": "https://albaheth.app",
               "logo": "https://albaheth.app/logo-icon.png",
-              "description": "منصة متخصصة للبحث في الأحكام القضائية السعودية"
+              "description": "منصة متخصصة للبحث في الأحكام القضائية السعودية",
+              "sameAs": ["https://x.com/albahethapp"]
             }
           `}
         </Script>
