@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { CreditCard, Smartphone, Loader2, CheckCircle, Lock, User } from 'lucide-react';
+import { CreditCard, Loader2, CheckCircle, Lock, User } from 'lucide-react';
 
 interface PaymentButtonsProps {
   plan: 'monthly' | 'annual';
@@ -201,6 +201,11 @@ export default function PaymentButtons({ plan, amount, label, discountedLabel, v
       return;
     }
 
+    if (paymentMethod === 'samsungpay') {
+      setError('Samsung Pay يتطلب إعداد حساب Samsung Developer. استخدم البطاقة أو Apple Pay.');
+      return;
+    }
+
     if (paymentMethod === 'creditcard') {
       if (!cardName.trim()) { setError('الرجاء إدخال الاسم على البطاقة'); return; }
       if (cardNumber.replace(/\s/g, '').length < 16) { setError('الرجاء إدخال رقم بطاقة صحيح'); return; }
@@ -302,7 +307,7 @@ export default function PaymentButtons({ plan, amount, label, discountedLabel, v
             paymentMethod === 'samsungpay' ? 'border-primary-600 bg-primary-50' : 'border-slate-200'
           }`}
         >
-          <Smartphone className="w-5 h-5 text-slate-600" />
+          <img src="/samsung-pay-icon.svg" alt="Samsung Pay" className="w-5 h-5" />
           <span className="text-xs font-medium text-slate-600">Samsung Pay</span>
         </button>
       </div>
