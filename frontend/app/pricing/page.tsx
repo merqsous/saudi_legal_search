@@ -6,14 +6,14 @@ import PaymentButtons from './PaymentButtons';
 export const metadata: Metadata = {
   title: 'الأسعار والباقات | الباحث - محرك بحث الأحكام القضائية السعودية',
   description:
-    'باقات الباحث لبحث الأحكام القضائية السعودية. تجربة مجانية، باقة شهرية وباقة سنوية. خصم 50% لأول 10 مشتركين. ابحث في آلاف الأحكام السعودية بسهولة.',
+    'باقات الباحث لبحث الأحكام القضائية السعودية. باقة شهرية 29.99 ريال وباقة سنوية 300 ريال. 50 بحث يومياً. ابحث في آلاف الأحكام السعودية بسهولة.',
   alternates: {
     canonical: 'https://albaheth.app/pricing',
   },
   robots: 'index, follow',
   openGraph: {
     title: 'الأسعار والباقات | الباحث',
-    description: 'بقات الباحث لبحث الأحكام القضائية السعودية. خصم 50% لأول 10 مشتركين.',
+    description: 'باقات الباحث لبحث الأحكام القضائية السعودية. باقة شهرية 29.99 ريال وباقة سنوية 300 ريال.',
     url: 'https://albaheth.app/pricing',
     siteName: 'الباحث',
     locale: 'ar_SA',
@@ -47,14 +47,10 @@ export default function PricingPage() {
         <div className="bg-primary-600 rounded-2xl p-6 mb-10 text-center shadow-sm">
           <div className="flex items-center justify-center gap-2 mb-2">
             <Sparkles className="w-6 h-6 text-white" />
-            <h2 className="text-2xl font-bold text-white">عرض الإطلاق — خصم 50%</h2>
+            <h2 className="text-2xl font-bold text-white">باقات بأسعار تنافسية</h2>
           </div>
-          <p className="text-white text-lg mb-1">احصل على خصم 50% على الباقة السنوية</p>
-          <p className="text-primary-50 text-sm">لأول 10 مشتركين فقط — سجل الآن قبل نفاد الأماكن</p>
-          <div className="mt-4 inline-flex items-center gap-2 bg-white/20 rounded-full px-4 py-2">
-            <Users className="w-4 h-4 text-white" />
-            <span className="text-white text-sm font-medium">0 / 10 مشتركين حتى الآن</span>
-          </div>
+          <p className="text-white text-lg mb-1">ابدأ البحث في الأحكام القضائية السعودية الآن</p>
+          <p className="text-primary-50 text-sm">50 بحث يومياً بأسعار تبدأ من 29.99 ريال شهرياً</p>
         </div>
 
         {/* Page Title */}
@@ -114,16 +110,17 @@ export default function PricingPage() {
             </div>
             <div className="text-center mb-6">
               <h3 className="text-lg font-bold text-slate-900 mb-2">باقة شهرية</h3>
-              <p className="text-sm text-slate-600">بحث غير محدود</p>
+              <p className="text-sm text-slate-600">50 بحث يومياً</p>
               <div className="mt-4">
-                <span className="text-4xl font-bold text-slate-900">149</span>
+                <span className="text-4xl font-bold text-slate-900">29.99</span>
                 <span className="text-slate-600 text-sm mr-1">ريال / شهر</span>
               </div>
+              <p className="text-xs text-slate-500 mt-1">شامل ضريبة القيمة المضافة</p>
             </div>
             <ul className="space-y-3 mb-6 flex-1">
               <li className="flex items-center gap-2 text-sm text-slate-700">
                 <CheckCircle className="w-4 h-4 text-primary-500 shrink-0" />
-                بحث غير محدود
+                50 بحث يومياً
               </li>
               <li className="flex items-center gap-2 text-sm text-slate-700">
                 <CheckCircle className="w-4 h-4 text-primary-500 shrink-0" />
@@ -142,33 +139,30 @@ export default function PricingPage() {
                 أحكام ذات صلة لكل قضية
               </li>
             </ul>
-            <Suspense fallback={<div className="w-full py-3 border-2 border-primary-600 text-primary-600 rounded-xl font-bold text-center">اشترك الآن - 149 ريال/شهر</div>}>
+            <Suspense fallback={<div className="w-full py-3 border-2 border-primary-600 text-primary-600 rounded-xl font-bold text-center">اشترك الآن - 29.99 ريال/شهر</div>}>
             <PaymentButtons
               plan="monthly"
-              amount={14900}
-              label="اشترك الآن - 149 ريال/شهر"
+              amount={2999}
+              label="اشترك الآن - 29.99 ريال/شهر"
               variant="outline"
             />
             </Suspense>
           </div>
 
-          {/* Annual Plan with 50% discount */}
+          {/* Annual Plan */}
           <div className="bg-primary-50 rounded-2xl border-2 border-primary-600 p-6 flex flex-col relative shadow-sm">
             <div className="absolute -top-3 right-1/2 translate-x-1/2 bg-primary-500 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
               <Crown className="w-3 h-3" />
-              خصم 50% لأول 10
+              أفضل قيمة
             </div>
             <div className="text-center mb-6">
               <h3 className="text-lg font-bold text-slate-900 mb-2">باقة سنوية</h3>
-              <p className="text-sm text-slate-600">أفضل قيمة — وفّر 50%</p>
+              <p className="text-sm text-slate-600">وفّر 58 ريال سنوياً</p>
               <div className="mt-4">
-                <div className="flex items-center justify-center gap-2">
-                  <span className="text-lg text-slate-600 line-through">1,490</span>
-                  <span className="text-4xl font-bold text-primary-600">745</span>
-                  <span className="text-slate-600 text-sm">ريال / سنة</span>
-                </div>
-                <p className="text-xs text-primary-600 font-medium mt-1">توفير 745 ريال سنوياً</p>
+                <span className="text-4xl font-bold text-primary-600">300</span>
+                <span className="text-slate-600 text-sm">ريال / سنة</span>
               </div>
+              <p className="text-xs text-slate-500 mt-1">شامل ضريبة القيمة المضافة</p>
             </div>
             <ul className="space-y-3 mb-6 flex-1">
               <li className="flex items-center gap-2 text-sm text-slate-700">
@@ -177,7 +171,7 @@ export default function PricingPage() {
               </li>
               <li className="flex items-center gap-2 text-sm text-slate-700">
                 <CheckCircle className="w-4 h-4 text-primary-500 shrink-0" />
-                بحث غير محدود طوال السنة
+                50 بحث يومياً طوال السنة
               </li>
               <li className="flex items-center gap-2 text-sm text-slate-700">
                 <CheckCircle className="w-4 h-4 text-primary-500 shrink-0" />
@@ -192,11 +186,11 @@ export default function PricingPage() {
                 دعم فني مخصص
               </li>
             </ul>
-            <Suspense fallback={<div className="w-full py-3 bg-primary-600 text-white rounded-xl font-bold text-center">اشترك بخصم 50%</div>}>
+            <Suspense fallback={<div className="w-full py-3 bg-primary-600 text-white rounded-xl font-bold text-center">اشترك الآن - 300 ريال/سنة</div>}>
             <PaymentButtons
               plan="annual"
-              amount={74500}
-              label="اشترك بخصم 50%"
+              amount={30000}
+              label="اشترك الآن - 300 ريال/سنة"
               variant="primary"
             />
             </Suspense>
