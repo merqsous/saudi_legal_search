@@ -1,6 +1,21 @@
 import type { Metadata } from 'next';
 import Script from 'next/script';
+import { Amiri, Noto_Naskh_Arabic } from 'next/font/google';
 import './globals.css';
+
+const amiri = Amiri({
+  subsets: ['arabic'],
+  weight: ['400', '700'],
+  display: 'swap',
+  variable: '--font-amiri',
+});
+
+const naskh = Noto_Naskh_Arabic({
+  subsets: ['arabic'],
+  weight: ['400', '500', '600', '700'],
+  display: 'swap',
+  variable: '--font-naskh',
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://albaheth.app'),
@@ -43,16 +58,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ar" dir="rtl">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Noto+Naskh+Arabic:wght@400;500;600;700&display=swap"
-          rel="stylesheet"
-        />
-        <link rel="stylesheet" href="https://cdn.moyasar.com/moyasar.css" />
-      </head>
-      <body>
+      <body className={`${amiri.variable} ${naskh.variable}`}>
         <Script src="https://www.googletagmanager.com/gtag/js?id=AW-18318854762" strategy="afterInteractive" />
         <Script id="google-ads" strategy="afterInteractive">
           {`
@@ -62,7 +68,7 @@ export default function RootLayout({
             gtag('config', 'AW-18318854762');
           `}
         </Script>
-        <Script id="structured-data" strategy="afterInteractive">
+        <Script id="structured-data" strategy="lazyOnload">
           {`
             {
               "@context": "https://schema.org",
@@ -79,7 +85,7 @@ export default function RootLayout({
             }
           `}
         </Script>
-        <Script id="org-data" strategy="afterInteractive">
+        <Script id="org-data" strategy="lazyOnload">
           {`
             {
               "@context": "https://schema.org",

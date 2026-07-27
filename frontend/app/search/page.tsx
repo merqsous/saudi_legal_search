@@ -27,7 +27,7 @@ export default function SearchPage() {
       <noscript>
         <div className="max-w-3xl mx-auto px-4 py-16 text-center">
           <div className="flex items-center justify-center w-16 h-16 rounded-2xl mb-4 mx-auto">
-            <img src="/logo-rounded.png" alt="الباحث" className="w-16 h-16 rounded-2xl" />
+            <img src="/logo-rounded.png" alt="الباحث" className="w-16 h-16 rounded-2xl" width={64} height={64} />
           </div>
           <h1 className="text-3xl font-bold text-slate-900 mb-4">بحث الأحكام القضائية السعودية</h1>
           <p className="text-lg text-slate-600 mb-8">

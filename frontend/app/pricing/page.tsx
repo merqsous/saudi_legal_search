@@ -25,6 +25,7 @@ export const metadata: Metadata = {
 export default function PricingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100" dir="rtl">
+      <link rel="stylesheet" href="https://cdn.moyasar.com/moyasar.css" />
       <Header />
 
       <main className="max-w-5xl mx-auto px-4 py-12">

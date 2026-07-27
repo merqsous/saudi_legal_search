@@ -357,7 +357,7 @@ export default function SearchClient() {
       <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center gap-3">
           <a href="/" className="flex items-center gap-3">
-            <img src="/logo-rounded.png" alt="الباحث" className="w-10 h-10 rounded-lg" />
+            <img src="/logo-rounded.png" alt="الباحث" className="w-10 h-10 rounded-lg" width={40} height={40} />
           </a>
           <div className="flex-1" />
           {authUser && (

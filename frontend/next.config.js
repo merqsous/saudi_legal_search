@@ -21,11 +21,11 @@ const nextConfig = {
         ],
       },
       {
-        source: '/:path*',
+        source: '/:path*{.(svg|png|jpg|jpeg|gif|webp|ico|woff|woff2|ttf|css|js)}',
         headers: [
           {
             key: 'Cache-Control',
-            value: 'no-cache, no-store, must-revalidate',
+            value: 'public, max-age=31536000, immutable',
           },
         ],
       },

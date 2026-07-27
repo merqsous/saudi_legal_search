@@ -53,7 +53,7 @@ function HeaderInner({ showSearchLink = true }: { showSearchLink?: boolean }) {
         {/* Logo + Account (right side in RTL) */}
         <div className="flex items-center gap-3">
           <a href="/" className="flex items-center gap-3">
-            <img src="/logo-rounded.png" alt="الباحث" className="w-10 h-10 rounded-xl" />
+            <img src="/logo-rounded.png" alt="الباحث" className="w-10 h-10 rounded-xl" width={40} height={40} />
           </a>
           {authUser && (
             <div className="hidden sm:flex items-center gap-2 mr-2">
@@ -164,7 +164,7 @@ export default function Header({ showSearchLink = true }: { showSearchLink?: boo
       <header className="bg-white border-b border-slate-200">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
           <a href="/" className="flex items-center gap-3">
-            <img src="/logo-rounded.png" alt="الباحث" className="w-10 h-10 rounded-xl" />
+            <img src="/logo-rounded.png" alt="الباحث" className="w-10 h-10 rounded-xl" width={40} height={40} />
           </a>
         </div>
       </header>

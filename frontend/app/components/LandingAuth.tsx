@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Phone, Loader2, User, CheckCircle, X } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 type Step = 'phone' | 'name' | 'verify';
 
@@ -19,6 +19,8 @@ export default function LandingAuth() {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [code, setCode] = useState('');
 
+  const searchParams = useSearchParams();
+
   useEffect(() => {
     const saved = localStorage.getItem('auth_user');
     if (saved) {
@@ -29,7 +31,10 @@ export default function LandingAuth() {
       } catch {}
     }
     setCheckingAuth(false);
-  }, [router]);
+    if (searchParams.get('signup') === '1') {
+      setShowAuth(true);
+    }
+  }, [router, searchParams]);
 
   const formatPhone = (val: string) => {
     let cleaned = val.replace(/\D/g, '');
@@ -187,7 +192,7 @@ export default function LandingAuth() {
             </button>
 
             <div className="flex flex-col items-center mb-6">
-              <img src="/logo-rounded.png" alt="الباحث" className="w-14 h-14 rounded-2xl mb-3" />
+              <img src="/logo-rounded.png" alt="الباحث" className="w-14 h-14 rounded-2xl mb-3" width={56} height={56} />
               <h2 className="text-xl font-bold text-slate-900">
                 {step === 'name' ? 'إنشاء حساب' : 'تسجيل الدخول'}
               </h2>

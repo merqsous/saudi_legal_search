@@ -337,7 +337,7 @@ export default function PaymentButtons({ plan, amount, label, discountedLabel, v
             paymentMethod === 'applepay' ? 'border-primary-600 bg-primary-50' : 'border-slate-200'
           }`}
         >
-          <img src="/apple-pay-icon.svg" alt="Apple Pay" className="w-5 h-5" />
+          <img src="/apple-pay-icon.svg" alt="Apple Pay" className="w-5 h-5" width={20} height={20} />
           <span className="text-xs font-medium text-slate-600">Apple Pay</span>
         </button>
         <button
@@ -346,7 +346,7 @@ export default function PaymentButtons({ plan, amount, label, discountedLabel, v
             paymentMethod === 'samsungpay' ? 'border-primary-600 bg-primary-50' : 'border-slate-200'
           }`}
         >
-          <img src="/samsung-pay-icon.svg" alt="Samsung Pay" className="w-5 h-5" />
+          <img src="/samsung-pay-icon.svg" alt="Samsung Pay" className="w-5 h-5" width={20} height={20} />
           <span className="text-xs font-medium text-slate-600">Samsung Pay</span>
         </button>
       </div>
