@@ -8,6 +8,15 @@ export const metadata: Metadata = {
   title: 'الأسعار والباقات | الباحث - محرك بحث الأحكام القضائية السعودية',
   description:
     'باقات الباحث لبحث الأحكام القضائية السعودية. باقة شهرية 29.99 ريال وباقة سنوية 300 ريال. 50 بحث يومياً. ابحث في آلاف الأحكام السعودية بسهولة.',
+  keywords: [
+    'أسعار الباحث',
+    'باقات الباحث',
+    'اشتراك قانوني',
+    'بحث الأحكام القضائية',
+    'باقة شهرية قانونية',
+    'محرك بحث قانوني',
+    'الأحكام القضائية السعودية',
+  ],
   alternates: {
     canonical: 'https://albaheth.app/pricing',
   },
@@ -250,6 +259,44 @@ export default function PricingPage() {
           الباحث — محرك بحث ذكي في الأحكام القضائية السعودية
         </div>
       </footer>
+
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'Service',
+            name: 'الباحث - محرك بحث الأحكام القضائية السعودية',
+            serviceType: 'بحث قانوني في الأحكام القضائية',
+            provider: {
+              '@type': 'Organization',
+              name: 'الباحث',
+              url: 'https://albaheth.app',
+            },
+            areaServed: {
+              '@type': 'Country',
+              name: 'المملكة العربية السعودية',
+            },
+            offers: [
+              {
+                '@type': 'Offer',
+                name: 'باقة شهرية',
+                price: '29.99',
+                priceCurrency: 'SAR',
+                description: '50 بحث يومياً في الأحكام القضائية السعودية',
+              },
+              {
+                '@type': 'Offer',
+                name: 'باقة سنوية',
+                price: '300',
+                priceCurrency: 'SAR',
+                description: '50 بحث يومياً في الأحكام القضائية السعودية - توفير 20%',
+              },
+            ],
+            url: 'https://albaheth.app/pricing',
+          }),
+        }}
+      />
     </div>
   );
 }

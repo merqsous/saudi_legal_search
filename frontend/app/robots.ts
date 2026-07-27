@@ -5,7 +5,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: '*',
       allow: '/',
-      disallow: ['/admin'],
+      disallow: ['/admin', '/account', '/favorites', '/studies', '/api'],
     },
     sitemap: 'https://albaheth.app/sitemap.xml',
   };
