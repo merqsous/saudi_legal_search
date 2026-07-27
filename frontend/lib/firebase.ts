@@ -15,8 +15,10 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 auth.languageCode = 'ar';
 
+export let recaptchaConfigPromise: Promise<void> | null = null;
+
 if (typeof window !== 'undefined') {
-  initializeRecaptchaConfig(auth).then(() => {
+  recaptchaConfigPromise = initializeRecaptchaConfig(auth).then(() => {
     console.log('[AUTH] reCAPTCHA config initialized');
   }).catch((err) => {
     console.error('[AUTH] reCAPTCHA config init failed:', err);

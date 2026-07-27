@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { X, Phone, Loader2, User, CheckCircle } from 'lucide-react';
 import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from 'firebase/auth';
-import { auth } from '../lib/firebase';
+import { auth, recaptchaConfigPromise } from '../lib/firebase';
 
 interface AuthModalProps {
   onClose: () => void;
@@ -41,25 +41,33 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
 
   useEffect(() => {
     if (!(window as any).recaptchaVerifier) {
-      try {
-        (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container-modal', {
-          size: 'invisible',
-          callback: () => {},
-          'expired-callback': () => {
-            if ((window as any).recaptchaWidgetId !== undefined && (window as any).grecaptcha) {
-              (window as any).grecaptcha.reset((window as any).recaptchaWidgetId);
-            }
-          },
-        });
-        (window as any).recaptchaVerifier.render().then((widgetId: number) => {
-          (window as any).recaptchaWidgetId = widgetId;
-          (window as any).recaptchaReady = true;
-        }).catch((err: any) => {
-          console.error('reCAPTCHA render error:', err);
-        });
-      } catch (e) {
-        console.error('reCAPTCHA setup error:', e);
-      }
+      const initRecaptcha = async () => {
+        try {
+          if (recaptchaConfigPromise) {
+            await recaptchaConfigPromise;
+            console.log('[AUTH MODAL] reCAPTCHA config ready');
+          }
+          (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container-modal', {
+            size: 'invisible',
+            callback: () => {},
+            'expired-callback': () => {
+              if ((window as any).recaptchaWidgetId !== undefined && (window as any).grecaptcha) {
+                (window as any).grecaptcha.reset((window as any).recaptchaWidgetId);
+              }
+            },
+          });
+          (window as any).recaptchaVerifier.render().then((widgetId: number) => {
+            (window as any).recaptchaWidgetId = widgetId;
+            (window as any).recaptchaReady = true;
+            console.log('[AUTH MODAL] reCAPTCHA rendered, widgetId:', widgetId);
+          }).catch((err: any) => {
+            console.error('[AUTH MODAL] reCAPTCHA render error:', err);
+          });
+        } catch (e) {
+          console.error('[AUTH MODAL] reCAPTCHA setup error:', e);
+        }
+      };
+      initRecaptcha();
     }
   }, []);
 

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Phone, Loader2, User, CheckCircle, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from 'firebase/auth';
-import { auth } from '../../lib/firebase';
+import { auth, recaptchaConfigPromise } from '../../lib/firebase';
 
 type Step = 'phone' | 'name' | 'verify';
 
@@ -51,30 +51,38 @@ export default function LandingAuth() {
 
   useEffect(() => {
     if (showAuth && !(window as any).recaptchaVerifier) {
-      try {
-        console.log('[AUTH] Initializing reCAPTCHA (Enterprise via App Check)...');
-        (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-          size: 'invisible',
-          callback: (token: string) => {
-            console.log('[AUTH] reCAPTCHA solved, token length:', token?.length);
-          },
-          'expired-callback': () => {
-            console.log('[AUTH] reCAPTCHA expired');
-          },
-          'error-callback': (err: any) => {
-            console.error('[AUTH] reCAPTCHA error-callback:', err);
+      const initRecaptcha = async () => {
+        try {
+          if (recaptchaConfigPromise) {
+            console.log('[AUTH] Waiting for reCAPTCHA config...');
+            await recaptchaConfigPromise;
+            console.log('[AUTH] reCAPTCHA config ready');
           }
-        });
-        (window as any).recaptchaVerifier.render().then((widgetId: number) => {
-          (window as any).recaptchaWidgetId = widgetId;
-          (window as any).recaptchaReady = true;
-          console.log('[AUTH] reCAPTCHA rendered, widgetId:', widgetId);
-        }).catch((err: any) => {
-          console.error('[AUTH] reCAPTCHA render error:', err);
-        });
-      } catch (e) {
-        console.error('[AUTH] reCAPTCHA setup error:', e);
-      }
+          console.log('[AUTH] Initializing reCAPTCHA...');
+          (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+            size: 'invisible',
+            callback: (token: string) => {
+              console.log('[AUTH] reCAPTCHA solved, token length:', token?.length);
+            },
+            'expired-callback': () => {
+              console.log('[AUTH] reCAPTCHA expired');
+            },
+            'error-callback': (err: any) => {
+              console.error('[AUTH] reCAPTCHA error-callback:', err);
+            }
+          });
+          (window as any).recaptchaVerifier.render().then((widgetId: number) => {
+            (window as any).recaptchaWidgetId = widgetId;
+            (window as any).recaptchaReady = true;
+            console.log('[AUTH] reCAPTCHA rendered, widgetId:', widgetId);
+          }).catch((err: any) => {
+            console.error('[AUTH] reCAPTCHA render error:', err);
+          });
+        } catch (e) {
+          console.error('[AUTH] reCAPTCHA setup error:', e);
+        }
+      };
+      initRecaptcha();
     }
   }, [showAuth]);
 
