@@ -113,8 +113,13 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
       setError('يرجى إعادة المحاولة');
       return;
     }
+    for (let i = 0; i < 10; i++) {
+      if ((window as any).recaptchaReady) break;
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
     if (!(window as any).recaptchaReady) {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      setError('فشل تحميل التحقق، أعد المحاولة');
+      return;
     }
     const internationalPhone = toInternational(phone);
     const result = await signInWithPhoneNumber(auth, internationalPhone, (window as any).recaptchaVerifier);

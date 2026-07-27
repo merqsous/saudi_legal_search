@@ -51,13 +51,8 @@ export default function LandingAuth() {
 
   useEffect(() => {
     if (showAuth && !(window as any).recaptchaVerifier) {
-      const container = document.getElementById('recaptcha-container');
-      if (!container) {
-        console.error('reCAPTCHA container not found in DOM');
-        return;
-      }
       try {
-        console.log('[AUTH] Initializing reCAPTCHA...');
+        console.log('[AUTH] Initializing reCAPTCHA (Enterprise via App Check)...');
         (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
           size: 'invisible',
           callback: (token: string) => {
@@ -65,9 +60,6 @@ export default function LandingAuth() {
           },
           'expired-callback': () => {
             console.log('[AUTH] reCAPTCHA expired');
-            if ((window as any).recaptchaWidgetId !== undefined && (window as any).grecaptcha) {
-              (window as any).grecaptcha.reset((window as any).recaptchaWidgetId);
-            }
           },
           'error-callback': (err: any) => {
             console.error('[AUTH] reCAPTCHA error-callback:', err);
@@ -92,7 +84,6 @@ export default function LandingAuth() {
       setError('يرجى إعادة المحاولة');
       return;
     }
-    // Poll for reCAPTCHA ready up to 5 seconds
     for (let i = 0; i < 10; i++) {
       if ((window as any).recaptchaReady) break;
       console.log('[AUTH] Waiting for reCAPTCHA ready...', i);
