@@ -5,8 +5,10 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
   const baseUrl = 'https://albaheth.app';
+  // Call the backend directly (not through the site's own /api proxy) to
+  // avoid serverless-function-to-serverless-function routing issues.
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || baseUrl;
 
   const staticPages: MetadataRoute.Sitemap = [
     { url: baseUrl, lastModified: new Date(), changeFrequency: 'daily', priority: 1 },
@@ -19,8 +21,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   try {
-    const res = await fetch(`${apiUrl}/api/judgments/ids`, { next: { revalidate: 0 } });
-    if (!res.ok) return staticPages;
+    const res = await fetch(`${apiUrl}/api/judgments/ids?limit=49000`, { cache: 'no-store' });
+    if (!res.ok) {
+      console.error(`[sitemap] fetch failed: ${res.status}`);
+      return staticPages;
+    }
     const data = await res.json();
     const items: { id: number; scraped_at: string | null; court_type: string | null; court_level: string | null; city: string | null; judgment_number: string | null }[] = data.ids || [];
 
@@ -35,7 +40,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     });
 
     return [...staticPages, ...judgmentUrls];
-  } catch {
+  } catch (e) {
+    console.error('[sitemap] fetch error:', e);
     return staticPages;
   }
 }
