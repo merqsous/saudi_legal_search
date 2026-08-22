@@ -5,9 +5,41 @@ from fastapi import APIRouter, Query, HTTPException, Request
 from api.db import query_all, query_one
 from api.embeddings import embed_text, vector_to_pgvector, get_client
 from api.config import EMBEDDING_MODEL
-from api.routes.auth import log_search, get_client_ip, get_country_from_ip
+from api.routes.auth import log_search, get_client_ip, get_country_from_ip, ADMIN_PHONE
 
 router = APIRouter()
+
+# Registered users who have not subscribed get a fixed number of free searches
+# before being required to upgrade. Anonymous users get a smaller preview
+# (handled separately via the `anonymous` query param).
+FREE_SEARCH_LIMIT = 3
+
+# Phone numbers that always bypass the subscription requirement (admin/owner).
+UNLIMITED_SEARCH_PHONES = {ADMIN_PHONE, "966553466235"}
+
+
+def _get_user_id_by_phone(phone: str) -> int | None:
+    if not phone:
+        return None
+    row = query_one("SELECT id FROM users WHERE phone = %s", [phone])
+    return row["id"] if row else None
+
+
+def _has_active_subscription(user_id: int) -> bool:
+    row = query_one(
+        "SELECT 1 FROM user_subscriptions WHERE user_id = %s AND status = 'active' "
+        "AND expires_at > NOW() LIMIT 1",
+        [user_id],
+    )
+    return row is not None
+
+
+def _get_search_count(user_id: int) -> int:
+    row = query_one(
+        "SELECT COUNT(*) as c FROM search_logs WHERE user_id = %s AND is_anonymous = FALSE",
+        [user_id],
+    )
+    return row["c"] if row else 0
 
 # Footer/boilerplate chunks have been deleted from the DB.
 # No NOT LIKE filters needed - keeps queries fast.
@@ -186,12 +218,26 @@ def search(
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
 ):
+    phone = request.headers.get("X-User-Phone", "")
+
     # Anonymous users are limited to a small preview of results
     effective_limit = 3 if anonymous else limit
+
+    # Registered, non-subscribed users are limited to a fixed number of free
+    # searches. Admin phone always bypasses this check.
+    if not anonymous and phone and phone not in UNLIMITED_SEARCH_PHONES:
+        user_id = _get_user_id_by_phone(phone)
+        if user_id and not _has_active_subscription(user_id):
+            prior_searches = _get_search_count(user_id)
+            if prior_searches >= FREE_SEARCH_LIMIT:
+                raise HTTPException(
+                    status_code=402,
+                    detail="subscription_required",
+                )
+
     result = _do_search(q, court_type, city, year, court_level, section, effective_limit, offset)
 
     # Log the search with IP for both authenticated and anonymous users
-    phone = request.headers.get("X-User-Phone", "")
     ip = get_client_ip(request)
     country = get_country_from_ip(ip)
     if anonymous or not phone:

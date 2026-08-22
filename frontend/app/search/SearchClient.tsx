@@ -74,6 +74,7 @@ export default function SearchClient() {
   const [showStudy, setShowStudy] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [loadingPage, setLoadingPage] = useState(false);
+  const [subscriptionRequired, setSubscriptionRequired] = useState(false);
   const pageSize = 10;
   const isAnonymous = !authUser;
 
@@ -161,6 +162,7 @@ export default function SearchClient() {
 
     setLoading(true);
     setError(null);
+    setSubscriptionRequired(false);
     setHasSearched(true);
 
     const params = new URLSearchParams({ q: query, limit: String(pageSize) });
@@ -175,7 +177,9 @@ export default function SearchClient() {
         headers: { 'X-User-Phone': authUser?.phone || '' },
       });
       if (!res.ok) {
-        if (res.status === 500) {
+        if (res.status === 402) {
+          setSubscriptionRequired(true);
+        } else if (res.status === 500) {
           setError('حدث خطأ مؤقت، يرجى إعادة المحاولة');
         } else {
           setError(`خطأ في البحث: ${res.status}`);
@@ -244,6 +248,8 @@ export default function SearchClient() {
         setResults(data.results);
         setCurrentPage(page);
         window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else if (res.status === 402) {
+        setSubscriptionRequired(true);
       }
     } catch {
       // ignore
@@ -601,8 +607,28 @@ export default function SearchClient() {
           </div>
         )}
 
+        {/* Subscription required */}
+        {subscriptionRequired && (
+          <div className="mt-6 bg-gradient-to-l from-primary-50 to-white border border-primary-200 rounded-xl p-6 text-center">
+            <h3 className="text-lg font-bold text-slate-800 mb-2">
+              لقد استخدمت جميع عمليات البحث المجانية
+            </h3>
+            <p className="text-sm text-slate-600 mb-4">
+              اشترك الآن للوصول الكامل والمستمر إلى آلاف الأحكام القضائية السعودية.
+            </p>
+            <div className="flex items-center justify-center gap-3">
+              <button
+                onClick={() => router.push('/pricing')}
+                className="px-5 py-2.5 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors"
+              >
+                عرض الباقات
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* No results */}
-        {!loading && hasSearched && results.length === 0 && !error && (
+        {!loading && hasSearched && results.length === 0 && !error && !subscriptionRequired && (
           <div className="text-center py-20">
             <p className="text-slate-400 text-lg">لا توجد نتائج</p>
           </div>

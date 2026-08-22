@@ -222,7 +222,9 @@ def get_subscription_status(authorization: str = Header(None)):
         raise HTTPException(status_code=401, detail="غير مصرح")
 
     sub = query_one(
-        "SELECT plan, status, started_at, expires_at FROM user_subscriptions WHERE user_id = %s AND status = 'active' ORDER BY started_at DESC LIMIT 1;",
+        "SELECT plan, status, started_at, expires_at FROM user_subscriptions "
+        "WHERE user_id = %s AND status = 'active' AND expires_at > NOW() "
+        "ORDER BY started_at DESC LIMIT 1;",
         [user_id],
     )
     if not sub:
