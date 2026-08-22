@@ -72,16 +72,19 @@ export default function SearchClient() {
   const [studyCitations, setStudyCitations] = useState<any[]>([]);
   const [studyId, setStudyId] = useState<number | null>(null);
   const [showStudy, setShowStudy] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [loadingPage, setLoadingPage] = useState(false);
+  const pageSize = 10;
   const isAnonymous = !authUser;
 
   // Quick filter presets
   const quickFilters = [
-    { label: 'تجاري', icon: Building2, action: () => { setSelectedCourtType('commercial'); doSearch(); } },
-    { label: 'الرياض', icon: MapPin, action: () => { setSelectedCity('الرياض'); doSearch(); } },
-    { label: 'المدينة المنورة', icon: MapPin, action: () => { setSelectedCity('المدينة المنورة'); doSearch(); } },
-    { label: 'استئناف', icon: Gavel, action: () => { setSelectedCourtLevel('appeal'); doSearch(); } },
-    { label: 'الدرجة الأولى', icon: Gavel, action: () => { setSelectedCourtLevel('first_instance'); doSearch(); } },
-    { label: 'الوقائع', icon: Scale, action: () => { setSelectedSection('الوقائع'); doSearch(); } },
+    { label: 'تجاري', icon: Building2, action: () => { setSelectedCourtType('commercial'); doSearch({ courtType: 'commercial' }); } },
+    { label: 'الرياض', icon: MapPin, action: () => { setSelectedCity('الرياض'); doSearch({ city: 'الرياض' }); } },
+    { label: 'المدينة المنورة', icon: MapPin, action: () => { setSelectedCity('المدينة المنورة'); doSearch({ city: 'المدينة المنورة' }); } },
+    { label: 'استئناف', icon: Gavel, action: () => { setSelectedCourtLevel('appeal'); doSearch({ courtLevel: 'appeal' }); } },
+    { label: 'الدرجة الأولى', icon: Gavel, action: () => { setSelectedCourtLevel('first_instance'); doSearch({ courtLevel: 'first_instance' }); } },
+    { label: 'الوقائع', icon: Scale, action: () => { setSelectedSection('الوقائع'); doSearch({ section: 'الوقائع' }); } },
   ];
 
   useEffect(() => {
@@ -134,9 +137,21 @@ export default function SearchClient() {
     }
   }, [router, searchParams]);
 
-  const doSearch = useCallback(async () => {
+  const doSearch = useCallback(async (overrides?: {
+    courtType?: string;
+    city?: string;
+    year?: string;
+    courtLevel?: string;
+    section?: string;
+  }) => {
+    const effCourtType = overrides?.courtType ?? selectedCourtType;
+    const effCity = overrides?.city ?? selectedCity;
+    const effYear = overrides?.year ?? selectedYear;
+    const effCourtLevel = overrides?.courtLevel ?? selectedCourtLevel;
+    const effSection = overrides?.section ?? selectedSection;
+
     const hasQuery = query.trim().length > 0;
-    const hasFilters = selectedCourtType || selectedCity || selectedYear || selectedCourtLevel || selectedSection;
+    const hasFilters = effCourtType || effCity || effYear || effCourtLevel || effSection;
     if (!hasQuery && !hasFilters) return;
 
     if (isAnonymous) {
@@ -148,12 +163,12 @@ export default function SearchClient() {
     setError(null);
     setHasSearched(true);
 
-    const params = new URLSearchParams({ q: query, limit: '20' });
-    if (selectedCourtType) params.set('court_type', selectedCourtType);
-    if (selectedCity) params.set('city', selectedCity);
-    if (selectedYear) params.set('year', selectedYear);
-    if (selectedCourtLevel) params.set('court_level', selectedCourtLevel);
-    if (selectedSection) params.set('section', selectedSection);
+    const params = new URLSearchParams({ q: query, limit: String(pageSize) });
+    if (effCourtType) params.set('court_type', effCourtType);
+    if (effCity) params.set('city', effCity);
+    if (effYear) params.set('year', effYear);
+    if (effCourtLevel) params.set('court_level', effCourtLevel);
+    if (effSection) params.set('section', effSection);
 
     try {
       const res = await fetch(`/api/search?${params.toString()}`, {
@@ -174,6 +189,7 @@ export default function SearchClient() {
       const data: SearchResponse = await res.json();
       setResults(data.results);
       setTotal(data.total);
+      setCurrentPage(1);
       setAiAnswer(null);
 
       // Google Ads conversion tracking
@@ -206,6 +222,37 @@ export default function SearchClient() {
       setLoading(false);
     }
   }, [query, selectedCourtType, selectedCity, selectedYear, selectedCourtLevel, selectedSection, isAnonymous, authUser?.phone]);
+
+  const goToPage = useCallback(async (page: number) => {
+    if (page < 1 || loadingPage) return;
+    const offset = (page - 1) * pageSize;
+    setLoadingPage(true);
+
+    const params = new URLSearchParams({ q: query, limit: String(pageSize), offset: String(offset) });
+    if (selectedCourtType) params.set('court_type', selectedCourtType);
+    if (selectedCity) params.set('city', selectedCity);
+    if (selectedYear) params.set('year', selectedYear);
+    if (selectedCourtLevel) params.set('court_level', selectedCourtLevel);
+    if (selectedSection) params.set('section', selectedSection);
+
+    try {
+      const res = await fetch(`/api/search?${params.toString()}`, {
+        headers: { 'X-User-Phone': authUser?.phone || '' },
+      });
+      if (res.ok) {
+        const data: SearchResponse = await res.json();
+        setResults(data.results);
+        setCurrentPage(page);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    } catch {
+      // ignore
+    } finally {
+      setLoadingPage(false);
+    }
+  }, [query, selectedCourtType, selectedCity, selectedYear, selectedCourtLevel, selectedSection, loadingPage, authUser?.phone]);
+
+  const totalPages = Math.ceil(total / pageSize);
 
   // Auto-trigger search when URL params populated the filters
   const [autoSearched, setAutoSearched] = useState(false);
@@ -686,6 +733,51 @@ export default function SearchClient() {
                 />
               ))}
             </div>
+            {!isAnonymous && total > pageSize && (
+              <div className="flex items-center justify-center gap-2 mt-6 flex-wrap">
+                <button
+                  onClick={() => goToPage(currentPage - 1)}
+                  disabled={currentPage === 1 || loadingPage}
+                  className="px-3 py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-sm"
+                >
+                  السابق
+                </button>
+                {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+                  let page: number;
+                  if (totalPages <= 7) {
+                    page = i + 1;
+                  } else if (currentPage <= 4) {
+                    page = i + 1;
+                  } else if (currentPage >= totalPages - 3) {
+                    page = totalPages - 6 + i;
+                  } else {
+                    page = currentPage - 3 + i;
+                  }
+                  return (
+                    <button
+                      key={page}
+                      onClick={() => goToPage(page)}
+                      disabled={loadingPage}
+                      className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
+                        page === currentPage
+                          ? 'bg-primary-600 text-white'
+                          : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  );
+                })}
+                <button
+                  onClick={() => goToPage(currentPage + 1)}
+                  disabled={currentPage === totalPages || loadingPage}
+                  className="px-3 py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-sm"
+                >
+                  التالي
+                </button>
+                {loadingPage && <Loader2 className="w-4 h-4 animate-spin text-primary-600 mr-2" />}
+              </div>
+            )}
             {isAnonymous && (
               <div className="mt-6 bg-gradient-to-l from-primary-50 to-white border border-primary-200 rounded-xl p-6 text-center">
                 <h3 className="text-lg font-bold text-slate-800 mb-2">

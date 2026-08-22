@@ -319,36 +319,39 @@ export default function PaymentButtons({ plan, amount, label, discountedLabel, v
     : 'border-2 border-primary-600 text-primary-600 hover:bg-primary-50';
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {/* Payment method selector */}
-      <div className="grid grid-cols-3 gap-2">
-        <button
-          onClick={() => { setPaymentMethod('creditcard'); setShowForm(false); setError(null); }}
-          className={`flex flex-col items-center gap-1 py-2 rounded-lg border-2 transition-colors ${
-            paymentMethod === 'creditcard' ? 'border-primary-600 bg-primary-50' : 'border-slate-200'
-          }`}
-        >
-          <CreditCard className="w-5 h-5 text-slate-600" />
-          <span className="text-xs font-medium text-slate-600">بطاقة</span>
-        </button>
-        <button
-          onClick={() => { setPaymentMethod('applepay'); setShowForm(false); setError(null); }}
-          className={`flex flex-col items-center gap-1 py-2 rounded-lg border-2 transition-colors ${
-            paymentMethod === 'applepay' ? 'border-primary-600 bg-primary-50' : 'border-slate-200'
-          }`}
-        >
-          <img src="/apple-pay-icon.svg" alt="Apple Pay" className="w-5 h-5" width={20} height={20} />
-          <span className="text-xs font-medium text-slate-600">Apple Pay</span>
-        </button>
-        <button
-          onClick={() => { setPaymentMethod('samsungpay'); setShowForm(false); setError(null); }}
-          className={`flex flex-col items-center gap-1 py-2 rounded-lg border-2 transition-colors ${
-            paymentMethod === 'samsungpay' ? 'border-primary-600 bg-primary-50' : 'border-slate-200'
-          }`}
-        >
-          <img src="/samsung-pay-icon.svg" alt="Samsung Pay" className="w-5 h-5" width={20} height={20} />
-          <span className="text-xs font-medium text-slate-600">Samsung Pay</span>
-        </button>
+      <div className="space-y-2">
+        <p className="text-xs text-slate-500 font-medium">طريقة الدفع</p>
+        <div className="grid grid-cols-3 gap-2">
+          <button
+            onClick={() => { setPaymentMethod('creditcard'); setShowForm(false); setError(null); }}
+            className={`flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl border-2 transition-all ${
+              paymentMethod === 'creditcard' ? 'border-primary-600 bg-primary-50' : 'border-slate-200 hover:border-slate-300'
+            }`}
+          >
+            <CreditCard className="w-5 h-5 text-slate-600" />
+            <span className="text-xs font-medium text-slate-600">بطاقة</span>
+          </button>
+          <button
+            onClick={() => { setPaymentMethod('applepay'); setShowForm(false); setError(null); }}
+            className={`flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl border-2 transition-all ${
+              paymentMethod === 'applepay' ? 'border-primary-600 bg-primary-50' : 'border-slate-200 hover:border-slate-300'
+            }`}
+          >
+            <img src="/apple-pay-icon.svg" alt="Apple Pay" className="w-6 h-6" width={24} height={24} />
+            <span className="text-xs font-medium text-slate-600">Apple Pay</span>
+          </button>
+          <button
+            onClick={() => { setPaymentMethod('samsungpay'); setShowForm(false); setError(null); }}
+            className={`flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl border-2 transition-all ${
+              paymentMethod === 'samsungpay' ? 'border-primary-600 bg-primary-50' : 'border-slate-200 hover:border-slate-300'
+            }`}
+          >
+            <img src="/samsung-pay-icon.svg" alt="Samsung Pay" className="w-6 h-6" width={24} height={24} />
+            <span className="text-xs font-medium text-slate-600">Samsung Pay</span>
+          </button>
+        </div>
       </div>
 
       {/* Card input form */}

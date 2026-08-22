@@ -52,9 +52,8 @@ function HeaderInner({ showSearchLink = true }: { showSearchLink?: boolean }) {
       <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
         {/* Logo + Account (right side in RTL) */}
         <div className="flex items-center gap-3">
-          <a href="/" className="flex items-center gap-2.5">
-            <img src="/logo-rounded.png" alt="الباحث" className="w-9 h-9 rounded-lg" width={36} height={36} />
-            <span className="hidden sm:block text-lg font-bold text-slate-900">الباحث</span>
+          <a href="/" className="bg-primary-600 rounded-xl px-4 py-2" style={{ fontFamily: 'B-Fantezy, var(--font-amiri), Amiri, serif' }}>
+            <span className="text-xl font-bold text-white">الباحث</span>
           </a>
           {authUser && (
             <div className="hidden sm:flex items-center gap-2 mr-2">
@@ -167,9 +166,8 @@ export default function Header({ showSearchLink = true }: { showSearchLink?: boo
     <Suspense fallback={
       <header className="bg-white/80 backdrop-blur-md border-b border-slate-200/80">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-          <a href="/" className="flex items-center gap-2.5">
-            <img src="/logo-rounded.png" alt="الباحث" className="w-9 h-9 rounded-lg" width={36} height={36} />
-            <span className="text-lg font-bold text-slate-900">الباحث</span>
+          <a href="/" className="bg-primary-600 rounded-xl px-4 py-2" style={{ fontFamily: 'B-Fantezy, var(--font-amiri), Amiri, serif' }}>
+            <span className="text-xl font-bold text-white">الباحث</span>
           </a>
         </div>
       </header>

@@ -69,36 +69,38 @@ export default function RootLayout({
             gtag('config', 'AW-18318854762');
           `}
         </Script>
-        <Script id="structured-data" strategy="lazyOnload">
-          {`
-            {
-              "@context": "https://schema.org",
-              "@type": "WebSite",
-              "name": "الباحث",
-              "url": "https://albaheth.app",
-              "description": "محرك بحث الأحكام القضائية السعودية",
-              "inLanguage": "ar-SA",
-              "potentialAction": {
-                "@type": "SearchAction",
-                "target": "https://albaheth.app/search?q={search_term_string}",
-                "query-input": "required name=search_term_string"
-              }
-            }
-          `}
-        </Script>
-        <Script id="org-data" strategy="lazyOnload">
-          {`
-            {
-              "@context": "https://schema.org",
-              "@type": "Organization",
-              "name": "الباحث",
-              "url": "https://albaheth.app",
-              "logo": "https://albaheth.app/logo-icon.png",
-              "description": "منصة متخصصة للبحث في الأحكام القضائية السعودية",
-              "sameAs": ["https://x.com/albahethapp"]
-            }
-          `}
-        </Script>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'WebSite',
+              name: 'الباحث',
+              url: 'https://albaheth.app',
+              description: 'محرك بحث الأحكام القضائية السعودية',
+              inLanguage: 'ar-SA',
+              potentialAction: {
+                '@type': 'SearchAction',
+                target: 'https://albaheth.app/search?q={search_term_string}',
+                'query-input': 'required name=search_term_string',
+              },
+            }),
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'Organization',
+              name: 'الباحث',
+              url: 'https://albaheth.app',
+              logo: 'https://albaheth.app/logo-icon.png',
+              description: 'منصة متخصصة للبحث في الأحكام القضائية السعودية',
+              sameAs: ['https://x.com/albahethapp'],
+            }),
+          }}
+        />
         {children}
         <ChatWidget />
       </body>

@@ -9,6 +9,35 @@ from api.routes.auth import log_search, get_client_ip, get_country_from_ip
 
 router = APIRouter()
 
+# Footer/boilerplate chunks have been deleted from the DB.
+# No NOT LIKE filters needed - keeps queries fast.
+_FOOTER_CHUNK_FILTER = ""
+
+# MOJ website footer markers - text after these is website navigation, not judgment content
+_FOOTER_MARKERS = [
+    "البريدية اتفاقية مستوى الخدمة",
+    "الإلكترونية تقديم شكوى بلاغ عن فساد",
+    "الاتصال و المساعدة اتصل بنا",
+    "عن البوابة من نحن استراتيجية",
+    "من نحن استراتيجية امن المعلومات",
+    "المجلس الأعلى للقضاء المنصة",
+    "الأسئلة الشائعة روابط مهمة",
+]
+
+
+def _clean_full_text(text: str) -> str:
+    """Remove MOJ website footer/navigation from full_text."""
+    if not text:
+        return text
+    earliest_pos = len(text)
+    for marker in _FOOTER_MARKERS:
+        pos = text.find(marker)
+        if pos != -1 and pos < earliest_pos:
+            earliest_pos = pos
+    if earliest_pos < len(text):
+        text = text[:earliest_pos].strip()
+    return text
+
 
 @router.get("/version")
 def get_version():
@@ -224,33 +253,50 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset):
             vec_str = None
 
     if embedding and vec_str and has_query and not is_browse_only:
-        count_sql = f"""
-            SELECT COUNT(DISTINCT j.id)
-            FROM judgment_chunks jc
-            JOIN judgments j ON jc.judgment_id = j.id
-            JOIN cases c ON j.case_id = c.id
-            LEFT JOIN judgment_sections js ON jc.section_id = js.id
-            LEFT JOIN court_types ct ON c.court_type_id = ct.id
-            LEFT JOIN locations l ON c.location_id = l.id
-            LEFT JOIN court_levels cl ON j.court_level_id = cl.id
-            WHERE jc.embedding IS NOT NULL
-              AND length(jc.chunk_text) >= 100
-              AND jc.embedding <=> %s::vector < 0.60
-              {where_clause}
+        # Two-step approach for accurate + fast pagination:
+        # Step 1: GROUP BY judgment to get the best (min) distance per judgment
+        # and an accurate COUNT(*) OVER() (computed post-dedup since each group
+        # produces exactly one row). Only id/distance columns are projected here.
+        # Step 2: fetch full metadata + chunk text only for the current page's
+        # judgment ids (bounded to `limit` rows, so this join is fast).
+        step1_sql = f"""
+            WITH matched AS (
+                SELECT j.id AS judgment_id, MIN(jc.embedding <=> %s::vector) AS distance
+                FROM judgment_chunks jc
+                JOIN judgments j ON jc.judgment_id = j.id
+                JOIN cases c ON j.case_id = c.id
+                LEFT JOIN judgment_sections js ON jc.section_id = js.id
+                LEFT JOIN court_types ct ON c.court_type_id = ct.id
+                LEFT JOIN locations l ON c.location_id = l.id
+                LEFT JOIN court_levels cl ON j.court_level_id = cl.id
+                WHERE jc.embedding IS NOT NULL
+                  AND length(jc.chunk_text) >= 100
+                  AND length(COALESCE(j.full_text, '')) > 800
+                  {_FOOTER_CHUNK_FILTER}
+                  AND jc.embedding <=> %s::vector < 0.60
+                  {where_clause}
+                GROUP BY j.id
+            )
+            SELECT judgment_id, distance, COUNT(*) OVER() AS total_count
+            FROM matched
+            ORDER BY distance
+            LIMIT %s OFFSET %s;
         """
 
-        count_params = [vec_str] + params
+        step1_params = [vec_str, vec_str] + params + [limit, offset]
+
         try:
-            count_row = query_one(count_sql, count_params)
-            total = count_row["count"] if count_row else 0
+            step1_rows = query_all(step1_sql, step1_params)
+            total = step1_rows[0]["total_count"] if step1_rows else 0
         except Exception as e:
-            print(f"[SEARCH WARNING] Count query failed, returning empty: {e}")
+            print(f"[SEARCH WARNING] Step1 query failed, returning empty: {e}")
             return {"results": [], "total": 0, "limit": limit, "offset": offset}
 
-        fetch_pool = min(limit * 5, 50)
-
-        sql = f"""
-            SELECT * FROM (
+        if not step1_rows:
+            rows = []
+        else:
+            page_ids = [r["judgment_id"] for r in step1_rows]
+            step2_sql = f"""
                 SELECT DISTINCT ON (j.id)
                     j.id AS judgment_id,
                     j.judgment_number,
@@ -275,23 +321,19 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset):
                 LEFT JOIN court_types ct ON c.court_type_id = ct.id
                 LEFT JOIN locations l ON c.location_id = l.id
                 LEFT JOIN court_levels cl ON j.court_level_id = cl.id
-                WHERE jc.embedding IS NOT NULL
+                WHERE j.id = ANY(%s)
+                  AND jc.embedding IS NOT NULL
                   AND length(jc.chunk_text) >= 100
-                  AND jc.embedding <=> %s::vector < 0.60
-                  {where_clause}
-                ORDER BY j.id, jc.embedding <=> %s::vector
-            ) AS best_chunks
-            ORDER BY distance
-            LIMIT %s OFFSET %s;
-        """
-
-        all_params = [vec_str, vec_str] + params + [vec_str, fetch_pool, offset]
-
-        try:
-            rows = query_all(sql, all_params)
-        except Exception as e:
-            print(f"[SEARCH WARNING] Fetch query failed, returning empty: {e}")
-            return {"results": [], "total": 0, "limit": limit, "offset": offset}
+                  {_FOOTER_CHUNK_FILTER}
+                ORDER BY j.id, jc.embedding <=> %s::vector;
+            """
+            try:
+                unordered_rows = query_all(step2_sql, [vec_str, page_ids, vec_str])
+                rows_by_id = {r["judgment_id"]: r for r in unordered_rows}
+                rows = [rows_by_id[i] for i in page_ids if i in rows_by_id]
+            except Exception as e:
+                print(f"[SEARCH WARNING] Step2 query failed, returning empty: {e}")
+                return {"results": [], "total": 0, "limit": limit, "offset": offset}
     elif is_browse_only:
         # Pure metadata term like "تجاري" - browse all cases of that type
         count_sql = f"""
@@ -372,6 +414,8 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset):
             LEFT JOIN court_levels cl ON j.court_level_id = cl.id
             WHERE jc.embedding IS NOT NULL
               AND length(jc.chunk_text) >= 100
+              AND length(COALESCE(j.full_text, '')) > 800
+              {_FOOTER_CHUNK_FILTER}
               {where_clause}
         """
 
@@ -412,6 +456,8 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset):
                 LEFT JOIN court_levels cl ON j.court_level_id = cl.id
                 WHERE jc.embedding IS NOT NULL
                   AND length(jc.chunk_text) >= 100
+                  AND length(COALESCE(j.full_text, '')) > 800
+                  {_FOOTER_CHUNK_FILTER}
                   {where_clause}
                 ORDER BY j.id
             ) AS best_chunks
@@ -427,47 +473,64 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset):
             print(f"[SEARCH WARNING] Fetch query failed, returning empty: {e}")
             return {"results": [], "total": 0, "limit": limit, "offset": offset}
 
-    # Sentence-level re-ranking: embed sentences and find most relevant ones
+    # Sentence-level re-ranking: split every row's chunk into sentences, then
+    # embed ALL sentences from ALL rows in a single batched OpenAI call
+    # (instead of one call per row) to minimize network round-trips.
+    import re as _re
+    import math
+
+    do_rerank = has_query and not is_browse_only
+
+    row_sentences: list[list[str]] = []
+    all_sentences: list[str] = []
+    sentence_owner: list[int] = []  # row index for each entry in all_sentences
+
+    for row_idx, row in enumerate(rows):
+        chunk_text = row.get("chunk_text", "")
+        sentences = [s.strip() for s in _re.split(r'(?<=[.؟!\n])\s+', chunk_text) if len(s.strip()) >= 20]
+        row_sentences.append(sentences)
+
+        if do_rerank and len(sentences) > 1:
+            for sent in sentences:
+                all_sentences.append(sent)
+                sentence_owner.append(row_idx)
+
+    sentence_embeddings_by_row: dict[int, list] = {}
+    if all_sentences:
+        try:
+            embed_data = get_client().embeddings.create(
+                model=EMBEDDING_MODEL,
+                input=all_sentences,
+            ).data
+            for owner_idx, sent, emb_obj in zip(sentence_owner, all_sentences, embed_data):
+                sentence_embeddings_by_row.setdefault(owner_idx, []).append((sent, emb_obj.embedding))
+        except Exception:
+            sentence_embeddings_by_row = {}
+
+    query_norm = math.sqrt(sum(x * x for x in embedding)) if embedding else 0
+
     results = []
-    for row in rows:
+    for row_idx, row in enumerate(rows):
         chunk_text = row.get("chunk_text", "")
         chunk_distance = float(row["distance"]) if row["distance"] else None
+        sentences = row_sentences[row_idx]
 
-        # Split chunk into sentences
-        import re as _re
-        sentences = [s.strip() for s in _re.split(r'(?<=[.؟!\n])\s+', chunk_text) if len(s.strip()) >= 20]
-
-        if len(sentences) <= 1 or not has_query or is_browse_only:
-            # Short chunk, no query, or browse-only mode: use as-is
+        if len(sentences) <= 1 or not do_rerank:
             best_sentences = [{"text": chunk_text, "distance": chunk_distance}]
+        elif row_idx in sentence_embeddings_by_row:
+            scored_sentences = []
+            for sent, sent_vec in sentence_embeddings_by_row[row_idx]:
+                dot = sum(a * b for a, b in zip(embedding, sent_vec))
+                sent_norm = math.sqrt(sum(x * x for x in sent_vec))
+                cos_sim = dot / (query_norm * sent_norm + 1e-9) if sent_norm > 0 else 0
+                sent_distance = 1 - cos_sim
+                scored_sentences.append({"text": sent, "distance": sent_distance})
+
+            scored_sentences.sort(key=lambda x: x["distance"])
+            best_sentences = scored_sentences[:3]
         else:
-            # Embed all sentences in one batch call
-            try:
-                sentence_embeddings = get_client().embeddings.create(
-                    model=EMBEDDING_MODEL,
-                    input=sentences,
-                ).data
-
-                # Compute cosine distance for each sentence vs query
-                import math
-                query_norm = math.sqrt(sum(x * x for x in embedding))
-
-                scored_sentences = []
-                for sent, emb_obj in zip(sentences, sentence_embeddings):
-                    sent_vec = emb_obj.embedding
-                    # Cosine similarity via dot product / norms
-                    dot = sum(a * b for a, b in zip(embedding, sent_vec))
-                    sent_norm = math.sqrt(sum(x * x for x in sent_vec))
-                    cos_sim = dot / (query_norm * sent_norm + 1e-9) if sent_norm > 0 else 0
-                    sent_distance = 1 - cos_sim
-                    scored_sentences.append({"text": sent, "distance": sent_distance})
-
-                # Sort by distance (most relevant first), take top 3
-                scored_sentences.sort(key=lambda x: x["distance"])
-                best_sentences = scored_sentences[:3]
-            except Exception:
-                # Fallback: use chunk as-is
-                best_sentences = [{"text": chunk_text, "distance": chunk_distance}]
+            # Batch embedding failed: fallback to chunk as-is
+            best_sentences = [{"text": chunk_text, "distance": chunk_distance}]
 
         # Build snippet from best sentences, highlight them
         snippet_parts = [s["text"] for s in best_sentences]
@@ -677,10 +740,14 @@ def get_judgment_detail(judgment_id: int):
     if not judgment:
         raise HTTPException(status_code=404, detail="Judgment not found")
 
+    # Clean MOJ boilerplate from full_text
+    judgment["full_text"] = _clean_full_text(judgment.get("full_text", ""))
+
     # Get related chunks (snippets) for the judgment content
     chunks = query_all(
         """SELECT id, chunk_text, chunk_order FROM judgment_chunks
-           WHERE judgment_id = %s ORDER BY chunk_order LIMIT 100;""",
+           WHERE judgment_id = %s
+           ORDER BY chunk_order LIMIT 100;""",
         [judgment_id],
     )
 
