@@ -6,9 +6,8 @@ export const revalidate = 0;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = 'https://albaheth.app';
-  // Call the backend directly (not through the site's own /api proxy) to
-  // avoid serverless-function-to-serverless-function routing issues.
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || baseUrl;
+  // Backend runs in the same container on port 8000 (see next.config.js rewrites).
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
 
   const staticPages: MetadataRoute.Sitemap = [
     { url: baseUrl, lastModified: new Date(), changeFrequency: 'daily', priority: 1 },
