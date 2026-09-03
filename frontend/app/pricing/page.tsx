@@ -8,7 +8,7 @@ import Footer from '../components/Footer';
 export const metadata: Metadata = {
   title: 'الأسعار والباقات | الباحث - محرك بحث الأحكام القضائية السعودية',
   description:
-    'باقات الباحث لبحث الأحكام القضائية السعودية. باقة شهرية 29.99 ريال وباقة سنوية 300 ريال. 50 بحث يومياً. ابحث في آلاف الأحكام السعودية بسهولة.',
+    'باقات الباحث لبحث الأحكام القضائية السعودية. باقة شهرية 12 ريال وباقة سنوية 300 ريال. 50 بحث يومياً. ابحث في آلاف الأحكام السعودية بسهولة.',
   keywords: [
     'أسعار الباحث',
     'باقات الباحث',
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   robots: 'index, follow',
   openGraph: {
     title: 'الأسعار والباقات | الباحث',
-    description: 'باقات الباحث لبحث الأحكام القضائية السعودية. باقة شهرية 29.99 ريال وباقة سنوية 300 ريال.',
+    description: 'باقات الباحث لبحث الأحكام القضائية السعودية. باقة شهرية 12 ريال وباقة سنوية 300 ريال.',
     url: 'https://albaheth.app/pricing',
     siteName: 'الباحث',
     locale: 'ar_SA',
@@ -46,7 +46,7 @@ export default function PricingPage() {
             <h2 className="text-2xl font-bold text-white">باقات بأسعار تنافسية</h2>
           </div>
           <p className="text-white text-lg mb-1">ابدأ البحث في الأحكام القضائية السعودية الآن</p>
-          <p className="text-primary-50 text-sm">50 بحث يومياً بأسعار تبدأ من 29.99 ريال شهرياً</p>
+          <p className="text-primary-50 text-sm">50 بحث يومياً بأسعار تبدأ من 12 ريال شهرياً</p>
         </div>
 
         {/* Page Title */}
@@ -108,7 +108,7 @@ export default function PricingPage() {
               <h3 className="text-lg font-bold text-slate-900 mb-2">باقة شهرية</h3>
               <p className="text-sm text-slate-600">50 بحث يومياً</p>
               <div className="mt-4">
-                <span className="text-4xl font-bold text-slate-900">29.99</span>
+                <span className="text-4xl font-bold text-slate-900">12</span>
                 <span className="text-slate-600 text-sm mr-1">ريال / شهر</span>
               </div>
               <p className="text-xs text-slate-500 mt-1">شامل ضريبة القيمة المضافة</p>
@@ -135,11 +135,11 @@ export default function PricingPage() {
                 أحكام ذات صلة لكل قضية
               </li>
             </ul>
-            <Suspense fallback={<div className="w-full py-3 border-2 border-primary-600 text-primary-600 rounded-xl font-bold text-center">اشترك الآن - 29.99 ريال/شهر</div>}>
+            <Suspense fallback={<div className="w-full py-3 border-2 border-primary-600 text-primary-600 rounded-xl font-bold text-center">اشترك الآن - 12 ريال/شهر</div>}>
             <PaymentButtons
               plan="monthly"
-              amount={2999}
-              label="اشترك الآن - 29.99 ريال/شهر"
+              amount={1200}
+              label="اشترك الآن - 12 ريال/شهر"
               variant="outline"
             />
             </Suspense>
@@ -271,7 +271,7 @@ export default function PricingPage() {
               {
                 '@type': 'Offer',
                 name: 'باقة شهرية',
-                price: '29.99',
+                price: '12',
                 priceCurrency: 'SAR',
                 description: '50 بحث يومياً في الأحكام القضائية السعودية',
               },

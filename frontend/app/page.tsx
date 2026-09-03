@@ -57,7 +57,7 @@ export default function LandingPage() {
             ابحث في آلاف الأحكام الصادرة من محاكم المملكة العربية السعودية. منصة متخصصة للمحامين والمستشارين والباحثين القانونيين.
           </p>
           <p className="text-base text-slate-500 mb-10 max-w-xl mx-auto">
-            سجل دخولك مجاناً وابحث بالمعنى لا بالكلمة المفتاحية فقط. باقات تبدأ من 29.99 ريال شهرياً.
+            سجل دخولك مجاناً وابحث بالمعنى لا بالكلمة المفتاحية فقط. باقات تبدأ من 12 ريال شهرياً.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <a
@@ -136,7 +136,7 @@ export default function LandingPage() {
           <p className="text-slate-600 mb-8">ابدأ البحث في الأحكام القضائية السعودية الآن — 50 بحث يومياً</p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
             <div className="bg-white rounded-xl border border-slate-200 px-6 py-4 shadow-sm">
-              <div className="text-2xl font-bold text-slate-900">29.99 <span className="text-base font-normal text-slate-500">ريال / شهر</span></div>
+              <div className="text-2xl font-bold text-slate-900">12 <span className="text-base font-normal text-slate-500">ريال / شهر</span></div>
             </div>
             <div className="bg-primary-600 rounded-xl px-6 py-4 shadow-md">
               <div className="text-2xl font-bold text-white">300 <span className="text-base font-normal text-primary-100">ريال / سنة</span></div>
