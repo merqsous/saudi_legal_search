@@ -8,7 +8,7 @@ import Footer from '../components/Footer';
 export const metadata: Metadata = {
   title: 'الأسعار والباقات | الباحث - محرك بحث الأحكام القضائية السعودية',
   description:
-    'باقات الباحث لبحث الأحكام القضائية السعودية. باقة شهرية 12 ريال وباقة سنوية 300 ريال. 50 بحث يومياً. ابحث في آلاف الأحكام السعودية بسهولة.',
+    'باقات الباحث لبحث الأحكام القضائية السعودية. باقة شهرية 12 ريال وباقة سنوية 100 ريال. 50 بحث يومياً. ابحث في آلاف الأحكام السعودية بسهولة.',
   keywords: [
     'أسعار الباحث',
     'باقات الباحث',
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   robots: 'index, follow',
   openGraph: {
     title: 'الأسعار والباقات | الباحث',
-    description: 'باقات الباحث لبحث الأحكام القضائية السعودية. باقة شهرية 12 ريال وباقة سنوية 300 ريال.',
+    description: 'باقات الباحث لبحث الأحكام القضائية السعودية. باقة شهرية 12 ريال وباقة سنوية 100 ريال.',
     url: 'https://albaheth.app/pricing',
     siteName: 'الباحث',
     locale: 'ar_SA',
@@ -153,9 +153,9 @@ export default function PricingPage() {
             </div>
             <div className="text-center mb-6">
               <h3 className="text-lg font-bold text-slate-900 mb-2">باقة سنوية</h3>
-              <p className="text-sm text-slate-600">وفّر 58 ريال سنوياً</p>
+              <p className="text-sm text-slate-600">وفّر 44 ريال سنوياً</p>
               <div className="mt-4">
-                <span className="text-4xl font-bold text-primary-600">300</span>
+                <span className="text-4xl font-bold text-primary-600">100</span>
                 <span className="text-slate-600 text-sm">ريال / سنة</span>
               </div>
               <p className="text-xs text-slate-500 mt-1">شامل ضريبة القيمة المضافة</p>
@@ -182,11 +182,11 @@ export default function PricingPage() {
                 دعم فني مخصص
               </li>
             </ul>
-            <Suspense fallback={<div className="w-full py-3 bg-primary-600 text-white rounded-xl font-bold text-center">اشترك الآن - 300 ريال/سنة</div>}>
+            <Suspense fallback={<div className="w-full py-3 bg-primary-600 text-white rounded-xl font-bold text-center">اشترك الآن - 100 ريال/سنة</div>}>
             <PaymentButtons
               plan="annual"
-              amount={30000}
-              label="اشترك الآن - 300 ريال/سنة"
+              amount={10000}
+              label="اشترك الآن - 100 ريال/سنة"
               variant="primary"
             />
             </Suspense>
@@ -278,9 +278,9 @@ export default function PricingPage() {
               {
                 '@type': 'Offer',
                 name: 'باقة سنوية',
-                price: '300',
+                price: '100',
                 priceCurrency: 'SAR',
-                description: '50 بحث يومياً في الأحكام القضائية السعودية - توفير 20%',
+                description: '50 بحث يومياً في الأحكام القضائية السعودية - توفير 31%',
               },
             ],
             url: 'https://albaheth.app/pricing',

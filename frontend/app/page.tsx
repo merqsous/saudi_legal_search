@@ -139,7 +139,7 @@ export default function LandingPage() {
               <div className="text-2xl font-bold text-slate-900">12 <span className="text-base font-normal text-slate-500">ريال / شهر</span></div>
             </div>
             <div className="bg-primary-600 rounded-xl px-6 py-4 shadow-md">
-              <div className="text-2xl font-bold text-white">300 <span className="text-base font-normal text-primary-100">ريال / سنة</span></div>
+              <div className="text-2xl font-bold text-white">100 <span className="text-base font-normal text-primary-100">ريال / سنة</span></div>
             </div>
           </div>
           <a
