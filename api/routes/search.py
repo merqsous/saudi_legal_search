@@ -12,7 +12,7 @@ router = APIRouter()
 # Registered users who have not subscribed get a fixed number of free searches
 # before being required to upgrade. Anonymous users get a smaller preview
 # (handled separately via the `anonymous` query param).
-FREE_SEARCH_LIMIT = 3
+FREE_SEARCH_LIMIT = 20
 
 # Phone numbers that always bypass the subscription requirement (admin/owner).
 UNLIMITED_SEARCH_PHONES = {ADMIN_PHONE, "966553466235"}
