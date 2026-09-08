@@ -12,13 +12,21 @@ router = APIRouter()
 
 BASE_URL = "https://api.moyasar.com/v1"
 
+# Canonical subscription prices in halalas (1 SAR = 100 halalas).
+# The client sends a plan name only; the amount actually charged via Moyasar
+# is always taken from here, never trusted from the request body.
+PLAN_PRICES = {
+    "monthly": 1200,   # 12 SAR
+    "annual": 10000,   # 100 SAR
+}
+
 
 def _get_secret_key() -> str:
     return os.getenv("MOYASAR_SECRET_KEY", "")
 
 
 class CreatePaymentRequest(BaseModel):
-    amount: int  # in halalas (1 SAR = 100 halalas)
+    amount: int  # in halalas; advisory only, server overrides with PLAN_PRICES[plan]
     currency: str = "SAR"
     description: str
     plan: str  # "monthly" or "annual"
@@ -79,6 +87,12 @@ def create_payment(req: CreatePaymentRequest, authorization: str = Header(None))
     if not user_id:
         raise HTTPException(status_code=401, detail="غير مصرح")
 
+    if req.plan not in PLAN_PRICES:
+        raise HTTPException(status_code=400, detail="باقة غير صالحة")
+
+    # Never trust the client-supplied amount; always charge the canonical price.
+    amount = PLAN_PRICES[req.plan]
+
     secret_key = _get_secret_key()
     if not secret_key:
         raise HTTPException(status_code=500, detail="Payment system not configured")
@@ -87,7 +101,7 @@ def create_payment(req: CreatePaymentRequest, authorization: str = Header(None))
     callback_url = os.getenv("MOYASAR_CALLBACK_URL", "http://localhost:3000/pricing?payment=callback")
 
     result = _moyasar_request("/payments", {
-        "amount": req.amount,
+        "amount": amount,
         "currency": req.currency,
         "description": req.description,
         "callback_url": callback_url,
