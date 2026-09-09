@@ -10,6 +10,9 @@ interface AdminStats {
   total_users: number;
   total_searches: number;
   anonymous_searches: number;
+  paid_monthly: number;
+  paid_annual: number;
+  free_trial: number;
   top_keywords: { query: string; cnt: number }[];
   top_court_types: { court_type: string; name_ar: string; cnt: number }[];
   users: {
@@ -22,6 +25,10 @@ interface AdminStats {
     created_at: string;
     search_count: number;
     last_search: string | null;
+    sub_plan: string | null;
+    sub_status: string | null;
+    sub_amount: number | null;
+    sub_expires: string | null;
   }[];
   recent_searches: {
     query: string;
@@ -288,6 +295,37 @@ export default function AdminPage() {
           </div>
         </div>
 
+        {/* Subscription Summary */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-green-50 text-green-600">
+                <CheckCircle className="w-5 h-5" />
+              </div>
+              <span className="text-sm text-slate-500">مشترك شهري</span>
+            </div>
+            <p className="text-3xl font-bold text-green-600">{stats.paid_monthly || 0}</p>
+          </div>
+          <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-purple-50 text-purple-600">
+                <CheckCircle className="w-5 h-5" />
+              </div>
+              <span className="text-sm text-slate-500">مشترك سنوي</span>
+            </div>
+            <p className="text-3xl font-bold text-purple-600">{stats.paid_annual || 0}</p>
+          </div>
+          <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-slate-100 text-slate-500">
+                <Users className="w-5 h-5" />
+              </div>
+              <span className="text-sm text-slate-500">فترة تجريبية</span>
+            </div>
+            <p className="text-3xl font-bold text-slate-500">{stats.free_trial || 0}</p>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Top Keywords */}
           <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200">
@@ -348,6 +386,7 @@ export default function AdminPage() {
                   <th className="text-right py-3 px-2">الهاتف</th>
                   <th className="text-right py-3 px-2">IP</th>
                   <th className="text-right py-3 px-2">الدولة</th>
+                  <th className="text-right py-3 px-2">الاشتراك</th>
                   <th className="text-right py-3 px-2">عمليات البحث</th>
                   <th className="text-right py-3 px-2">آخر بحث</th>
                   <th className="text-right py-3 px-2">تاريخ التسجيل</th>
@@ -360,6 +399,18 @@ export default function AdminPage() {
                     <td className="py-3 px-2 text-slate-600" dir="ltr">{u.phone}</td>
                     <td className="py-3 px-2 text-slate-500" dir="ltr">{u.ip_address || '-'}</td>
                     <td className="py-3 px-2 text-slate-500">{u.country || '-'}</td>
+                    <td className="py-3 px-2">
+                      {u.sub_status === 'active' && u.sub_plan ? (
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${u.sub_plan === 'annual' ? 'bg-purple-50 text-purple-700' : 'bg-green-50 text-green-700'}`}>
+                          {u.sub_plan === 'annual' ? 'سنوي' : 'شهري'}
+                          {u.sub_amount ? ` (${(u.sub_amount / 100).toFixed(0)} ر.س)` : ''}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-500">
+                          مجاني
+                        </span>
+                      )}
+                    </td>
                     <td className="py-3 px-2 font-bold text-primary-600">{u.search_count}</td>
                     <td className="py-3 px-2 text-slate-500">{u.last_search ? formatDate(u.last_search) : '-'}</td>
                     <td className="py-3 px-2 text-slate-500">{formatDate(u.created_at)}</td>

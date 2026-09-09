@@ -396,10 +396,20 @@ def admin_stats(authorization: str = Header(None)):
     users_with_searches = safe_query_all(
         """SELECT u.id, u.phone, u.first_name, u.last_name, u.ip_address, u.country, u.created_at,
                   COUNT(sl.id) as search_count,
-                  MAX(sl.created_at) as last_search
+                  MAX(sl.created_at) as last_search,
+                  us.plan as sub_plan,
+                  us.status as sub_status,
+                  us.amount_paid as sub_amount,
+                  us.expires_at as sub_expires
            FROM users u
            LEFT JOIN search_logs sl ON sl.user_id = u.id
-           GROUP BY u.id, u.phone, u.first_name, u.last_name, u.ip_address, u.country, u.created_at
+           LEFT JOIN LATERAL (
+               SELECT * FROM user_subscriptions
+               WHERE user_id = u.id AND status = 'active'
+               ORDER BY id DESC LIMIT 1
+           ) us ON true
+           GROUP BY u.id, u.phone, u.first_name, u.last_name, u.ip_address, u.country, u.created_at,
+                    us.plan, us.status, us.amount_paid, us.expires_at
            ORDER BY search_count DESC"""
     )
 
@@ -428,12 +438,19 @@ def admin_stats(authorization: str = Header(None)):
            ORDER BY j.id DESC LIMIT 20"""
     )
 
+    paid_monthly = safe_query_one("SELECT COUNT(*) as cnt FROM user_subscriptions WHERE status = 'active' AND plan = 'monthly' AND amount_paid > 0")["cnt"]
+    paid_annual = safe_query_one("SELECT COUNT(*) as cnt FROM user_subscriptions WHERE status = 'active' AND plan = 'annual' AND amount_paid > 0")["cnt"]
+    free_trial = safe_query_one("SELECT COUNT(*) as cnt FROM user_subscriptions WHERE status = 'active' AND payment_id = 'FREE_TRIAL'")["cnt"]
+
     return {
         "total_judgments": total_judgments,
         "total_cases": total_cases,
         "total_users": total_users,
         "total_searches": total_searches,
         "anonymous_searches": anonymous_searches,
+        "paid_monthly": paid_monthly,
+        "paid_annual": paid_annual,
+        "free_trial": free_trial,
         "top_keywords": top_keywords,
         "top_court_types": top_court_types,
         "users": users_with_searches,
