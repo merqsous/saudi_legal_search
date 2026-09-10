@@ -121,7 +121,12 @@ def detect_metadata_filters(q: str) -> dict:
 
 
 def expand_query(query: str) -> str:
-    """Expand short queries with legal context for better semantic matching."""
+    """Expand very short queries (≤2 words) with legal context for better semantic matching.
+    Longer, specific queries are passed as-is to preserve the user's precise intent."""
+    words = query.split()
+    if len(words) > 2:
+        return query
+
     normalized = normalize_arabic(query)
 
     legal_keywords = {
@@ -166,9 +171,9 @@ def generate_ai_answer(query: str, results: list[dict]) -> str | None:
     if not results:
         return None
 
-    # Skip if top results are not relevant enough (distance > 0.6 means < 70% match)
+    # Skip if top results are not relevant enough (distance > 0.45 means < 55% match)
     best_distance = min((r.get("distance") or 1.0) for r in results[:3])
-    if best_distance > 0.6:
+    if best_distance > 0.45:
         return None
 
     top_results = results[:5]
@@ -319,7 +324,7 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset):
                   AND length(jc.chunk_text) >= 100
                   AND length(COALESCE(j.full_text, '')) > 800
                   {_FOOTER_CHUNK_FILTER}
-                  AND jc.embedding <=> %s::vector < 0.60
+                  AND jc.embedding <=> %s::vector < 0.45
                   {where_clause}
                 GROUP BY j.id
             )
@@ -606,6 +611,26 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset):
 
     # Re-sort results by sentence-level distance
     results.sort(key=lambda x: x["distance"] if x["distance"] is not None else 1.0)
+
+    # Keyword overlap post-filter: for multi-word queries (3+ words), require
+    # at least 2 significant query terms to appear in the result snippet.
+    # This catches cases where embedding distance is small but the result
+    # doesn't actually discuss the specific legal point.
+    if has_query and not is_browse_only:
+        query_words = set(normalize_arabic(q).split())
+        # Remove common stopwords
+        stopwords = {'في', 'من', 'على', 'الى', 'عن', 'مع', 'او', 'و', 'ال', 'لا', 'ما', 'هو', 'هي', 'هذا', 'هذه', 'التي', 'الذي', 'عند', 'قد', 'ثم', 'بين', 'كل', 'بعض', 'غير', 'حيث', 'كما', 'لكن', 'ان', 'اذا', 'اذ', 'عن'}
+        significant_words = query_words - stopwords
+        if len(significant_words) >= 3:
+            filtered_results = []
+            for r in results:
+                snippet_norm = normalize_arabic(r.get("snippet", ""))
+                overlap = sum(1 for w in significant_words if w in snippet_norm)
+                if overlap >= 2:
+                    filtered_results.append(r)
+            if filtered_results:
+                results = filtered_results
+                total = len(results)
 
     return {"results": results[:limit], "total": total, "limit": limit, "offset": offset}
 
