@@ -92,15 +92,21 @@ def embed_and_store(batch_num):
         print(f"  [FAIL] Batch {batch_num} failed after 5 retries, skipping")
         return -1
 
-    # Store in DB (autocommit — each UPDATE commits immediately)
+    # Store in DB: single UPDATE with unnest (1 round-trip instead of 100)
+    vec_strs = ["[" + ",".join(str(x) for x in embeddings[idx]) + "]" for idx in range(len(ids))]
     with get_db() as conn:
         with conn.cursor() as cur:
-            for idx, row_id in enumerate(ids):
-                vec_str = "[" + ",".join(str(x) for x in embeddings[idx]) + "]"
-                cur.execute(
-                    "UPDATE judgment_chunks SET embedding_large = %s::vector WHERE id = %s",
-                    (vec_str, row_id),
-                )
+            cur.execute(
+                """
+                UPDATE judgment_chunks
+                SET embedding_large = data.vec::vector
+                FROM (
+                    SELECT unnest(%s::int[]) AS id, unnest(%s::text[]) AS vec
+                ) AS data
+                WHERE judgment_chunks.id = data.id
+                """,
+                (ids, vec_strs),
+            )
 
     return len(ids)
 
