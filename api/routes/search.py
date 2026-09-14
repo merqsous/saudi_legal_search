@@ -6,6 +6,7 @@ from api.db import query_all, query_one
 from api.embeddings import embed_text, vector_to_pgvector, get_client
 from api.config import EMBEDDING_MODEL
 from api.query_intelligence import analyze_query
+from api.legal_kb import get_kb_expansions, CONCEPTS as KB_CONCEPTS
 from api.routes.auth import log_search, get_client_ip, get_country_from_ip, ADMIN_PHONE
 
 router = APIRouter()
@@ -263,16 +264,33 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset):
     if has_query:
         intelligence = analyze_query(q)
 
+    # Legal KB: instant concept detection from user's exact words.
+    # Provides synonyms, related concepts, and domain as backup signal.
+    kb_labels = []
+    kb_court_type = None
+    if has_query:
+        kb_labels, kb_concepts = get_kb_expansions(q)
+        if kb_concepts:
+            # Use KB concept court type if consistent across all matched concepts
+            kb_courts = {KB_CONCEPTS[cid]["court"] for cid in kb_concepts if cid in KB_CONCEPTS}
+            if len(kb_courts) == 1:
+                kb_court_type = kb_courts.pop()
+
     # Detect metadata keywords in query (e.g. "تجاري" -> court_type filter)
     metadata_filters = {}
     if has_query:
         metadata_filters = detect_metadata_filters(q)
-    # Merge priority: explicit user filter > keyword detection > LLM intelligence
-    effective_court_type = court_type or metadata_filters.get('court_type') or (intelligence or {}).get('court_type')
-    effective_court_level = court_level or metadata_filters.get('court_level')
+    # Merge priority: explicit user filter > keyword detection > LLM intelligence > KB concepts
+    effective_court_type = (
+        court_type
+        or metadata_filters.get('court_type')
+        or (intelligence or {}).get('court_type')
+        or kb_court_type
+    )
     if effective_court_type == 'general':
-        # 'general' means LLM couldn't determine domain — don't filter
-        effective_court_type = court_type or metadata_filters.get('court_type')
+        # 'general' means LLM couldn't determine domain — try KB, else no filter
+        effective_court_type = court_type or metadata_filters.get('court_type') or kb_court_type
+    effective_court_level = court_level or metadata_filters.get('court_level')
 
     # Check if query is a pure browse term (e.g. just "تجاري") -> skip semantic search
     normalized_q = normalize_arabic(q).strip() if has_query else ""
@@ -310,6 +328,10 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset):
                 embedding_q = intelligence['rewritten_query']
             else:
                 embedding_q = expand_query(q)
+            # KB enrichment: append alternative labels + related concepts
+            # (synonym variations from the legal knowledge base)
+            if kb_labels:
+                embedding_q = embedding_q + " " + " ".join(kb_labels)
             embedding = embed_text(embedding_q)
             vec_str = vector_to_pgvector(embedding)
         except Exception as e:
