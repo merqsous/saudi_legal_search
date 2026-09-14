@@ -566,7 +566,7 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset):
     import re as _re
     import math
 
-    do_rerank = has_query and not is_browse_only
+    do_rerank = has_query and not is_browse_only and embedding is not None
 
     row_sentences: list[list[str]] = []
     all_sentences: list[str] = []
