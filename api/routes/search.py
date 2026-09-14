@@ -5,6 +5,7 @@ from fastapi import APIRouter, Query, HTTPException, Request
 from api.db import query_all, query_one
 from api.embeddings import embed_text, vector_to_pgvector, get_client
 from api.config import EMBEDDING_MODEL
+from api.query_intelligence import analyze_query
 from api.routes.auth import log_search, get_client_ip, get_country_from_ip, ADMIN_PHONE
 
 router = APIRouter()
@@ -256,13 +257,22 @@ def search(
 def _do_search(q, court_type, city, year, court_level, section, limit, offset):
     has_query = q and q.strip()
 
+    # Query intelligence: LLM analyzes intent, detects domain, rewrites query.
+    # Falls back to keyword detection if LLM fails or is too slow.
+    intelligence = None
+    if has_query:
+        intelligence = analyze_query(q)
+
     # Detect metadata keywords in query (e.g. "تجاري" -> court_type filter)
     metadata_filters = {}
     if has_query:
         metadata_filters = detect_metadata_filters(q)
-    # Merge: explicit filters take priority over detected ones
-    effective_court_type = court_type or metadata_filters.get('court_type')
+    # Merge priority: explicit user filter > keyword detection > LLM intelligence
+    effective_court_type = court_type or metadata_filters.get('court_type') or (intelligence or {}).get('court_type')
     effective_court_level = court_level or metadata_filters.get('court_level')
+    if effective_court_type == 'general':
+        # 'general' means LLM couldn't determine domain — don't filter
+        effective_court_type = court_type or metadata_filters.get('court_type')
 
     # Check if query is a pure browse term (e.g. just "تجاري") -> skip semantic search
     normalized_q = normalize_arabic(q).strip() if has_query else ""
@@ -295,8 +305,12 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset):
     vec_str = None
     if has_query and not is_browse_only:
         try:
-            expanded_q = expand_query(q)
-            embedding = embed_text(expanded_q)
+            # Use LLM-rewritten query if available, else dictionary expansion
+            if intelligence and intelligence.get('rewritten_query'):
+                embedding_q = intelligence['rewritten_query']
+            else:
+                embedding_q = expand_query(q)
+            embedding = embed_text(embedding_q)
             vec_str = vector_to_pgvector(embedding)
         except Exception as e:
             print(f"[SEARCH WARNING] Embedding failed, falling back to browse mode: {e}")

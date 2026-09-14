@@ -24,4 +24,8 @@ else:
     DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+# NOTE: Re-embedding in progress. Once all chunks are re-embedded with
+# text-embedding-3-large into embedding_large column, switch this to
+# "text-embedding-3-large" and point search at the new column.
 EMBEDDING_MODEL = "text-embedding-3-small"
+EMBEDDING_DIMENSIONS = 1536
