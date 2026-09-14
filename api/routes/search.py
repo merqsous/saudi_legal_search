@@ -2,7 +2,7 @@ import json
 import os
 import re
 from fastapi import APIRouter, Query, HTTPException, Request
-from api.db import query_all, query_one
+from api.db import query_all, query_one, get_db
 from api.embeddings import embed_text, vector_to_pgvector, get_client
 from api.config import EMBEDDING_MODEL
 from api.query_intelligence import analyze_query
@@ -232,6 +232,7 @@ def search(
 
     # Registered, non-subscribed users are limited to a fixed number of free
     # searches. Admin phone always bypasses this check.
+    user_id = None
     if not anonymous and phone and phone not in UNLIMITED_SEARCH_PHONES:
         user_id = _get_user_id_by_phone(phone)
         if user_id and not _has_active_subscription(user_id):
@@ -241,8 +242,10 @@ def search(
                     status_code=402,
                     detail="subscription_required",
                 )
+    elif phone:
+        user_id = _get_user_id_by_phone(phone)
 
-    result = _do_search(q, court_type, city, year, court_level, section, effective_limit, offset)
+    result = _do_search(q, court_type, city, year, court_level, section, effective_limit, offset, user_id=user_id)
 
     # Log the search with IP for both authenticated and anonymous users
     ip = get_client_ip(request)
@@ -255,7 +258,54 @@ def search(
     return result
 
 
-def _do_search(q, court_type, city, year, court_level, section, limit, offset):
+def _apply_feedback_boost(results: list[dict], q: str, user_id: int | None) -> list[dict]:
+    """Boost ranking based on relevance feedback (clicks and explicit ratings).
+
+    Signal weights: click=+1 (weak), relevant=+3 (strong), not_relevant=-3.
+    Distance adjustment: -min(score * 0.05, 0.30) — max 30% boost.
+    Personal signals (user's own 'relevant' ratings on any query) add extra weight.
+    """
+    if not results or not q or not q.strip():
+        return results
+
+    try:
+        feedback = query_all("""
+            SELECT judgment_id,
+                   SUM(CASE signal_type
+                       WHEN 'relevant' THEN 3
+                       WHEN 'click' THEN 1
+                       WHEN 'not_relevant' THEN -3
+                       ELSE 0 END) as score
+            FROM search_feedback
+            WHERE query = %s
+            GROUP BY judgment_id
+        """, [q.strip()])
+        boost_map: dict[int, float] = {f["judgment_id"]: float(f["score"]) for f in feedback}
+
+        if user_id:
+            personal = query_all("""
+                SELECT judgment_id, COUNT(*) as cnt
+                FROM search_feedback
+                WHERE user_id = %s AND signal_type = 'relevant'
+                GROUP BY judgment_id
+            """, [user_id])
+            for p in personal:
+                boost_map[p["judgment_id"]] = boost_map.get(p["judgment_id"], 0.0) + float(p["cnt"]) * 2
+
+        for r in results:
+            jid = r.get("judgment_id")
+            if jid in boost_map and r.get("distance") is not None:
+                boost = max(-0.30, min(boost_map[jid] * 0.05, 0.30))
+                r["distance"] = max(0.0, r["distance"] - boost)
+
+        results.sort(key=lambda x: x["distance"] if x["distance"] is not None else 1.0)
+    except Exception as e:
+        print(f"[FEEDBACK BOOST] Failed (non-fatal): {e}")
+
+    return results
+
+
+def _do_search(q, court_type, city, year, court_level, section, limit, offset, user_id: int | None = None):
     has_query = q and q.strip()
 
     # Query intelligence: LLM analyzes intent, detects domain, rewrites query.
@@ -668,7 +718,43 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset):
                 results = filtered_results
                 total = len(results)
 
+    # Relevance feedback boost: promote judgments with positive signals
+    results = _apply_feedback_boost(results, q, user_id)
+
     return {"results": results[:limit], "total": total, "limit": limit, "offset": offset}
+
+
+@router.post("/search/feedback")
+def record_search_feedback(request: Request, payload: dict):
+    """Record a relevance signal for a judgment from search results.
+
+    Body: {
+        "query": str,            -- the search query
+        "judgment_id": int,      -- judgment clicked/rated
+        "signal_type": str,      -- "click" | "relevant" | "not_relevant"
+        "position": int | null   -- rank position in results (optional)
+    }
+    """
+    query = (payload.get("query") or "").strip()
+    judgment_id = payload.get("judgment_id")
+    signal_type = payload.get("signal_type")
+    position = payload.get("position")
+
+    if not query or not judgment_id or signal_type not in ("click", "relevant", "not_relevant"):
+        raise HTTPException(status_code=400, detail="بيانات غير صالحة")
+
+    phone = request.headers.get("X-User-Phone", "")
+    user_id = _get_user_id_by_phone(phone) if phone else None
+
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """INSERT INTO search_feedback (user_id, query, judgment_id, signal_type, position)
+                   VALUES (%s, %s, %s, %s, %s)""",
+                (user_id, query, judgment_id, signal_type, position),
+            )
+
+    return {"ok": True}
 
 
 @router.get("/ai-answer")

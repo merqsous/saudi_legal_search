@@ -756,6 +756,8 @@ export default function SearchClient() {
                   favorited={favoritedIds.has(result.judgment_id)}
                   onToggleFavorite={() => toggleFavorite(result.judgment_id)}
                   isLoggedIn={!!authToken}
+                  position={idx + 1}
+                  userPhone={authUser?.phone || ''}
                 />
               ))}
             </div>
@@ -868,14 +870,32 @@ function FilterSelect({
   );
 }
 
-function ResultCard({ result, query, favorited, onToggleFavorite, isLoggedIn }: {
+function ResultCard({ result, query, favorited, onToggleFavorite, isLoggedIn, position, userPhone }: {
   result: SearchResult;
   query: string;
   favorited: boolean;
   onToggleFavorite: () => void;
   isLoggedIn: boolean;
+  position: number;
+  userPhone: string;
 }) {
   const relevance = result.distance != null ? Math.max(0, Math.min(1, 1.0 - result.distance * 0.5)) : null;
+
+  const [userRating, setUserRating] = useState<'relevant' | 'not_relevant' | null>(null);
+
+  const sendFeedbackSignal = (signalType: 'click' | 'relevant' | 'not_relevant') => {
+    if (!query.trim()) return;
+    fetch('/api/search/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-User-Phone': userPhone },
+      body: JSON.stringify({
+        query,
+        judgment_id: result.judgment_id,
+        signal_type: signalType,
+        position,
+      }),
+    }).catch(() => {});
+  };
 
   const highlightSnippet = (text: string, q: string) => {
     if (!q.trim()) return text;
@@ -912,6 +932,7 @@ function ResultCard({ result, query, favorited, onToggleFavorite, isLoggedIn }: 
             <a
               href={judgmentUrl(result.judgment_id, { court_type: result.court_type, court_level: result.court_level, city: result.city, judgment_number: result.judgment_number })}
               className="flex flex-wrap items-center gap-2"
+              onClick={() => sendFeedbackSignal('click')}
             >
               {result.court_type && (
                 <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-primary-50 text-primary-700">
@@ -971,11 +992,35 @@ function ResultCard({ result, query, favorited, onToggleFavorite, isLoggedIn }: 
           {/* Snippet */}
           <a
             href={judgmentUrl(result.judgment_id, { court_type: result.court_type, court_level: result.court_level, city: result.city, judgment_number: result.judgment_number })}
+            onClick={() => sendFeedbackSignal('click')}
           >
             <p className="text-sm text-slate-700 leading-relaxed arabic-text" dir="rtl">
               {highlightSnippet(result.snippet, query)}
             </p>
           </a>
+
+          {/* Relevance feedback */}
+          <div className="flex items-center gap-2 mt-3">
+            <span className="text-xs text-slate-400">هل هذا الحكم ذو صلة ببحثك؟</span>
+            <button
+              onClick={() => { setUserRating('relevant'); sendFeedbackSignal('relevant'); }}
+              className={`p-1 rounded transition-colors ${userRating === 'relevant' ? 'text-green-600 bg-green-50' : 'text-slate-300 hover:text-green-600'}`}
+              title="ذو صلة"
+            >
+              <svg className="w-4 h-4" fill={userRating === 'relevant' ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M14 10h4.764a2 2 0 011.789 1.894l.214 4.373A2 2 0 0118.766 20H14m0-10v10m0-10H7a1 1 0 00-1 1v4a1 1 0 001 1h2m0-6v6m-2 0h6" />
+              </svg>
+            </button>
+            <button
+              onClick={() => { setUserRating('not_relevant'); sendFeedbackSignal('not_relevant'); }}
+              className={`p-1 rounded transition-colors ${userRating === 'not_relevant' ? 'text-red-600 bg-red-50' : 'text-slate-300 hover:text-red-600'}`}
+              title="غير ذو صلة"
+            >
+              <svg className="w-4 h-4" fill={userRating === 'not_relevant' ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10 14H5.236a2 2 0 01-1.789-1.894l-.214-4.373A2 2 0 014.234 4H10m0 10v10m0-10h7a1 1 0 001-1V5a1 1 0 00-1-1h-2m0 6v-6m2 0h-6" />
+              </svg>
+            </button>
+          </div>
 
           {/* Link */}
           {result.details_url && (
