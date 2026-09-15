@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Search, Loader2, ExternalLink, Scale, Filter, X, ChevronDown, Sparkles, LogOut, LayoutDashboard, CheckCircle, MapPin, Building2, Gavel, Bookmark, FileText, Download, BookOpen, User } from 'lucide-react';
+import { Search, Loader2, ExternalLink, Scale, Filter, X, ChevronDown, Sparkles, LogOut, LayoutDashboard, CheckCircle, MapPin, Building2, Gavel, Bookmark, FileText, Download, BookOpen, User, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { judgmentUrl } from '@/lib/slug';
 
 interface AuthUser {
@@ -1007,18 +1007,14 @@ function ResultCard({ result, query, favorited, onToggleFavorite, isLoggedIn, po
               className={`p-1 rounded transition-colors ${userRating === 'relevant' ? 'text-green-600 bg-green-50' : 'text-slate-300 hover:text-green-600'}`}
               title="ذو صلة"
             >
-              <svg className="w-4 h-4" fill={userRating === 'relevant' ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M14 10h4.764a2 2 0 011.789 1.894l.214 4.373A2 2 0 0118.766 20H14m0-10v10m0-10H7a1 1 0 00-1 1v4a1 1 0 001 1h2m0-6v6m-2 0h6" />
-              </svg>
+              <ThumbsUp className="w-4 h-4" fill={userRating === 'relevant' ? 'currentColor' : 'none'} />
             </button>
             <button
               onClick={() => { setUserRating('not_relevant'); sendFeedbackSignal('not_relevant'); }}
               className={`p-1 rounded transition-colors ${userRating === 'not_relevant' ? 'text-red-600 bg-red-50' : 'text-slate-300 hover:text-red-600'}`}
               title="غير ذو صلة"
             >
-              <svg className="w-4 h-4" fill={userRating === 'not_relevant' ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M10 14H5.236a2 2 0 01-1.789-1.894l-.214-4.373A2 2 0 014.234 4H10m0 10v10m0-10h7a1 1 0 001-1V5a1 1 0 00-1-1h-2m0 6v-6m2 0h-6" />
-              </svg>
+              <ThumbsDown className="w-4 h-4" fill={userRating === 'not_relevant' ? 'currentColor' : 'none'} />
             </button>
           </div>
 
