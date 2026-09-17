@@ -3,6 +3,12 @@
 import { useEffect } from 'react';
 
 const KNOWN_SOURCES: { match: (host: string) => boolean; label: string }[] = [
+  // AI assistants (gemini must come before google — it lives on gemini.google.com)
+  { match: (h) => h.includes('chatgpt.com'), label: 'ChatGPT' },
+  { match: (h) => h.includes('perplexity'), label: 'Perplexity' },
+  { match: (h) => h.includes('claude'), label: 'Claude' },
+  { match: (h) => h.includes('gemini'), label: 'Gemini' },
+  { match: (h) => h.includes('copilot'), label: 'Copilot' },
   { match: (h) => h.includes('google'), label: 'Google' },
   { match: (h) => h.includes('bing'), label: 'Bing' },
   { match: (h) => h.includes('linkedin') || h.includes('lnkd'), label: 'LinkedIn' },
