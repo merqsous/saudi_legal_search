@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Search, Loader2, ExternalLink, Scale, Filter, X, ChevronDown, Sparkles, LogOut, LayoutDashboard, CheckCircle, MapPin, Building2, Gavel, Bookmark, FileText, Download, BookOpen, User, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { Search, Loader2, ExternalLink, Scale, Filter, X, ChevronDown, Sparkles, LogOut, LayoutDashboard, CheckCircle, MapPin, Building2, Gavel, Bookmark, FileText, Download, BookOpen, User, ThumbsUp, ThumbsDown, Briefcase } from 'lucide-react';
 import { judgmentUrl } from '@/lib/slug';
 import { getVisitSource } from '../components/VisitTracker';
 
@@ -761,6 +761,7 @@ export default function SearchClient() {
                   isLoggedIn={!!authToken}
                   position={idx + 1}
                   userPhone={authUser?.phone || ''}
+                  authToken={authToken}
                 />
               ))}
             </div>
@@ -873,7 +874,7 @@ function FilterSelect({
   );
 }
 
-function ResultCard({ result, query, favorited, onToggleFavorite, isLoggedIn, position, userPhone }: {
+function ResultCard({ result, query, favorited, onToggleFavorite, isLoggedIn, position, userPhone, authToken }: {
   result: SearchResult;
   query: string;
   favorited: boolean;
@@ -881,7 +882,42 @@ function ResultCard({ result, query, favorited, onToggleFavorite, isLoggedIn, po
   isLoggedIn: boolean;
   position: number;
   userPhone: string;
+  authToken: string | null;
 }) {
+  const [caseMenuOpen, setCaseMenuOpen] = useState(false);
+  const [userCases, setUserCases] = useState<{ id: number; title: string }[] | null>(null);
+  const [savedCaseTitle, setSavedCaseTitle] = useState<string | null>(null);
+
+  const openCaseMenu = async () => {
+    if (!authToken) {
+      window.location.href = '/?signup=1';
+      return;
+    }
+    setCaseMenuOpen((v) => !v);
+    if (userCases === null) {
+      try {
+        const res = await fetch('/api/cases', { headers: { Authorization: `Bearer ${authToken}` } });
+        const d = await res.json();
+        setUserCases(d.cases || []);
+      } catch {
+        setUserCases([]);
+      }
+    }
+  };
+
+  const saveToCase = async (caseId: number, caseTitle: string) => {
+    if (!authToken) return;
+    setCaseMenuOpen(false);
+    try {
+      await fetch(`/api/cases/${caseId}/judgments/${result.judgment_id}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      setSavedCaseTitle(caseTitle);
+      setTimeout(() => setSavedCaseTitle(null), 2500);
+    } catch {}
+  };
+
   const relevance = result.distance != null ? Math.max(0, Math.min(1, 1.0 - result.distance * 0.5)) : null;
 
   const [userRating, setUserRating] = useState<'relevant' | 'not_relevant' | null>(null);
@@ -958,13 +994,52 @@ function ResultCard({ result, query, favorited, onToggleFavorite, isLoggedIn, po
                 </span>
               )}
             </a>
-            <button
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleFavorite(); }}
-              className={`ml-auto p-1 transition-colors ${favorited ? 'text-primary-600' : 'text-slate-300 hover:text-primary-600'}`}
-              title={favorited ? 'إزالة من المفضلة' : 'إضافة للمفضلة'}
-            >
-              <Bookmark className="w-4 h-4" fill={favorited ? 'currentColor' : 'none'} />
-            </button>
+            <div className="ml-auto flex items-center gap-1 relative">
+              {savedCaseTitle && (
+                <span className="text-xs text-green-600 font-medium ml-2">تم الحفظ في: {savedCaseTitle}</span>
+              )}
+              <button
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); openCaseMenu(); }}
+                className={`p-1 transition-colors ${savedCaseTitle ? 'text-green-600' : 'text-slate-300 hover:text-primary-600'}`}
+                title="حفظ في قضية"
+              >
+                <Briefcase className="w-4 h-4" />
+              </button>
+              {caseMenuOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setCaseMenuOpen(false); }} />
+                  <div className="absolute top-full left-0 z-20 mt-1 w-56 bg-white border border-slate-200 rounded-xl shadow-lg py-1 max-h-60 overflow-y-auto" dir="rtl">
+                    <p className="text-xs font-semibold text-slate-400 px-3 py-2">حفظ الحكم في قضية</p>
+                    {userCases === null ? (
+                      <div className="px-3 py-3 flex justify-center">
+                        <Loader2 className="w-4 h-4 text-slate-400 animate-spin" />
+                      </div>
+                    ) : userCases.length === 0 ? (
+                      <a href="/cases" className="block px-3 py-2.5 text-sm text-primary-600 hover:bg-primary-50 font-medium">
+                        أنشئ قضيتك الأولى
+                      </a>
+                    ) : (
+                      userCases.map((c) => (
+                        <button
+                          key={c.id}
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); saveToCase(c.id, c.title); }}
+                          className="block w-full text-right px-3 py-2 text-sm text-slate-700 hover:bg-primary-50 hover:text-primary-700 truncate"
+                        >
+                          {c.title}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </>
+              )}
+              <button
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleFavorite(); }}
+                className={`p-1 transition-colors ${favorited ? 'text-primary-600' : 'text-slate-300 hover:text-primary-600'}`}
+                title={favorited ? 'إزالة من المفضلة' : 'إضافة للمفضلة'}
+              >
+                <Bookmark className="w-4 h-4" fill={favorited ? 'currentColor' : 'none'} />
+              </button>
+            </div>
           </div>
 
           {/* البيانات الأساسية */}

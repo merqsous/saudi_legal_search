@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api.routes import search, auth, payments, favorites, legal_study, export, support
+from api.routes import search, auth, payments, favorites, legal_study, export, support, cases
 
 app = FastAPI(
     title="Saudi Legal Search API",
@@ -23,6 +23,7 @@ app.include_router(favorites.router, prefix="/api", tags=["favorites"])
 app.include_router(legal_study.router, prefix="/api", tags=["legal-study"])
 app.include_router(export.router, prefix="/api", tags=["export"])
 app.include_router(support.router, prefix="/api", tags=["support"])
+app.include_router(cases.router, prefix="/api", tags=["cases"])
 
 
 @app.on_event("startup")
@@ -37,6 +38,11 @@ def startup():
     except Exception as e:
         import logging
         logging.error(f"init_support_tables failed: {e}")
+    try:
+        cases.init_case_tables()
+    except Exception as e:
+        import logging
+        logging.error(f"init_case_tables failed: {e}")
 
 
 @app.get("/")
