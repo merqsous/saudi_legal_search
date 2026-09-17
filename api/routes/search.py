@@ -224,6 +224,7 @@ def search(
     anonymous: bool = Query(False, description="Anonymous preview mode, limits results"),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
+    source: str | None = Query(None, description="Traffic source (where the visitor came from)"),
 ):
     phone = request.headers.get("X-User-Phone", "")
 
@@ -251,9 +252,9 @@ def search(
     ip = get_client_ip(request)
     country = get_country_from_ip(ip)
     if anonymous or not phone:
-        log_search("", q, court_type, city, year, court_level, result.get("total", 0), ip, country, is_anonymous=True)
+        log_search("", q, court_type, city, year, court_level, result.get("total", 0), ip, country, is_anonymous=True, source=source)
     else:
-        log_search(phone, q, court_type, city, year, court_level, result.get("total", 0), ip, country, is_anonymous=False)
+        log_search(phone, q, court_type, city, year, court_level, result.get("total", 0), ip, country, is_anonymous=False, source=source)
 
     return result
 

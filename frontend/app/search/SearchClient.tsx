@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Search, Loader2, ExternalLink, Scale, Filter, X, ChevronDown, Sparkles, LogOut, LayoutDashboard, CheckCircle, MapPin, Building2, Gavel, Bookmark, FileText, Download, BookOpen, User, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { judgmentUrl } from '@/lib/slug';
+import { getVisitSource } from '../components/VisitTracker';
 
 interface AuthUser {
   id: number;
@@ -171,6 +172,8 @@ export default function SearchClient() {
     if (effYear) params.set('year', effYear);
     if (effCourtLevel) params.set('court_level', effCourtLevel);
     if (effSection) params.set('section', effSection);
+    const visit = getVisitSource();
+    if (visit.source) params.set('source', visit.source);
 
     try {
       const res = await fetch(`/api/search?${params.toString()}`, {

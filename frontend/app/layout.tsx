@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Script from 'next/script';
 import { Amiri, Noto_Naskh_Arabic } from 'next/font/google';
 import ChatWidget from './components/ChatWidget';
+import VisitTracker from './components/VisitTracker';
 import './globals.css';
 
 const amiri = Amiri({
@@ -103,6 +104,7 @@ export default function RootLayout({
         />
         {children}
         <ChatWidget />
+        <VisitTracker />
       </body>
     </html>
   );

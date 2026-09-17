@@ -107,6 +107,14 @@ def init_auth_tables():
             cur.execute("ALTER TABLE search_logs ADD COLUMN IF NOT EXISTS ip_address VARCHAR(45)")
             cur.execute("ALTER TABLE search_logs ADD COLUMN IF NOT EXISTS country VARCHAR(100)")
             cur.execute("ALTER TABLE search_logs ADD COLUMN IF NOT EXISTS is_anonymous BOOLEAN DEFAULT FALSE")
+            cur.execute("ALTER TABLE search_logs ADD COLUMN IF NOT EXISTS source VARCHAR(100)")
+        except Exception:
+            pass
+        # Traffic attribution columns on users (where the user came from)
+        try:
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS source VARCHAR(100)")
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS medium VARCHAR(100)")
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS campaign VARCHAR(200)")
         except Exception:
             pass
         # Create persistent sessions table (survives server restarts)
@@ -215,6 +223,9 @@ class LoginRequest(BaseModel):
     phone: str
     first_name: str | None = None
     last_name: str | None = None
+    source: str | None = None
+    medium: str | None = None
+    campaign: str | None = None
 
 
 @router.post("/auth/login")
@@ -240,8 +251,8 @@ def simple_login(req: LoginRequest, request: Request):
             if not req.first_name or not req.last_name:
                 raise HTTPException(status_code=400, detail="الاسم الأول والأخير مطلوبان للمستخدمين الجدد")
             cur.execute(
-                "INSERT INTO users (phone, first_name, last_name, ip_address, country) VALUES (%s, %s, %s, %s, %s) RETURNING id",
-                (phone, req.first_name, req.last_name, ip, country),
+                "INSERT INTO users (phone, first_name, last_name, ip_address, country, source, medium, campaign) VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
+                (phone, req.first_name, req.last_name, ip, country, req.source, req.medium, req.campaign),
             )
             user_id = cur.fetchone()[0]
         cur.close()
@@ -333,7 +344,7 @@ def check_user(req: LoginRequest):
     return {"is_new": user is None, "user": user}
 
 
-def log_search(phone: str, query: str, court_type: str = None, city: str = None, year: str = None, court_level: str = None, results_count: int = 0, ip_address: str = None, country: str = None, is_anonymous: bool = False):
+def log_search(phone: str, query: str, court_type: str = None, city: str = None, year: str = None, court_level: str = None, results_count: int = 0, ip_address: str = None, country: str = None, is_anonymous: bool = False, source: str = None):
     """Log a search query for analytics."""
     try:
         user = query_one("SELECT id FROM users WHERE phone = %s", [phone]) if phone and not is_anonymous else None
@@ -341,9 +352,9 @@ def log_search(phone: str, query: str, court_type: str = None, city: str = None,
         with get_db() as conn:
             cur = conn.cursor()
             cur.execute(
-                """INSERT INTO search_logs (user_id, phone, query, court_type, city, year, court_level, results_count, ip_address, country, is_anonymous)
-                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
-                (user_id, phone or ("anonymous" if is_anonymous else None), query, court_type, city, year, court_level, results_count, ip_address, country, is_anonymous),
+                """INSERT INTO search_logs (user_id, phone, query, court_type, city, year, court_level, results_count, ip_address, country, is_anonymous, source)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                (user_id, phone or ("anonymous" if is_anonymous else None), query, court_type, city, year, court_level, results_count, ip_address, country, is_anonymous, source),
             )
             cur.close()
     except Exception as e:
@@ -394,7 +405,7 @@ def admin_stats(authorization: str = Header(None)):
     )
 
     users_with_searches = safe_query_all(
-        """SELECT u.id, u.phone, u.first_name, u.last_name, u.ip_address, u.country, u.created_at,
+        """SELECT u.id, u.phone, u.first_name, u.last_name, u.ip_address, u.country, u.source, u.medium, u.campaign, u.created_at,
                   COUNT(sl.id) as search_count,
                   MAX(sl.created_at) as last_search,
                   us.plan as sub_plan,
@@ -408,13 +419,21 @@ def admin_stats(authorization: str = Header(None)):
                WHERE user_id = u.id AND status = 'active'
                ORDER BY id DESC LIMIT 1
            ) us ON true
-           GROUP BY u.id, u.phone, u.first_name, u.last_name, u.ip_address, u.country, u.created_at,
+           GROUP BY u.id, u.phone, u.first_name, u.last_name, u.ip_address, u.country, u.source, u.medium, u.campaign, u.created_at,
                     us.plan, us.status, us.amount_paid, us.expires_at
            ORDER BY search_count DESC"""
     )
 
+    traffic_sources = safe_query_all(
+        """SELECT COALESCE(source, 'غير معروف') as source, COUNT(*) as cnt,
+                  COUNT(DISTINCT user_id) FILTER (WHERE user_id IS NOT NULL) as users_cnt
+           FROM search_logs
+           GROUP BY source
+           ORDER BY cnt DESC LIMIT 20"""
+    )
+
     recent_searches = safe_query_all(
-        """SELECT sl.query, sl.phone, u.first_name, u.last_name, sl.created_at, sl.results_count, sl.ip_address, sl.country, sl.is_anonymous
+        """SELECT sl.query, sl.phone, u.first_name, u.last_name, sl.created_at, sl.results_count, sl.ip_address, sl.country, sl.is_anonymous, sl.source
            FROM search_logs sl
            LEFT JOIN users u ON u.id = sl.user_id
            ORDER BY sl.created_at DESC LIMIT 50"""
@@ -453,6 +472,7 @@ def admin_stats(authorization: str = Header(None)):
         "free_trial": free_trial,
         "top_keywords": top_keywords,
         "top_court_types": top_court_types,
+        "traffic_sources": traffic_sources,
         "users": users_with_searches,
         "recent_searches": recent_searches,
         "searches_by_day": searches_by_day,
@@ -544,6 +564,9 @@ class VerifyOtpRequest(BaseModel):
     code: str
     first_name: str | None = None
     last_name: str | None = None
+    source: str | None = None
+    medium: str | None = None
+    campaign: str | None = None
 
 
 @router.post("/auth/send-otp")
@@ -604,8 +627,8 @@ def verify_otp(req: VerifyOtpRequest, request: Request):
             if not req.first_name or not req.last_name:
                 raise HTTPException(status_code=400, detail="الاسم الأول والأخير مطلوبان للمستخدمين الجدد")
             cur.execute(
-                "INSERT INTO users (phone, first_name, last_name, ip_address, country) VALUES (%s, %s, %s, %s, %s) RETURNING id",
-                (phone, req.first_name, req.last_name, ip, country),
+                "INSERT INTO users (phone, first_name, last_name, ip_address, country, source, medium, campaign) VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
+                (phone, req.first_name, req.last_name, ip, country, req.source, req.medium, req.campaign),
             )
             user_id = cur.fetchone()[0]
         cur.close()

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { X, Phone, Loader2, User, CheckCircle } from 'lucide-react';
+import { getVisitSource } from './components/VisitTracker';
 
 interface AuthModalProps {
   onClose: () => void;
@@ -89,6 +90,7 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
           code,
           first_name: needsName ? firstName : undefined,
           last_name: needsName ? lastName : undefined,
+          ...(needsName ? getVisitSource() : {}),
         }),
       });
       const data = await res.json();

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Phone, Loader2, User, CheckCircle, X } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { getVisitSource } from './VisitTracker';
 
 type Step = 'phone' | 'name' | 'verify';
 
@@ -146,6 +147,7 @@ export default function LandingAuth() {
           code,
           first_name: isNewUser ? firstName.trim() : undefined,
           last_name: isNewUser ? lastName.trim() : undefined,
+          ...(isNewUser ? getVisitSource() : {}),
         }),
       });
       const data = await res.json();

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Scale, LogOut, Loader2, Users, Search, Database, TrendingUp, Clock, ArrowRight, MessageSquare, Send, ChevronRight, CheckCircle, X } from 'lucide-react';
+import { Scale, LogOut, Loader2, Users, Search, Database, TrendingUp, Clock, ArrowRight, MessageSquare, Send, ChevronRight, CheckCircle, X, Globe } from 'lucide-react';
 
 interface AdminStats {
   total_judgments: number;
@@ -15,6 +15,7 @@ interface AdminStats {
   free_trial: number;
   top_keywords: { query: string; cnt: number }[];
   top_court_types: { court_type: string; name_ar: string; cnt: number }[];
+  traffic_sources: { source: string; cnt: number; users_cnt: number }[];
   users: {
     id: number;
     phone: string;
@@ -22,6 +23,9 @@ interface AdminStats {
     last_name: string;
     ip_address: string | null;
     country: string | null;
+    source: string | null;
+    medium: string | null;
+    campaign: string | null;
     created_at: string;
     search_count: number;
     last_search: string | null;
@@ -40,6 +44,7 @@ interface AdminStats {
     ip_address: string | null;
     country: string | null;
     is_anonymous: boolean;
+    source: string | null;
   }[];
   searches_by_day: { day: string; cnt: number }[];
   recent_cases: {
@@ -370,6 +375,30 @@ export default function AdminPage() {
               ))}
             </div>
           </div>
+          {/* Traffic Sources */}
+          <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200">
+            <div className="flex items-center gap-2 mb-4">
+              <Globe className="w-5 h-5 text-primary-600" />
+              <h2 className="text-lg font-bold text-slate-900">مصادر الزيارات</h2>
+            </div>
+            <div className="space-y-2">
+              {(stats.traffic_sources || []).length === 0 && (
+                <p className="text-sm text-slate-400">لا توجد بيانات</p>
+              )}
+              {(stats.traffic_sources || []).map((ts, i) => (
+                <div key={i} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-bold text-slate-400 w-5">{i + 1}</span>
+                    <span className="text-sm text-slate-700" dir="rtl">{ts.source}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-slate-400">{ts.users_cnt} مستخدم</span>
+                    <span className="text-sm font-bold text-primary-600">{ts.cnt}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Users Table */}
@@ -384,6 +413,7 @@ export default function AdminPage() {
                 <tr className="border-b border-slate-200 text-slate-500 text-xs">
                   <th className="text-right py-3 px-2">الاسم</th>
                   <th className="text-right py-3 px-2">الهاتف</th>
+                  <th className="text-right py-3 px-2">المصدر</th>
                   <th className="text-right py-3 px-2">IP</th>
                   <th className="text-right py-3 px-2">الدولة</th>
                   <th className="text-right py-3 px-2">الاشتراك</th>
@@ -397,6 +427,15 @@ export default function AdminPage() {
                   <tr key={u.id} className="border-b border-slate-100 last:border-0">
                     <td className="py-3 px-2 text-slate-700" dir="rtl">{u.first_name} {u.last_name}</td>
                     <td className="py-3 px-2 text-slate-600" dir="ltr">{u.phone}</td>
+                    <td className="py-3 px-2">
+                      {u.source ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-blue-700">
+                          {u.source}{u.medium ? ` (${u.medium})` : ''}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 text-xs">-</span>
+                      )}
+                    </td>
                     <td className="py-3 px-2 text-slate-500" dir="ltr">{u.ip_address || '-'}</td>
                     <td className="py-3 px-2 text-slate-500">{u.country || '-'}</td>
                     <td className="py-3 px-2">
@@ -433,6 +472,7 @@ export default function AdminPage() {
                 <tr className="border-b border-slate-200 text-slate-500 text-xs">
                   <th className="text-right py-3 px-2">البحث</th>
                   <th className="text-right py-3 px-2">المستخدم</th>
+                  <th className="text-right py-3 px-2">المصدر</th>
                   <th className="text-right py-3 px-2">IP</th>
                   <th className="text-right py-3 px-2">الدولة</th>
                   <th className="text-right py-3 px-2">النتائج</th>
@@ -450,6 +490,15 @@ export default function AdminPage() {
                         </span>
                       ) : (
                         s.first_name ? `${s.first_name} ${s.last_name}` : s.phone
+                      )}
+                    </td>
+                    <td className="py-3 px-2">
+                      {s.source ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-blue-700">
+                          {s.source}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 text-xs">-</span>
                       )}
                     </td>
                     <td className="py-3 px-2 text-slate-500" dir="ltr">{s.ip_address || '-'}</td>
