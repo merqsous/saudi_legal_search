@@ -15,12 +15,13 @@ def init_case_tables():
                     id SERIAL PRIMARY KEY,
                     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
                     title VARCHAR(200) NOT NULL,
-                    client_name VARCHAR(200),
+                    plaintiff VARCHAR(200),
+                    defendant VARCHAR(200),
+                    client_role VARCHAR(20),
                     case_number VARCHAR(50),
                     case_year VARCHAR(10),
                     court_type VARCHAR(100),
                     city VARCHAR(100),
-                    opponents VARCHAR(300),
                     status VARCHAR(20) NOT NULL DEFAULT 'active',
                     notes TEXT,
                     created_at TIMESTAMP DEFAULT NOW(),
@@ -49,6 +50,21 @@ def init_case_tables():
                     UNIQUE(case_id, judgment_id)
                 );
             """)
+            # Migration: rename party columns to legal terms (المدعي / المدعي عليه)
+            try:
+                cur.execute("ALTER TABLE user_cases RENAME COLUMN client_name TO plaintiff")
+            except Exception:
+                pass
+            try:
+                cur.execute("ALTER TABLE user_cases RENAME COLUMN opponents TO defendant")
+            except Exception:
+                pass
+            try:
+                cur.execute("ALTER TABLE user_cases ADD COLUMN IF NOT EXISTS plaintiff VARCHAR(200)")
+                cur.execute("ALTER TABLE user_cases ADD COLUMN IF NOT EXISTS defendant VARCHAR(200)")
+                cur.execute("ALTER TABLE user_cases ADD COLUMN IF NOT EXISTS client_role VARCHAR(20)")
+            except Exception:
+                pass
             cur.execute("CREATE INDEX IF NOT EXISTS idx_user_cases_user_id ON user_cases(user_id);")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_case_hearings_case_id ON case_hearings(case_id);")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_case_judgments_case_id ON case_judgments(case_id);")
@@ -78,24 +94,26 @@ def _get_case_for_user(case_id: int, user_id: int) -> dict:
 
 class CaseCreate(BaseModel):
     title: str
-    client_name: str | None = None
+    plaintiff: str | None = None
+    defendant: str | None = None
+    client_role: str | None = None
     case_number: str | None = None
     case_year: str | None = None
     court_type: str | None = None
     city: str | None = None
-    opponents: str | None = None
     status: str = "active"
     notes: str | None = None
 
 
 class CaseUpdate(BaseModel):
     title: str | None = None
-    client_name: str | None = None
+    plaintiff: str | None = None
+    defendant: str | None = None
+    client_role: str | None = None
     case_number: str | None = None
     case_year: str | None = None
     court_type: str | None = None
     city: str | None = None
-    opponents: str | None = None
     status: str | None = None
     notes: str | None = None
 
@@ -125,8 +143,8 @@ def list_cases(authorization: str = Header(None)):
 
     rows = query_all(
         """
-        SELECT uc.id, uc.title, uc.client_name, uc.case_number, uc.case_year,
-               uc.court_type, uc.city, uc.opponents, uc.status, uc.notes,
+        SELECT uc.id, uc.title, uc.plaintiff, uc.defendant, uc.client_role, uc.case_number, uc.case_year,
+               uc.court_type, uc.city, uc.status, uc.notes,
                uc.created_at, uc.updated_at,
                (SELECT COUNT(*) FROM case_judgments cj WHERE cj.case_id = uc.id) AS judgments_count,
                nh.hearing_date AS next_hearing_date,
@@ -160,10 +178,10 @@ def create_case(req: CaseCreate, authorization: str = Header(None)):
         cur = conn.cursor()
         cur.execute(
             """INSERT INTO user_cases
-               (user_id, title, client_name, case_number, case_year, court_type, city, opponents, status, notes)
-               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id""",
-            (user_id, req.title.strip(), req.client_name, req.case_number, req.case_year,
-             req.court_type, req.city, req.opponents, req.status, req.notes),
+               (user_id, title, plaintiff, defendant, client_role, case_number, case_year, court_type, city, status, notes)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id""",
+            (user_id, req.title.strip(), req.plaintiff, req.defendant, req.client_role, req.case_number, req.case_year,
+             req.court_type, req.city, req.status, req.notes),
         )
         case_id = cur.fetchone()[0]
         cur.close()
@@ -179,8 +197,8 @@ def get_case(case_id: int, authorization: str = Header(None)):
     _get_case_for_user(case_id, user_id)
 
     case = query_one(
-        """SELECT id, title, client_name, case_number, case_year, court_type, city,
-                  opponents, status, notes, created_at, updated_at
+        """SELECT id, title, plaintiff, defendant, client_role, case_number, case_year, court_type, city,
+                  status, notes, created_at, updated_at
            FROM user_cases WHERE id = %s;""",
         [case_id],
     )
@@ -225,9 +243,10 @@ def update_case(case_id: int, req: CaseUpdate, authorization: str = Header(None)
     _get_case_for_user(case_id, user_id)
 
     fields = {
-        "title": req.title, "client_name": req.client_name, "case_number": req.case_number,
-        "case_year": req.case_year, "court_type": req.court_type, "city": req.city,
-        "opponents": req.opponents, "status": req.status, "notes": req.notes,
+        "title": req.title, "plaintiff": req.plaintiff, "defendant": req.defendant,
+        "client_role": req.client_role, "case_number": req.case_number, "case_year": req.case_year,
+        "court_type": req.court_type, "city": req.city,
+        "status": req.status, "notes": req.notes,
     }
     updates = [f"{k} = %s" for k, v in fields.items() if v is not None]
     params = [v for v in fields.values() if v is not None]

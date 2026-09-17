@@ -8,12 +8,13 @@ import Header from '../components/Header';
 interface CaseItem {
   id: number;
   title: string;
-  client_name: string | null;
+  plaintiff: string | null;
+  defendant: string | null;
+  client_role: string | null;
   case_number: string | null;
   case_year: string | null;
   court_type: string | null;
   city: string | null;
-  opponents: string | null;
   status: string;
   notes: string | null;
   created_at: string;
@@ -48,12 +49,13 @@ export default function CasesPage() {
 
   // Create form state
   const [title, setTitle] = useState('');
-  const [clientName, setClientName] = useState('');
+  const [plaintiff, setPlaintiff] = useState('');
+  const [defendant, setDefendant] = useState('');
+  const [clientRole, setClientRole] = useState('plaintiff');
   const [caseNumber, setCaseNumber] = useState('');
   const [caseYear, setCaseYear] = useState('');
   const [courtType, setCourtType] = useState('');
   const [city, setCity] = useState('');
-  const [opponents, setOpponents] = useState('');
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -89,20 +91,22 @@ export default function CasesPage() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
         body: JSON.stringify({
           title: title.trim(),
-          client_name: clientName.trim() || null,
+          plaintiff: plaintiff.trim() || null,
+          defendant: defendant.trim() || null,
+          client_role: clientRole,
           case_number: caseNumber.trim() || null,
           case_year: caseYear.trim() || null,
           court_type: courtType || null,
           city: city || null,
-          opponents: opponents.trim() || null,
           notes: notes.trim() || null,
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'فشل إنشاء القضية');
       setShowCreate(false);
-      setTitle(''); setClientName(''); setCaseNumber(''); setCaseYear('');
-      setCourtType(''); setCity(''); setOpponents(''); setNotes('');
+      setTitle(''); setPlaintiff(''); setDefendant(''); setClientRole('plaintiff');
+      setCaseNumber(''); setCaseYear('');
+      setCourtType(''); setCity(''); setNotes('');
       // Reload list
       const refreshed = await fetch('/api/cases', { headers: { Authorization: `Bearer ${authToken}` } }).then((r) => r.json());
       setCases(refreshed.cases || []);
@@ -137,9 +141,9 @@ export default function CasesPage() {
       const q = search.trim();
       return (
         c.title.includes(q) ||
-        (c.client_name || '').includes(q) ||
-        (c.case_number || '').includes(q) ||
-        (c.opponents || '').includes(q)
+        (c.plaintiff || '').includes(q) ||
+        (c.defendant || '').includes(q) ||
+        (c.case_number || '').includes(q)
       );
     }
     return true;
@@ -269,12 +273,19 @@ export default function CasesPage() {
                         >
                           {statusLabel[c.status] || c.status}
                         </span>
+                        {c.client_role && (
+                          <span className="text-xs px-2 py-0.5 rounded-md font-medium bg-violet-50 text-violet-700">
+                            موكلنا: {c.client_role === 'plaintiff' ? 'المدعي' : 'المدعي عليه'}
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-4 flex-wrap text-sm text-slate-500">
-                        {c.client_name && (
+                        {(c.plaintiff || c.defendant) && (
                           <span className="flex items-center gap-1">
                             <User className="w-3.5 h-3.5" />
-                            {c.client_name}
+                            <span className={c.client_role === 'plaintiff' ? 'font-bold text-primary-700' : ''}>{c.plaintiff || '—'}</span>
+                            <span>ضد</span>
+                            <span className={c.client_role === 'defendant' ? 'font-bold text-primary-700' : ''}>{c.defendant || '—'}</span>
                           </span>
                         )}
                         {c.case_number && (
@@ -352,24 +363,44 @@ export default function CasesPage() {
                   autoFocus
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">اسم الموكل</label>
-                  <input
-                    type="text"
-                    value={clientName}
-                    onChange={(e) => setClientName(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">الخصم</label>
-                  <input
-                    type="text"
-                    value={opponents}
-                    onChange={(e) => setOpponents(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  />
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">المدعي</label>
+                <input
+                  type="text"
+                  value={plaintiff}
+                  onChange={(e) => setPlaintiff(e.target.value)}
+                  placeholder="اسم المدعي"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">المدعي عليه</label>
+                <input
+                  type="text"
+                  value={defendant}
+                  onChange={(e) => setDefendant(e.target.value)}
+                  placeholder="اسم المدعي عليه"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">موكلكم هو</label>
+                <div className="flex gap-1 bg-slate-50 border border-slate-200 rounded-xl p-1">
+                  {[
+                    { key: 'plaintiff', label: 'المدعي' },
+                    { key: 'defendant', label: 'المدعي عليه' },
+                  ].map((r) => (
+                    <button
+                      key={r.key}
+                      type="button"
+                      onClick={() => setClientRole(r.key)}
+                      className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        clientRole === r.key ? 'bg-primary-600 text-white' : 'text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      {r.label}
+                    </button>
+                  ))}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">

@@ -9,12 +9,13 @@ import { judgmentUrl } from '@/lib/slug';
 interface CaseData {
   id: number;
   title: string;
-  client_name: string | null;
+  plaintiff: string | null;
+  defendant: string | null;
+  client_role: string | null;
   case_number: string | null;
   case_year: string | null;
   court_type: string | null;
   city: string | null;
-  opponents: string | null;
   status: string;
   notes: string | null;
   created_at: string;
@@ -69,8 +70,9 @@ export default function CaseDetailPage() {
   // Edit case
   const [showEdit, setShowEdit] = useState(false);
   const [editTitle, setEditTitle] = useState('');
-  const [editClient, setEditClient] = useState('');
-  const [editOpponents, setEditOpponents] = useState('');
+  const [editPlaintiff, setEditPlaintiff] = useState('');
+  const [editDefendant, setEditDefendant] = useState('');
+  const [editClientRole, setEditClientRole] = useState('plaintiff');
   const [editNotes, setEditNotes] = useState('');
   const [editSaving, setEditSaving] = useState(false);
 
@@ -86,8 +88,9 @@ export default function CaseDetailPage() {
       setHearings(data.hearings || []);
       setJudgments(data.judgments || []);
       setEditTitle(data.case.title);
-      setEditClient(data.case.client_name || '');
-      setEditOpponents(data.case.opponents || '');
+      setEditPlaintiff(data.case.plaintiff || '');
+      setEditDefendant(data.case.defendant || '');
+      setEditClientRole(data.case.client_role || 'plaintiff');
       setEditNotes(data.case.notes || '');
     } catch {}
     setLoading(false);
@@ -170,8 +173,9 @@ export default function CaseDetailPage() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
         body: JSON.stringify({
           title: editTitle.trim(),
-          client_name: editClient.trim() || null,
-          opponents: editOpponents.trim() || null,
+          plaintiff: editPlaintiff.trim() || null,
+          defendant: editDefendant.trim() || null,
+          client_role: editClientRole,
           notes: editNotes.trim() || null,
         }),
       });
@@ -276,14 +280,26 @@ export default function CaseDetailPage() {
                 <span className={`text-xs px-2.5 py-1 rounded-lg font-medium ${caseData.status === 'active' ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
                   {statusLabel[caseData.status] || caseData.status}
                 </span>
+                {caseData.client_role && (
+                  <span className="text-xs px-2.5 py-1 rounded-lg font-medium bg-violet-50 text-violet-700">
+                    موكلنا: {caseData.client_role === 'plaintiff' ? 'المدعي' : 'المدعي عليه'}
+                  </span>
+                )}
               </div>
+              {(caseData.plaintiff || caseData.defendant) && (
+                <div className="flex items-center gap-2 flex-wrap text-sm text-slate-500 mb-2">
+                  <span className="flex items-center gap-1.5">
+                    <User className="w-4 h-4" />
+                    <span className={caseData.client_role === 'plaintiff' ? 'font-bold text-primary-700' : 'font-medium text-slate-600'}>المدعي: {caseData.plaintiff || '—'}</span>
+                  </span>
+                  <span className="text-slate-400">ضد</span>
+                  <span className="flex items-center gap-1.5">
+                    <Scale className="w-4 h-4" />
+                    <span className={caseData.client_role === 'defendant' ? 'font-bold text-primary-700' : 'font-medium text-slate-600'}>المدعي عليه: {caseData.defendant || '—'}</span>
+                  </span>
+                </div>
+              )}
               <div className="flex items-center gap-4 flex-wrap text-sm text-slate-500">
-                {caseData.client_name && (
-                  <span className="flex items-center gap-1.5"><User className="w-4 h-4" />{caseData.client_name}</span>
-                )}
-                {caseData.opponents && (
-                  <span className="flex items-center gap-1.5"><Scale className="w-4 h-4" />ضد: {caseData.opponents}</span>
-                )}
                 {caseData.case_number && (
                   <span className="flex items-center gap-1.5"><FileText className="w-4 h-4" />{caseData.case_number}{caseData.case_year ? `/${caseData.case_year}` : ''}</span>
                 )}
@@ -564,24 +580,42 @@ export default function CaseDetailPage() {
                   className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">الموكل</label>
-                  <input
-                    type="text"
-                    value={editClient}
-                    onChange={(e) => setEditClient(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">الخصم</label>
-                  <input
-                    type="text"
-                    value={editOpponents}
-                    onChange={(e) => setEditOpponents(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  />
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">المدعي</label>
+                <input
+                  type="text"
+                  value={editPlaintiff}
+                  onChange={(e) => setEditPlaintiff(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">المدعي عليه</label>
+                <input
+                  type="text"
+                  value={editDefendant}
+                  onChange={(e) => setEditDefendant(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">موكلكم هو</label>
+                <div className="flex gap-1 bg-slate-50 border border-slate-200 rounded-xl p-1">
+                  {[
+                    { key: 'plaintiff', label: 'المدعي' },
+                    { key: 'defendant', label: 'المدعي عليه' },
+                  ].map((r) => (
+                    <button
+                      key={r.key}
+                      type="button"
+                      onClick={() => setEditClientRole(r.key)}
+                      className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        editClientRole === r.key ? 'bg-primary-600 text-white' : 'text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      {r.label}
+                    </button>
+                  ))}
                 </div>
               </div>
               <div>
