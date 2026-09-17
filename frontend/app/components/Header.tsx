@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { LogOut, User, LayoutDashboard, Menu, X, ChevronDown, Search, Briefcase, Building2, Bookmark, FileText, CreditCard, LifeBuoy } from 'lucide-react';
+import { LogOut, User, LayoutDashboard, Menu, X, ChevronDown, Search, Briefcase, Building2, Bookmark, FileText, CreditCard, LifeBuoy, BookOpen } from 'lucide-react';
 import AuthModal from '../AuthModal';
 
 interface AuthUser {
@@ -18,6 +18,7 @@ const APP_LINKS = [
   { href: '/firm', label: 'المكتب', icon: Building2 },
   { href: '/studies', label: 'الدراسات', icon: FileText },
   { href: '/favorites', label: 'المفضلة', icon: Bookmark },
+  { href: '/guide', label: 'الدليل', icon: BookOpen },
 ];
 
 function HeaderInner({ showSearchLink = true }: { showSearchLink?: boolean }) {
@@ -100,6 +101,7 @@ function HeaderInner({ showSearchLink = true }: { showSearchLink?: boolean }) {
                 <a href="/#platform" className="px-3 py-1.5 rounded-lg text-sm font-medium text-ink-600 hover:text-ink-900 hover:bg-ink-50 transition-colors">المنصة</a>
                 <a href="/#firms" className="px-3 py-1.5 rounded-lg text-sm font-medium text-ink-600 hover:text-ink-900 hover:bg-ink-50 transition-colors">للمكاتب والشركات</a>
                 <a href="/pricing" className="px-3 py-1.5 rounded-lg text-sm font-medium text-ink-600 hover:text-ink-900 hover:bg-ink-50 transition-colors">الأسعار</a>
+                <a href="/guide" className="px-3 py-1.5 rounded-lg text-sm font-medium text-ink-600 hover:text-ink-900 hover:bg-ink-50 transition-colors">دليل الاستخدام</a>
                 <a href="/about" className="px-3 py-1.5 rounded-lg text-sm font-medium text-ink-600 hover:text-ink-900 hover:bg-ink-50 transition-colors">عن الباحث</a>
               </nav>
             )}

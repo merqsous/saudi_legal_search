@@ -21,6 +21,8 @@ export default function Footer() {
             <h3 className="text-sm font-bold text-white mb-4">المنصة</h3>
             <ul className="space-y-2.5">
               <li><a href="/search" className="text-sm text-ink-400 hover:text-white transition-colors">البحث في الأحكام</a></li>
+              <li><a href="/cases" className="text-sm text-ink-400 hover:text-white transition-colors">إدارة القضايا</a></li>
+              <li><a href="/guide" className="text-sm text-ink-400 hover:text-white transition-colors">دليل الاستخدام</a></li>
               <li><a href="/pricing" className="text-sm text-ink-400 hover:text-white transition-colors">الأسعار والباقات</a></li>
               <li><a href="/about" className="text-sm text-ink-400 hover:text-white transition-colors">عن الباحث</a></li>
               <li><a href="/faq" className="text-sm text-ink-400 hover:text-white transition-colors">الأسئلة الشائعة</a></li>
