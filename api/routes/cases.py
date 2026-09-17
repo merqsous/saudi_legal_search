@@ -82,11 +82,26 @@ def _get_user_from_auth(authorization: str | None) -> int | None:
     return session["user_id"] if session else None
 
 
-def _get_case_for_user(case_id: int, user_id: int) -> dict:
-    case = query_one(
-        "SELECT id FROM user_cases WHERE id = %s AND user_id = %s;",
-        [case_id, user_id],
+def get_case_for_access(case_id: int, user_id: int) -> dict | None:
+    """Return the case row if the user owns it or belongs to the case's firm."""
+    return query_one(
+        """SELECT uc.* FROM user_cases uc
+           WHERE uc.id = %s AND (
+               uc.user_id = %s
+               OR (uc.firm_id IS NOT NULL AND uc.firm_id IN (
+                   SELECT fm.firm_id FROM firm_members fm WHERE fm.user_id = %s))
+           );""",
+        [case_id, user_id, user_id],
     )
+
+
+def get_user_firm_id(user_id: int) -> int | None:
+    row = query_one("SELECT firm_id FROM firm_members WHERE user_id = %s LIMIT 1;", [user_id])
+    return row["firm_id"] if row else None
+
+
+def _get_case_for_user(case_id: int, user_id: int) -> dict:
+    case = get_case_for_access(case_id, user_id)
     if not case:
         raise HTTPException(status_code=404, detail="القضية غير موجودة")
     return case
@@ -144,14 +159,16 @@ def list_cases(authorization: str = Header(None)):
     rows = query_all(
         """
         SELECT uc.id, uc.title, uc.plaintiff, uc.defendant, uc.client_role, uc.case_number, uc.case_year,
-               uc.court_type, uc.city, uc.status, uc.notes,
+               uc.court_type, uc.city, uc.status, uc.notes, uc.user_id, uc.firm_id,
                uc.created_at, uc.updated_at,
+               u.first_name AS owner_first_name, u.last_name AS owner_last_name,
                (SELECT COUNT(*) FROM case_judgments cj WHERE cj.case_id = uc.id) AS judgments_count,
                nh.hearing_date AS next_hearing_date,
                nh.hijri_date AS next_hijri_date,
                nh.agenda AS next_hearing_agenda,
                nh.hearing_time AS next_hearing_time
         FROM user_cases uc
+        LEFT JOIN users u ON u.id = uc.user_id
         LEFT JOIN LATERAL (
             SELECT hearing_date, hijri_date, agenda, hearing_time
             FROM case_hearings
@@ -159,9 +176,11 @@ def list_cases(authorization: str = Header(None)):
             ORDER BY hearing_date ASC LIMIT 1
         ) nh ON true
         WHERE uc.user_id = %s
+           OR (uc.firm_id IS NOT NULL AND uc.firm_id IN (
+               SELECT fm.firm_id FROM firm_members fm WHERE fm.user_id = %s))
         ORDER BY nh.hearing_date ASC NULLS LAST, uc.updated_at DESC;
         """,
-        [user_id],
+        [user_id, user_id],
     )
     return {"cases": [dict(r) for r in rows]}
 
@@ -176,12 +195,13 @@ def create_case(req: CaseCreate, authorization: str = Header(None)):
 
     with get_db() as conn:
         cur = conn.cursor()
+        firm_id = get_user_firm_id(user_id)
         cur.execute(
             """INSERT INTO user_cases
-               (user_id, title, plaintiff, defendant, client_role, case_number, case_year, court_type, city, status, notes)
-               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id""",
+               (user_id, title, plaintiff, defendant, client_role, case_number, case_year, court_type, city, status, notes, firm_id)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id""",
             (user_id, req.title.strip(), req.plaintiff, req.defendant, req.client_role, req.case_number, req.case_year,
-             req.court_type, req.city, req.status, req.notes),
+             req.court_type, req.city, req.status, req.notes, firm_id),
         )
         case_id = cur.fetchone()[0]
         cur.close()
@@ -269,7 +289,11 @@ def delete_case(case_id: int, authorization: str = Header(None)):
     user_id = _get_user_from_auth(authorization)
     if not user_id:
         raise HTTPException(status_code=401, detail="غير مصرح")
-    _get_case_for_user(case_id, user_id)
+    case = get_case_for_access(case_id, user_id)
+    if not case:
+        raise HTTPException(status_code=404, detail="القضية غير موجودة")
+    if case["user_id"] != user_id:
+        raise HTTPException(status_code=403, detail="يمكن لمالك القضية فقط حذفها")
 
     with get_db() as conn:
         cur = conn.cursor()

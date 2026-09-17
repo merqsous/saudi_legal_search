@@ -80,6 +80,9 @@ function HeaderInner({ showSearchLink = true }: { showSearchLink?: boolean }) {
           {authUser && (
             <a href="/cases" className="hidden sm:block text-sm font-medium text-slate-600 hover:text-primary-600">القضايا</a>
           )}
+          {authUser && (
+            <a href="/firm" className="hidden sm:block text-sm font-medium text-slate-600 hover:text-primary-600">المكتب</a>
+          )}
           <a href="/pricing" className="hidden sm:block text-sm font-medium text-slate-600 hover:text-primary-600">الأسعار</a>
           <a href="/about" className="hidden md:block text-sm font-medium text-slate-600 hover:text-primary-600">عن الباحث</a>
           {authUser && (
@@ -135,6 +138,7 @@ function HeaderInner({ showSearchLink = true }: { showSearchLink?: boolean }) {
           </button>
           <a href="/search" className="block py-2 text-sm text-slate-700 hover:text-primary-600">البحث</a>
           <a href="/cases" className="block py-2 text-sm text-slate-700 hover:text-primary-600">القضايا</a>
+          <a href="/firm" className="block py-2 text-sm text-slate-700 hover:text-primary-600">المكتب</a>
           <a href="/favorites" className="block py-2 text-sm text-slate-700 hover:text-primary-600">المفضلة</a>
           <a href="/studies" className="block py-2 text-sm text-slate-700 hover:text-primary-600">الدراسات</a>
           {isAdmin && (

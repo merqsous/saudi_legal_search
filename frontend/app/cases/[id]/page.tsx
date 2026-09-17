@@ -4,6 +4,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { Briefcase, Loader2, Plus, X, CalendarDays, FileText, User, MapPin, Building2, Scale, Trash2, CheckCircle, ChevronRight, ExternalLink, Clock } from 'lucide-react';
 import Header from '../../components/Header';
+import ChatPanel from './ChatPanel';
+import DocumentsSection from './DocumentsSection';
+import DraftsSection from './DraftsSection';
 import { judgmentUrl } from '@/lib/slug';
 
 interface CaseData {
@@ -333,6 +336,9 @@ export default function CaseDetailPage() {
           </div>
         </div>
 
+        {/* AI assistant chat */}
+        {authToken && <ChatPanel caseId={caseId} authToken={authToken} />}
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Hearings */}
           <div className="bg-white rounded-2xl border border-slate-200 p-6">
@@ -491,6 +497,14 @@ export default function CaseDetailPage() {
             )}
           </div>
         </div>
+
+        {/* Documents + Drafts */}
+        {authToken && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+            <DocumentsSection caseId={caseId} authToken={authToken} />
+            <DraftsSection caseId={caseId} authToken={authToken} />
+          </div>
+        )}
       </main>
 
       {/* Add hearing modal */}

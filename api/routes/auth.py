@@ -257,6 +257,10 @@ def simple_login(req: LoginRequest, request: Request):
             user_id = cur.fetchone()[0]
         cur.close()
 
+    # Auto-join any firm that invited this phone before signup
+    from api.routes.firms import accept_pending_invitations
+    accept_pending_invitations(phone, user_id)
+
     token = secrets.token_urlsafe(32)
     create_session(token, user_id, phone)
     _sessions[token] = {"user_id": user_id, "phone": phone}
@@ -632,6 +636,10 @@ def verify_otp(req: VerifyOtpRequest, request: Request):
             )
             user_id = cur.fetchone()[0]
         cur.close()
+
+    # Auto-join any firm that invited this phone before signup
+    from api.routes.firms import accept_pending_invitations
+    accept_pending_invitations(phone, user_id)
 
     token = secrets.token_urlsafe(32)
     create_session(token, user_id, phone)

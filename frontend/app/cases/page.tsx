@@ -17,6 +17,10 @@ interface CaseItem {
   city: string | null;
   status: string;
   notes: string | null;
+  user_id: number | null;
+  firm_id: number | null;
+  owner_first_name: string | null;
+  owner_last_name: string | null;
   created_at: string;
   updated_at: string;
   judgments_count: number;
@@ -43,6 +47,7 @@ export default function CasesPage() {
   const [filters, setFilters] = useState<Filters | null>(null);
   const [loading, setLoading] = useState(true);
   const [authToken, setAuthToken] = useState<string | null>(null);
+  const [myUserId, setMyUserId] = useState<number | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [search, setSearch] = useState('');
@@ -62,6 +67,10 @@ export default function CasesPage() {
 
   useEffect(() => {
     const savedToken = localStorage.getItem('auth_token');
+    const savedUser = localStorage.getItem('auth_user');
+    if (savedUser) {
+      try { setMyUserId(JSON.parse(savedUser).id); } catch {}
+    }
     if (!savedToken) {
       setLoading(false);
       return;
@@ -276,6 +285,11 @@ export default function CasesPage() {
                         {c.client_role && (
                           <span className="text-xs px-2 py-0.5 rounded-md font-medium bg-violet-50 text-violet-700">
                             موكلنا: {c.client_role === 'plaintiff' ? 'المدعي' : 'المدعي عليه'}
+                          </span>
+                        )}
+                        {myUserId && c.user_id && c.user_id !== myUserId && (
+                          <span className="text-xs px-2 py-0.5 rounded-md font-medium bg-sky-50 text-sky-700">
+                            مشتركة — {c.owner_first_name || 'زميل'} {c.owner_last_name || ''}
                           </span>
                         )}
                       </div>

@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api.routes import search, auth, payments, favorites, legal_study, export, support, cases
+from api.routes import search, auth, payments, favorites, legal_study, export, support, cases, case_chat, case_docs, case_drafts, firms
 
 app = FastAPI(
     title="Saudi Legal Search API",
@@ -24,6 +24,10 @@ app.include_router(legal_study.router, prefix="/api", tags=["legal-study"])
 app.include_router(export.router, prefix="/api", tags=["export"])
 app.include_router(support.router, prefix="/api", tags=["support"])
 app.include_router(cases.router, prefix="/api", tags=["cases"])
+app.include_router(case_chat.router, prefix="/api", tags=["case-chat"])
+app.include_router(case_docs.router, prefix="/api", tags=["case-docs"])
+app.include_router(case_drafts.router, prefix="/api", tags=["case-drafts"])
+app.include_router(firms.router, prefix="/api", tags=["firms"])
 
 
 @app.on_event("startup")
@@ -43,6 +47,26 @@ def startup():
     except Exception as e:
         import logging
         logging.error(f"init_case_tables failed: {e}")
+    try:
+        case_chat.init_case_chat_tables()
+    except Exception as e:
+        import logging
+        logging.error(f"init_case_chat_tables failed: {e}")
+    try:
+        case_docs.init_case_docs_tables()
+    except Exception as e:
+        import logging
+        logging.error(f"init_case_docs_tables failed: {e}")
+    try:
+        case_drafts.init_case_drafts_tables()
+    except Exception as e:
+        import logging
+        logging.error(f"init_case_drafts_tables failed: {e}")
+    try:
+        firms.init_firm_tables()
+    except Exception as e:
+        import logging
+        logging.error(f"init_firm_tables failed: {e}")
 
 
 @app.get("/")
