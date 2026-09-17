@@ -34,50 +34,50 @@ export default function AboutPage() {
       <Header />
 
       <main className="max-w-4xl mx-auto px-4 py-12">
-        <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-6">عن الباحث</h1>
+        <h1 className="text-3xl md:text-4xl font-bold text-ink-900 mb-6">عن الباحث</h1>
 
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 md:p-8 mb-8">
-          <p className="text-lg text-slate-700 leading-relaxed mb-4">
+        <div className="bg-white rounded-2xl border border-ink-100 p-6 md:p-8 mb-8">
+          <p className="text-lg text-ink-700 leading-relaxed mb-4">
             الباحث هو محرك بحث ذكي متخصص في الأحكام القضائية السعودية. يتيح للمحامين والمستشارين والباحثين القانونيين
             البحث في آلاف الأحكام الصادرة من محاكم الدرجة الأولى ومحكمة الاستئناف في المملكة العربية السعودية.
           </p>
-          <p className="text-lg text-slate-700 leading-relaxed mb-4">
+          <p className="text-lg text-ink-700 leading-relaxed mb-4">
             يتميز الباحث بالبحث الدلالي — ابحث بالمعنى لا بالكلمة المفتاحية فقط. يجد المحرك الأحكام ذات الصلة
             بموضوع البحث حتى لو لم تطابق الكلمات المفتاحية تماماً.
           </p>
-          <p className="text-lg text-slate-700 leading-relaxed">
+          <p className="text-lg text-ink-700 leading-relaxed">
             يشمل البحث أحكام المحاكم التجارية والمحاكم العامة ومحاكم التنفيذ ومحاكم الاستئناف
             في مختلف مدن المملكة العربية السعودية مثل الرياض وجدة ومكة المكرمة والمدينة المنورة.
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-2xl p-6 border border-slate-200 text-center">
+          <div className="bg-white rounded-2xl p-6 border border-ink-100 text-center">
             <div className="w-12 h-12 bg-primary-50 text-primary-600 rounded-xl flex items-center justify-center mx-auto mb-4">
               <Search className="w-6 h-6" />
             </div>
-            <h2 className="font-bold text-slate-900 mb-2">بحث دلالي ذكي</h2>
-            <p className="text-sm text-slate-600">ابحث بالمعنى لا بالكلمة المفتاحية فقط. يجد المحرك الأحكام ذات الصلة بموضوع البحث.</p>
+            <h2 className="font-bold text-ink-900 mb-2">بحث دلالي ذكي</h2>
+            <p className="text-sm text-ink-600">ابحث بالمعنى لا بالكلمة المفتاحية فقط. يجد المحرك الأحكام ذات الصلة بموضوع البحث.</p>
           </div>
-          <div className="bg-white rounded-2xl p-6 border border-slate-200 text-center">
+          <div className="bg-white rounded-2xl p-6 border border-ink-100 text-center">
             <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center mx-auto mb-4">
               <Scale className="w-6 h-6" />
             </div>
-            <h2 className="font-bold text-slate-900 mb-2">أحكام موثوقة</h2>
-            <p className="text-sm text-slate-600">أحكام من محاكم المملكة العربية السعودية — الدرجة الأولى والاستئناف.</p>
+            <h2 className="font-bold text-ink-900 mb-2">أحكام موثوقة</h2>
+            <p className="text-sm text-ink-600">أحكام من محاكم المملكة العربية السعودية — الدرجة الأولى والاستئناف.</p>
           </div>
-          <div className="bg-white rounded-2xl p-6 border border-slate-200 text-center">
+          <div className="bg-white rounded-2xl p-6 border border-ink-100 text-center">
             <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mx-auto mb-4">
               <CheckCircle className="w-6 h-6" />
             </div>
-            <h2 className="font-bold text-slate-900 mb-2">تجربة مجانية</h2>
-            <p className="text-sm text-slate-600">3 عمليات بحث مجانية بدون تسجيل. سجل للحصول على بحث غير محدود.</p>
+            <h2 className="font-bold text-ink-900 mb-2">تجربة مجانية</h2>
+            <p className="text-sm text-ink-600">3 عمليات بحث مجانية بدون تسجيل. سجل للحصول على بحث غير محدود.</p>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 md:p-8 mb-8">
-          <h2 className="text-xl font-bold text-slate-900 mb-4">أنواع المحاكم</h2>
-          <ul className="space-y-2 text-slate-700">
+        <div className="bg-white rounded-2xl border border-ink-100 p-6 md:p-8 mb-8">
+          <h2 className="text-xl font-bold text-ink-900 mb-4">أنواع المحاكم</h2>
+          <ul className="space-y-2 text-ink-700">
             <li className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-primary-600"></span>
               المحاكم التجارية — أحكام القضايا التجارية والشركاتية
@@ -107,7 +107,7 @@ export default function AboutPage() {
           </a>
         </div>
 
-        <div className="mt-12 text-center text-sm text-slate-500">
+        <div className="mt-12 text-center text-sm text-ink-500">
           <a href="mailto:albahethapp@gmail.com" className="inline-flex items-center gap-2 text-primary-600 hover:text-primary-700">
             <Mail className="w-4 h-4" />
             albahethapp@gmail.com

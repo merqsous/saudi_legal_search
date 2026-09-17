@@ -15,25 +15,56 @@ html {
 }
 
 body {
-  @apply bg-slate-50 text-slate-900 antialiased;
-  font-family: var(--font-naskh), 'Noto Naskh Arabic', sans-serif;
+  @apply bg-white text-ink-900 antialiased;
+  font-family: var(--font-plex), 'IBM Plex Sans Arabic', sans-serif;
+  font-feature-settings: 'ss01';
 }
 
+/* Legal document text: traditional serif */
 .arabic-text {
   direction: rtl;
   font-family: var(--font-amiri), 'Amiri', serif;
 }
 
-/* Custom scrollbar */
+/* Professional app background — flat, calm, low-noise */
+.app-bg {
+  background-color: #f6f7f9;
+}
+
+/* Refined card primitives */
+.card {
+  @apply bg-white rounded-xl border border-ink-100 shadow-card;
+}
+
+.card-hover {
+  @apply transition-shadow duration-200 hover:shadow-card-hover hover:border-ink-200;
+}
+
+/* Subtle section label used above headings */
+.eyebrow {
+  @apply text-xs font-semibold tracking-widest text-gold-600 uppercase;
+}
+
+/* Custom scrollbar — slim and unobtrusive */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 10px;
+  height: 10px;
 }
 ::-webkit-scrollbar-track {
-  @apply bg-slate-100;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  @apply bg-slate-300 rounded-full;
+  @apply bg-ink-200 rounded-full border-2 border-solid border-transparent bg-clip-padding;
 }
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-slate-400;
+  @apply bg-ink-300;
+}
+
+/* Focus rings — consistent and accessible */
+.focus-ring {
+  @apply focus:outline-none focus:ring-2 focus:ring-primary-500/60 focus:border-primary-500;
+}
+
+::selection {
+  @apply bg-primary-100 text-primary-900;
 }

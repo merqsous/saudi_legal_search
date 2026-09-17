@@ -165,10 +165,10 @@ export default function CasesPage() {
 
   if (!authToken && !loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center" dir="rtl">
+      <div className="min-h-screen app-bg flex items-center justify-center" dir="rtl">
         <div className="text-center">
-          <Briefcase className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-          <p className="text-slate-600 mb-4">يجب تسجيل الدخول لإدارة القضايا</p>
+          <Briefcase className="w-12 h-12 text-ink-300 mx-auto mb-4" />
+          <p className="text-ink-600 mb-4">يجب تسجيل الدخول لإدارة القضايا</p>
           <button onClick={() => router.push('/')} className="px-6 py-3 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700">
             تسجيل الدخول
           </button>
@@ -178,14 +178,14 @@ export default function CasesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100" dir="rtl">
+    <div className="min-h-screen app-bg" dir="rtl">
       <Header />
 
       <main className="max-w-5xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
             <Briefcase className="w-6 h-6 text-primary-600" />
-            <h1 className="text-2xl font-bold text-slate-900">إدارة القضايا</h1>
+            <h1 className="text-2xl font-bold text-ink-900">إدارة القضايا</h1>
           </div>
           <button
             onClick={() => setShowCreate(true)}
@@ -198,23 +198,23 @@ export default function CasesPage() {
 
         {/* Summary */}
         <div className="grid grid-cols-3 gap-3 mb-6">
-          <div className="bg-white rounded-xl border border-slate-200 p-4">
-            <p className="text-xs text-slate-500 mb-1">إجمالي القضايا</p>
-            <p className="text-2xl font-bold text-slate-900">{cases.length}</p>
+          <div className="bg-white rounded-xl border border-ink-100 p-4">
+            <p className="text-xs text-ink-500 mb-1">إجمالي القضايا</p>
+            <p className="text-2xl font-bold text-ink-900">{cases.length}</p>
           </div>
-          <div className="bg-white rounded-xl border border-slate-200 p-4">
-            <p className="text-xs text-slate-500 mb-1">قضايا نشطة</p>
+          <div className="bg-white rounded-xl border border-ink-100 p-4">
+            <p className="text-xs text-ink-500 mb-1">قضايا نشطة</p>
             <p className="text-2xl font-bold text-primary-600">{activeCount}</p>
           </div>
-          <div className="bg-white rounded-xl border border-slate-200 p-4">
-            <p className="text-xs text-slate-500 mb-1">جلسات خلال أسبوع</p>
+          <div className="bg-white rounded-xl border border-ink-100 p-4">
+            <p className="text-xs text-ink-500 mb-1">جلسات خلال أسبوع</p>
             <p className="text-2xl font-bold text-amber-600">{upcomingThisWeek}</p>
           </div>
         </div>
 
         {/* Filter + search bar */}
         <div className="flex flex-col sm:flex-row gap-3 mb-6">
-          <div className="flex gap-1 bg-white rounded-xl border border-slate-200 p-1 w-fit">
+          <div className="flex gap-1 bg-white rounded-xl border border-ink-100 p-1 w-fit">
             {[
               { key: 'all', label: 'الكل' },
               { key: 'active', label: 'نشطة' },
@@ -224,7 +224,7 @@ export default function CasesPage() {
                 key={t.key}
                 onClick={() => setStatusFilter(t.key)}
                 className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  statusFilter === t.key ? 'bg-primary-600 text-white' : 'text-slate-600 hover:bg-slate-50'
+                  statusFilter === t.key ? 'bg-primary-600 text-white' : 'text-ink-600 hover:bg-ink-50'
                 }`}
               >
                 {t.label}
@@ -232,13 +232,13 @@ export default function CasesPage() {
             ))}
           </div>
           <div className="relative flex-1">
-            <SearchIcon className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <SearchIcon className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-400" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="ابحث في قضاياك..."
-              className="w-full pr-10 pl-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full pr-10 pl-4 py-2.5 bg-white border border-ink-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
         </div>
@@ -249,11 +249,11 @@ export default function CasesPage() {
             <Loader2 className="w-8 h-8 text-primary-600 animate-spin" />
           </div>
         ) : filtered.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
-            <Briefcase className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-            <p className="text-slate-600 mb-2">{cases.length === 0 ? 'لا توجد قضايا بعد' : 'لا توجد نتائج مطابقة'}</p>
+          <div className="card p-12 text-center">
+            <Briefcase className="w-12 h-12 text-ink-300 mx-auto mb-4" />
+            <p className="text-ink-600 mb-2">{cases.length === 0 ? 'لا توجد قضايا بعد' : 'لا توجد نتائج مطابقة'}</p>
             {cases.length === 0 && (
-              <p className="text-sm text-slate-400 mb-6">أنشئ قضيتك الأولى واربط بها الأحكام والأبحاث ذات الصلة</p>
+              <p className="text-sm text-ink-400 mb-6">أنشئ قضيتك الأولى واربط بها الأحكام والأبحاث ذات الصلة</p>
             )}
             {cases.length === 0 && (
               <button onClick={() => setShowCreate(true)} className="px-6 py-3 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700">
@@ -269,15 +269,15 @@ export default function CasesPage() {
                 <button
                   key={c.id}
                   onClick={() => router.push(`/cases/${c.id}`)}
-                  className="w-full text-right bg-white rounded-2xl border border-slate-200 p-5 hover:border-primary-300 hover:shadow-sm transition-all"
+                  className="w-full text-right bg-white rounded-xl border border-ink-100 shadow-card p-5 hover:border-primary-300 hover:shadow-card-hover transition-all"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap mb-2">
-                        <h3 className="font-bold text-slate-900">{c.title}</h3>
+                        <h3 className="font-bold text-ink-900">{c.title}</h3>
                         <span
                           className={`text-xs px-2 py-0.5 rounded-md font-medium ${
-                            c.status === 'active' ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-500'
+                            c.status === 'active' ? 'bg-green-50 text-green-700' : 'bg-ink-100 text-ink-500'
                           }`}
                         >
                           {statusLabel[c.status] || c.status}
@@ -293,7 +293,7 @@ export default function CasesPage() {
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-4 flex-wrap text-sm text-slate-500">
+                      <div className="flex items-center gap-4 flex-wrap text-sm text-ink-500">
                         {(c.plaintiff || c.defendant) && (
                           <span className="flex items-center gap-1">
                             <User className="w-3.5 h-3.5" />
@@ -333,11 +333,11 @@ export default function CasesPage() {
                           الجلسة {days === 0 ? 'اليوم' : days === 1 ? 'غداً' : `بعد ${days} يوم`}
                         </span>
                       ) : c.next_hearing_date ? (
-                        <span className="text-xs px-2.5 py-1 rounded-lg font-medium bg-slate-100 text-slate-500">
+                        <span className="text-xs px-2.5 py-1 rounded-lg font-medium bg-ink-100 text-ink-500">
                           جلسة فائتة
                         </span>
                       ) : null}
-                      <span className="text-xs text-slate-400 flex items-center gap-1">
+                      <span className="text-xs text-ink-400 flex items-center gap-1">
                         <FileText className="w-3.5 h-3.5" />
                         {c.judgments_count} حكم مرتبط
                       </span>
@@ -353,10 +353,10 @@ export default function CasesPage() {
       {/* Create case modal */}
       {showCreate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" dir="rtl">
-          <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl p-6 max-h-[90vh] overflow-y-auto">
+          <div className="w-full max-w-lg bg-white rounded-2xl border border-ink-100 shadow-card-hover p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-bold text-slate-900">قضية جديدة</h2>
-              <button onClick={() => setShowCreate(false)} className="text-slate-400 hover:text-slate-600">
+              <h2 className="text-lg font-bold text-ink-900">قضية جديدة</h2>
+              <button onClick={() => setShowCreate(false)} className="text-ink-400 hover:text-ink-600">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -367,39 +367,39 @@ export default function CasesPage() {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">عنوان القضية *</label>
+                <label className="block text-sm font-medium text-ink-700 mb-1.5">عنوان القضية *</label>
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="مثال: قضية تعويض ضد شركة..."
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-4 py-2.5 bg-ink-50 border border-ink-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                   autoFocus
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">المدعي</label>
+                <label className="block text-sm font-medium text-ink-700 mb-1.5">المدعي</label>
                 <input
                   type="text"
                   value={plaintiff}
                   onChange={(e) => setPlaintiff(e.target.value)}
                   placeholder="اسم المدعي"
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-4 py-2.5 bg-ink-50 border border-ink-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">المدعي عليه</label>
+                <label className="block text-sm font-medium text-ink-700 mb-1.5">المدعي عليه</label>
                 <input
                   type="text"
                   value={defendant}
                   onChange={(e) => setDefendant(e.target.value)}
                   placeholder="اسم المدعي عليه"
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-4 py-2.5 bg-ink-50 border border-ink-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">موكلكم هو</label>
-                <div className="flex gap-1 bg-slate-50 border border-slate-200 rounded-xl p-1">
+                <label className="block text-sm font-medium text-ink-700 mb-1.5">موكلكم هو</label>
+                <div className="flex gap-1 bg-ink-50 border border-ink-100 rounded-xl p-1">
                   {[
                     { key: 'plaintiff', label: 'المدعي' },
                     { key: 'defendant', label: 'المدعي عليه' },
@@ -409,7 +409,7 @@ export default function CasesPage() {
                       type="button"
                       onClick={() => setClientRole(r.key)}
                       className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        clientRole === r.key ? 'bg-primary-600 text-white' : 'text-slate-600 hover:bg-slate-100'
+                        clientRole === r.key ? 'bg-primary-600 text-white' : 'text-ink-600 hover:bg-ink-100'
                       }`}
                     >
                       {r.label}
@@ -419,33 +419,33 @@ export default function CasesPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">رقم القضية</label>
+                  <label className="block text-sm font-medium text-ink-700 mb-1.5">رقم القضية</label>
                   <input
                     type="text"
                     value={caseNumber}
                     onChange={(e) => setCaseNumber(e.target.value)}
                     placeholder="1234"
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-4 py-2.5 bg-ink-50 border border-ink-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">السنة</label>
+                  <label className="block text-sm font-medium text-ink-700 mb-1.5">السنة</label>
                   <input
                     type="text"
                     value={caseYear}
                     onChange={(e) => setCaseYear(e.target.value)}
                     placeholder="1446"
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-4 py-2.5 bg-ink-50 border border-ink-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                   />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">المحكمة</label>
+                  <label className="block text-sm font-medium text-ink-700 mb-1.5">المحكمة</label>
                   <select
                     value={courtType}
                     onChange={(e) => setCourtType(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-4 py-2.5 bg-ink-50 border border-ink-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                   >
                     <option value="">اختر المحكمة</option>
                     {(filters?.court_types || []).map((ct) => (
@@ -454,11 +454,11 @@ export default function CasesPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">المدينة</label>
+                  <label className="block text-sm font-medium text-ink-700 mb-1.5">المدينة</label>
                   <select
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-4 py-2.5 bg-ink-50 border border-ink-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                   >
                     <option value="">اختر المدينة</option>
                     {(filters?.locations || []).map((l) => (
@@ -468,12 +468,12 @@ export default function CasesPage() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">ملاحظات</label>
+                <label className="block text-sm font-medium text-ink-700 mb-1.5">ملاحظات</label>
                 <textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   rows={3}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-4 py-2.5 bg-ink-50 border border-ink-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
               </div>
             </div>

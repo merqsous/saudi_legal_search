@@ -130,14 +130,14 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 relative">
         <button
           onClick={onClose}
-          className="absolute left-4 top-4 text-slate-400 hover:text-slate-600"
+          className="absolute left-4 top-4 text-ink-400 hover:text-ink-600"
         >
           <X className="w-5 h-5" />
         </button>
 
         <div className="flex items-center gap-2 mb-6">
           <img src="/logo-rounded.png" alt="الباحث" className="w-10 h-10 rounded-xl" width={40} height={40} />
-          <h2 className="text-lg font-bold text-slate-900">تسجيل الدخول</h2>
+          <h2 className="text-lg font-bold text-ink-900">تسجيل الدخول</h2>
         </div>
 
         {error && (
@@ -149,16 +149,16 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
         {/* Step 1: Phone */}
         {step === 'phone' && (
           <div className="space-y-4">
-            <p className="text-sm text-slate-600">أدخل رقم هاتفك السعودي لتصلك رمز التحقق عبر SMS</p>
+            <p className="text-sm text-ink-600">أدخل رقم هاتفك السعودي لتصلك رمز التحقق عبر SMS</p>
             <div className="relative">
-              <Phone className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+              <Phone className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-ink-400" />
               <input
                 type="text"
                 value={phone}
                 onChange={(e) => setPhone(formatPhone(e.target.value))}
                 onKeyDown={(e) => e.key === 'Enter' && handleSendCode()}
                 placeholder="0501234567"
-                className="w-full pr-11 pl-4 py-3 text-base bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full pr-11 pl-4 py-3 text-base bg-ink-50 border border-ink-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
                 style={{ direction: 'ltr' }}
               />
             </div>
@@ -180,14 +180,14 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
               <CheckCircle className="w-4 h-4" />
               <span>تم إرسال الرمز إلى {phone}</span>
             </div>
-            <p className="text-sm text-slate-600">أدخل رمز التحقق المرسل إلى هاتفك</p>
+            <p className="text-sm text-ink-600">أدخل رمز التحقق المرسل إلى هاتفك</p>
             <input
               type="text"
               value={code}
               onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
               onKeyDown={(e) => e.key === 'Enter' && handleVerifyCode()}
               placeholder="0000"
-              className="w-full px-4 py-3 text-2xl text-center tracking-[0.5em] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full px-4 py-3 text-2xl text-center tracking-[0.5em] bg-ink-50 border border-ink-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
               style={{ direction: 'ltr' }}
             />
             <button
@@ -200,7 +200,7 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
             </button>
             <button
               onClick={() => { setStep('phone'); setCode(''); }}
-              className="w-full text-sm text-slate-500 hover:text-slate-700"
+              className="w-full text-sm text-ink-500 hover:text-ink-700"
             >
               تغيير الرقم
             </button>
@@ -210,27 +210,27 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
         {/* Step 3: Name (new users) */}
         {step === 'name' && (
           <div className="space-y-4">
-            <p className="text-sm text-slate-600">أدخل اسمك لإكمال إنشاء الحساب</p>
+            <p className="text-sm text-ink-600">أدخل اسمك لإكمال إنشاء الحساب</p>
             <div className="relative">
-              <User className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+              <User className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-ink-400" />
               <input
                 type="text"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
                 placeholder="الاسم الأول"
-                className="w-full pr-11 pl-4 py-3 text-base bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full pr-11 pl-4 py-3 text-base bg-ink-50 border border-ink-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
                 style={{ direction: 'rtl' }}
               />
             </div>
             <div className="relative">
-              <User className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+              <User className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-ink-400" />
               <input
                 type="text"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleRegister()}
                 placeholder="الاسم الأخير"
-                className="w-full pr-11 pl-4 py-3 text-base bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full pr-11 pl-4 py-3 text-base bg-ink-50 border border-ink-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
                 style={{ direction: 'rtl' }}
               />
             </div>

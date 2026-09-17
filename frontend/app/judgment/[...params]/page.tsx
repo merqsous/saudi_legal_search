@@ -122,21 +122,21 @@ export default async function JudgmentPage({ params }: { params: { params: strin
   breadcrumbs.push({ name: `حكم رقم ${j.judgment_number || j.id}`, url: canonicalUrl });
 
   return (
-    <div className="min-h-screen bg-slate-50" dir="rtl">
+    <div className="min-h-screen bg-ink-50" dir="rtl">
       <Header />
 
       {/* Breadcrumbs */}
       <nav className="max-w-4xl mx-auto px-4 py-3" aria-label="breadcrumb">
-        <ol className="flex flex-wrap items-center gap-1 text-sm text-slate-500">
+        <ol className="flex flex-wrap items-center gap-1 text-sm text-ink-500">
           {breadcrumbs.map((crumb, i) => (
             <li key={i} className="flex items-center gap-1">
               {i < breadcrumbs.length - 1 ? (
                 <>
                   <a href={crumb.url} className="hover:text-primary-600 transition-colors">{crumb.name}</a>
-                  <span className="text-slate-300">/</span>
+                  <span className="text-ink-300">/</span>
                 </>
               ) : (
-                <span className="text-slate-700 font-medium">{crumb.name}</span>
+                <span className="text-ink-700 font-medium">{crumb.name}</span>
               )}
             </li>
           ))}
@@ -144,8 +144,8 @@ export default async function JudgmentPage({ params }: { params: { params: strin
       </nav>
 
       <main className="max-w-4xl mx-auto px-4 py-8">
-        <article className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8">
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-900 mb-4 leading-relaxed">
+        <article className="bg-white rounded-2xl shadow-sm border border-ink-100 p-6 md:p-8">
+          <h1 className="text-2xl md:text-3xl font-bold text-ink-900 mb-4 leading-relaxed">
             حكم {j.court_type || 'قضائي'} {j.court_level ? `— محكمة ${j.court_level}` : ''} {j.city ? `في ${j.city}` : ''} رقم {j.judgment_number || j.id}
           </h1>
 
@@ -161,7 +161,7 @@ export default async function JudgmentPage({ params }: { params: { params: strin
               </span>
             )}
             {j.city && (
-              <span className="inline-flex items-center px-3 py-1 rounded-lg text-sm font-medium bg-slate-100 text-slate-700">
+              <span className="inline-flex items-center px-3 py-1 rounded-lg text-sm font-medium bg-ink-100 text-ink-700">
                 {j.city}
               </span>
             )}
@@ -172,39 +172,39 @@ export default async function JudgmentPage({ params }: { params: { params: strin
             )}
           </div>
 
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-6">
-            <h2 className="text-sm font-semibold text-slate-500 mb-3">البيانات الأساسية</h2>
+          <div className="bg-ink-50 border border-ink-100 rounded-xl p-4 mb-6">
+            <h2 className="text-sm font-semibold text-ink-500 mb-3">البيانات الأساسية</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
               {j.case_number && (
                 <div>
-                  <span className="text-slate-500">رقم القضية:</span>
-                  <span className="font-medium text-slate-700 mr-1">{j.case_number}/{j.case_year || ''}</span>
+                  <span className="text-ink-500">رقم القضية:</span>
+                  <span className="font-medium text-ink-700 mr-1">{j.case_number}/{j.case_year || ''}</span>
                 </div>
               )}
               {j.judgment_number && (
                 <div>
-                  <span className="text-slate-500">رقم الحكم:</span>
-                  <span className="font-medium text-slate-700 mr-1">{j.judgment_number}</span>
+                  <span className="text-ink-500">رقم الحكم:</span>
+                  <span className="font-medium text-ink-700 mr-1">{j.judgment_number}</span>
                 </div>
               )}
               {j.judgment_year && (
                 <div>
-                  <span className="text-slate-500">سنة الحكم:</span>
-                  <span className="font-medium text-slate-700 mr-1">{j.judgment_year}</span>
+                  <span className="text-ink-500">سنة الحكم:</span>
+                  <span className="font-medium text-ink-700 mr-1">{j.judgment_year}</span>
                 </div>
               )}
             </div>
           </div>
 
           <div className="prose prose-slate max-w-none">
-            <h2 className="text-lg font-bold text-slate-900 mb-3">نص الحكم</h2>
-            <div className="text-slate-700 leading-loose whitespace-pre-wrap arabic-text">
+            <h2 className="text-lg font-bold text-ink-900 mb-3">نص الحكم</h2>
+            <div className="text-ink-700 leading-loose whitespace-pre-wrap arabic-text">
               {fullText || 'نص الحكم غير متوفر.'}
             </div>
           </div>
 
           {j.details_url && (
-            <div className="mt-8 pt-6 border-t border-slate-200">
+            <div className="mt-8 pt-6 border-t border-ink-100">
               <a
                 href={j.details_url}
                 target="_blank"
@@ -220,13 +220,13 @@ export default async function JudgmentPage({ params }: { params: { params: strin
         {/* Related Judgments - Internal Linking */}
         {related.length > 0 && (
           <section className="mt-8">
-            <h2 className="text-lg font-bold text-slate-900 mb-4">أحكام ذات صلة</h2>
+            <h2 className="text-lg font-bold text-ink-900 mb-4">أحكام ذات صلة</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {related.map((r) => (
                 <a
                   key={r.id}
                   href={`/judgment/${r.id}/${judgmentSlug(r)}`}
-                  className="block bg-white rounded-xl border border-slate-200 p-4 hover:border-primary-300 hover:shadow-sm transition-all"
+                  className="block bg-white rounded-xl border border-ink-100 p-4 hover:border-primary-300 hover:shadow-sm transition-all"
                 >
                   <div className="flex items-center gap-2 mb-2">
                     {r.court_level && (
@@ -240,10 +240,10 @@ export default async function JudgmentPage({ params }: { params: { params: strin
                       </span>
                     )}
                   </div>
-                  <h3 className="font-bold text-slate-900 text-sm mb-1">
+                  <h3 className="font-bold text-ink-900 text-sm mb-1">
                     حكم رقم {r.judgment_number || r.id}
                   </h3>
-                  <div className="flex items-center gap-2 text-xs text-slate-500">
+                  <div className="flex items-center gap-2 text-xs text-ink-500">
                     {r.city && <span>{r.city}</span>}
                     {r.judgment_date_hijri && <span>{r.judgment_date_hijri}</span>}
                   </div>
@@ -254,8 +254,8 @@ export default async function JudgmentPage({ params }: { params: { params: strin
         )}
 
         <section className="mt-8 bg-gradient-to-l from-primary-50 to-white border border-primary-200 rounded-xl p-6 text-center">
-          <h2 className="text-lg font-bold text-slate-900 mb-2">ابحث في آلاف الأحكام</h2>
-          <p className="text-sm text-slate-600 mb-4">
+          <h2 className="text-lg font-bold text-ink-900 mb-2">ابحث في آلاف الأحكام</h2>
+          <p className="text-sm text-ink-600 mb-4">
             استخدم الباحث للبحث الذكي في الأحكام القضائية السعودية.
           </p>
           <a
@@ -267,8 +267,8 @@ export default async function JudgmentPage({ params }: { params: { params: strin
         </section>
       </main>
 
-      <footer className="border-t border-slate-200 mt-12 bg-white">
-        <div className="max-w-4xl mx-auto px-4 py-6 text-center text-xs text-slate-400">
+      <footer className="border-t border-ink-100 mt-12 bg-white">
+        <div className="max-w-4xl mx-auto px-4 py-6 text-center text-xs text-ink-400">
           الباحث — بحث في الأحكام القضائية السعودية
         </div>
       </footer>

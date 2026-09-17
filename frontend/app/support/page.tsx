@@ -157,7 +157,7 @@ export default function SupportPage() {
     if (status === 'answered') {
       return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-green-700"><CheckCircle className="w-3 h-3" /> تم الرد</span>;
     }
-    return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-600">مغلقة</span>;
+    return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-ink-100 text-ink-600">مغلقة</span>;
   };
 
   const formatDate = (d: string) => {
@@ -170,7 +170,7 @@ export default function SupportPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
+      <div className="min-h-screen app-bg">
         <Header />
         <div className="flex items-center justify-center py-20">
           <Loader2 className="w-8 h-8 animate-spin text-primary-600" />
@@ -180,13 +180,13 @@ export default function SupportPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
+    <div className="min-h-screen app-bg">
       <Header />
 
       <main className="max-w-3xl mx-auto px-4 py-12">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">الدعم الفني</h1>
-          <p className="text-slate-600">أرسل استفسارك وسنرد عليك خلال 24 ساعة</p>
+          <h1 className="text-3xl font-bold text-ink-900 mb-2">الدعم الفني</h1>
+          <p className="text-ink-600">أرسل استفسارك وسنرد عليك خلال 24 ساعة</p>
         </div>
 
         {error && (
@@ -203,21 +203,21 @@ export default function SupportPage() {
         )}
 
         {selectedTicket ? (
-          <div className="bg-white rounded-2xl border border-slate-200 p-6">
+          <div className="bg-white rounded-2xl border border-ink-100 p-6">
             <button
               onClick={() => setSelectedTicket(null)}
-              className="text-sm text-slate-500 hover:text-slate-700 mb-4 flex items-center gap-1"
+              className="text-sm text-ink-500 hover:text-ink-700 mb-4 flex items-center gap-1"
             >
               <ChevronRight className="w-4 h-4" /> رجوع للقائمة
             </button>
 
             <div className="mb-6">
               <div className="flex items-center justify-between mb-2">
-                <h2 className="text-xl font-bold text-slate-900">{selectedTicket.subject}</h2>
+                <h2 className="text-xl font-bold text-ink-900">{selectedTicket.subject}</h2>
                 {statusBadge(selectedTicket.status)}
               </div>
-              <p className="text-sm text-slate-500 mb-3">{formatDate(selectedTicket.created_at)}</p>
-              <div className="bg-slate-50 rounded-xl p-4 text-slate-700 leading-relaxed">
+              <p className="text-sm text-ink-500 mb-3">{formatDate(selectedTicket.created_at)}</p>
+              <div className="bg-ink-50 rounded-xl p-4 text-ink-700 leading-relaxed">
                 {selectedTicket.message}
               </div>
             </div>
@@ -226,15 +226,15 @@ export default function SupportPage() {
               {replies.map((reply) => (
                 <div
                   key={reply.id}
-                  className={`rounded-xl p-4 ${reply.is_admin ? 'bg-primary-50 border border-primary-200' : 'bg-slate-50 border border-slate-200'}`}
+                  className={`rounded-xl p-4 ${reply.is_admin ? 'bg-primary-50 border border-primary-200' : 'bg-ink-50 border border-ink-100'}`}
                 >
                   <div className="flex items-center gap-2 mb-1">
-                    <span className={`text-xs font-bold ${reply.is_admin ? 'text-primary-700' : 'text-slate-600'}`}>
+                    <span className={`text-xs font-bold ${reply.is_admin ? 'text-primary-700' : 'text-ink-600'}`}>
                       {reply.is_admin ? 'فريق الدعم' : 'أنت'}
                     </span>
-                    <span className="text-xs text-slate-400">{formatDate(reply.created_at)}</span>
+                    <span className="text-xs text-ink-400">{formatDate(reply.created_at)}</span>
                   </div>
-                  <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap">{reply.message}</p>
+                  <p className="text-ink-700 text-sm leading-relaxed whitespace-pre-wrap">{reply.message}</p>
                 </div>
               ))}
             </div>
@@ -246,7 +246,7 @@ export default function SupportPage() {
                   onChange={(e) => setReplyText(e.target.value)}
                   placeholder="اكتب ردك..."
                   rows={3}
-                  className="w-full rounded-xl border border-slate-200 p-3 text-sm text-slate-900 focus:outline-none focus:border-primary-500 resize-none"
+                  className="w-full rounded-xl border border-ink-100 p-3 text-sm text-ink-900 focus:outline-none focus:border-primary-500 resize-none"
                 />
                 <button
                   type="submit"
@@ -260,33 +260,33 @@ export default function SupportPage() {
             )}
           </div>
         ) : showForm ? (
-          <div className="bg-white rounded-2xl border border-slate-200 p-6">
+          <div className="bg-white rounded-2xl border border-ink-100 p-6">
             <button
               onClick={() => setShowForm(false)}
-              className="text-sm text-slate-500 hover:text-slate-700 mb-4 flex items-center gap-1"
+              className="text-sm text-ink-500 hover:text-ink-700 mb-4 flex items-center gap-1"
             >
               <ChevronRight className="w-4 h-4" /> رجوع للقائمة
             </button>
             <form onSubmit={handleSubmit}>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-slate-700 mb-1">الموضوع</label>
+                <label className="block text-sm font-medium text-ink-700 mb-1">الموضوع</label>
                 <input
                   type="text"
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
                   placeholder="مثال: مشكلة في البحث، استفسار عن الاشتراك..."
                   maxLength={200}
-                  className="w-full rounded-xl border border-slate-200 p-3 text-sm focus:outline-none focus:border-primary-500"
+                  className="w-full rounded-xl border border-ink-100 p-3 text-sm focus:outline-none focus:border-primary-500"
                 />
               </div>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-slate-700 mb-1">الرسالة</label>
+                <label className="block text-sm font-medium text-ink-700 mb-1">الرسالة</label>
                 <textarea
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   placeholder="اكتب تفاصيل استفسارك هنا..."
                   rows={5}
-                  className="w-full rounded-xl border border-slate-200 p-3 text-sm focus:outline-none focus:border-primary-500 resize-none"
+                  className="w-full rounded-xl border border-ink-100 p-3 text-sm focus:outline-none focus:border-primary-500 resize-none"
                 />
               </div>
               <button
@@ -310,10 +310,10 @@ export default function SupportPage() {
             </button>
 
             {tickets.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
-                <MessageSquare className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                <p className="text-slate-500">لا توجد تذاكر دعم بعد</p>
-                <p className="text-sm text-slate-400 mt-1">أنشئ تذكرة جديدة وسنرد عليك خلال 24 ساعة</p>
+              <div className="bg-white rounded-2xl border border-ink-100 p-12 text-center">
+                <MessageSquare className="w-12 h-12 text-ink-300 mx-auto mb-3" />
+                <p className="text-ink-500">لا توجد تذاكر دعم بعد</p>
+                <p className="text-sm text-ink-400 mt-1">أنشئ تذكرة جديدة وسنرد عليك خلال 24 ساعة</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -321,14 +321,14 @@ export default function SupportPage() {
                   <button
                     key={ticket.id}
                     onClick={() => openTicket(ticket)}
-                    className="w-full text-right bg-white rounded-xl border border-slate-200 p-4 hover:border-primary-300 hover:shadow-sm transition-all"
+                    className="w-full text-right bg-white rounded-xl border border-ink-100 p-4 hover:border-primary-300 hover:shadow-sm transition-all"
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <h3 className="font-bold text-slate-900 text-sm">{ticket.subject}</h3>
+                      <h3 className="font-bold text-ink-900 text-sm">{ticket.subject}</h3>
                       {statusBadge(ticket.status)}
                     </div>
-                    <p className="text-sm text-slate-500 line-clamp-2 mb-2">{ticket.message}</p>
-                    <span className="text-xs text-slate-400">{formatDate(ticket.created_at)}</span>
+                    <p className="text-sm text-ink-500 line-clamp-2 mb-2">{ticket.message}</p>
+                    <span className="text-xs text-ink-400">{formatDate(ticket.created_at)}</span>
                   </button>
                 ))}
               </div>

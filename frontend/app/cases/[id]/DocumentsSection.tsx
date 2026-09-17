@@ -99,12 +99,12 @@ export default function DocumentsSection({ caseId, authToken }: { caseId: string
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-6">
+    <div className="bg-white rounded-xl border border-ink-100 shadow-card p-6">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <FileText className="w-5 h-5 text-primary-600" />
-          <h2 className="text-lg font-bold text-slate-900">مستندات القضية</h2>
-          <span className="text-xs text-slate-400">({documents.length})</span>
+          <h2 className="text-lg font-bold text-ink-900">مستندات القضية</h2>
+          <span className="text-xs text-ink-400">({documents.length})</span>
         </div>
         <input
           ref={fileInputRef}
@@ -123,27 +123,27 @@ export default function DocumentsSection({ caseId, authToken }: { caseId: string
         </button>
       </div>
 
-      <p className="text-xs text-slate-400 mb-4">
-        ارفع صحيفة الدعوى، العقود، أو أي مستند ذي صلة (PDF أو Word حتى 10 ميجابايت) واطلب تحليله الذكي
+      <p className="text-xs text-ink-400 mb-4">
+        ارفع صحائف الدعاوى والعقود والمستندات ذات الصلة (PDF أو Word حتى 10 ميجابايت) ليقوم المساعد بتحليلها واستخلاص النقاط الجوهرية.
       </p>
 
       {loading ? (
         <div className="flex justify-center py-8">
-          <Loader2 className="w-6 h-6 text-slate-400 animate-spin" />
+          <Loader2 className="w-6 h-6 text-ink-400 animate-spin" />
         </div>
       ) : documents.length === 0 ? (
-        <p className="text-sm text-slate-400 text-center py-8">لا توجد مستندات مرفوعة</p>
+        <p className="text-sm text-ink-400 text-center py-8">لا توجد مستندات مرفوعة</p>
       ) : (
         <div className="space-y-2">
           {documents.map((doc) => (
-            <div key={doc.id} className="border border-slate-200 bg-slate-50 rounded-xl p-3">
+            <div key={doc.id} className="border border-ink-100 bg-ink-50 rounded-xl p-3">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0 flex-1">
                   <FileText className="w-4 h-4 text-primary-600 shrink-0" />
-                  <span className="text-sm font-medium text-slate-700 truncate">{doc.filename}</span>
-                  <span className="text-xs text-slate-400 shrink-0">{formatSize(doc.size_bytes)}</span>
+                  <span className="text-sm font-medium text-ink-700 truncate">{doc.filename}</span>
+                  <span className="text-xs text-ink-400 shrink-0">{formatSize(doc.size_bytes)}</span>
                   {doc.has_text && (
-                    <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600 shrink-0">قابل للتحليل</span>
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600 shrink-0">جاهز للتحليل</span>
                   )}
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
@@ -163,7 +163,7 @@ export default function DocumentsSection({ caseId, authToken }: { caseId: string
                       e.preventDefault();
                       downloadWithAuth(doc);
                     }}
-                    className="p-1.5 text-slate-400 hover:text-primary-600"
+                    className="p-1.5 text-ink-400 hover:text-primary-600"
                     title="تنزيل"
                   >
                     <Download className="w-4 h-4" />
@@ -185,21 +185,21 @@ export default function DocumentsSection({ caseId, authToken }: { caseId: string
       {/* Analysis modal */}
       {analysis && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" dir="rtl">
-          <div className="w-full max-w-2xl bg-white rounded-2xl shadow-xl p-6 max-h-[85vh] overflow-y-auto">
+          <div className="w-full max-w-2xl bg-white rounded-2xl border border-ink-100 shadow-card-hover p-6 max-h-[85vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                <h3 className="font-bold text-ink-900 flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-primary-600" />
                   تحليل المستند
                 </h3>
-                <p className="text-xs text-slate-400 mt-0.5">{analysis.filename}</p>
+                <p className="text-xs text-ink-400 mt-0.5">{analysis.filename}</p>
               </div>
-              <button onClick={() => setAnalysis(null)} className="text-slate-400 hover:text-slate-600">
+              <button onClick={() => setAnalysis(null)} className="text-ink-400 hover:text-ink-600">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-4">
+            <div className="bg-ink-50 border border-ink-100 rounded-xl p-4 mb-4">
               {analysis.text.split('\n').map((line, i) => {
                 const trimmed = line.trim();
                 if (!trimmed) return <div key={i} className="h-1.5" />;
@@ -208,7 +208,7 @@ export default function DocumentsSection({ caseId, authToken }: { caseId: string
                 return isHeading ? (
                   <p key={i} className="font-bold text-primary-900 text-sm mt-3 mb-1">{clean}</p>
                 ) : (
-                  <p key={i} className="text-sm text-slate-700 leading-relaxed mb-1.5">{clean}</p>
+                  <p key={i} className="text-sm text-ink-700 leading-relaxed mb-1.5">{clean}</p>
                 );
               })}
             </div>
@@ -220,7 +220,7 @@ export default function DocumentsSection({ caseId, authToken }: { caseId: string
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
                 placeholder="اسأل سؤالاً محدداً عن المستند..."
-                className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="flex-1 px-3.5 py-2.5 bg-ink-50 border border-ink-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && question.trim()) {
                     const doc = documents.find((d) => d.filename === analysis.filename);

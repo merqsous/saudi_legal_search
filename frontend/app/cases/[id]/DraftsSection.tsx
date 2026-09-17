@@ -91,12 +91,12 @@ export default function DraftsSection({ caseId, authToken }: { caseId: string; a
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-6">
+    <div className="bg-white rounded-xl border border-ink-100 shadow-card p-6">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <PenTool className="w-5 h-5 text-primary-600" />
-          <h2 className="text-lg font-bold text-slate-900">صياغة المستندات</h2>
-          <span className="text-xs text-slate-400">({drafts.length})</span>
+          <h2 className="text-lg font-bold text-ink-900">صياغة المستندات</h2>
+          <span className="text-xs text-ink-400">({drafts.length})</span>
         </div>
         <button
           onClick={() => setShowCreate(true)}
@@ -107,31 +107,31 @@ export default function DraftsSection({ caseId, authToken }: { caseId: string; a
         </button>
       </div>
 
-      <p className="text-xs text-slate-400 mb-4">
+      <p className="text-xs text-ink-400 mb-4">
         ولّد لوائح الدعاوى ومذكرات الدفاع والآراء القانونية من معلومات القضية والأحكام المرتبطة بها — ثم صدّرها إلى Word
       </p>
 
       {loading ? (
         <div className="flex justify-center py-8">
-          <Loader2 className="w-6 h-6 text-slate-400 animate-spin" />
+          <Loader2 className="w-6 h-6 text-ink-400 animate-spin" />
         </div>
       ) : drafts.length === 0 ? (
-        <p className="text-sm text-slate-400 text-center py-8">لا توجد مستندات مولدة بعد</p>
+        <p className="text-sm text-ink-400 text-center py-8">لا توجد مستندات مولدة بعد</p>
       ) : (
         <div className="space-y-2">
           {drafts.map((draft) => (
-            <div key={draft.id} className="border border-slate-200 bg-slate-50 rounded-xl p-3 flex items-center justify-between gap-2">
+            <div key={draft.id} className="border border-ink-100 bg-ink-50 rounded-xl p-3 flex items-center justify-between gap-2">
               <button onClick={() => openDraft(draft.id)} className="flex items-center gap-2 min-w-0 flex-1 text-right">
                 <FileText className="w-4 h-4 text-primary-600 shrink-0" />
-                <span className="text-sm font-medium text-slate-700">{typeLabel(draft.doc_type)}</span>
-                <span className="text-xs text-slate-400 shrink-0">
+                <span className="text-sm font-medium text-ink-700">{typeLabel(draft.doc_type)}</span>
+                <span className="text-xs text-ink-400 shrink-0">
                   {new Date(draft.created_at).toLocaleDateString('ar-SA-u-ca-gregory')}
                 </span>
               </button>
               <div className="flex items-center gap-1 shrink-0">
                 <a
                   href={`/api/cases/drafts/${draft.id}/export/docx?token=${authToken}`}
-                  className="p-1.5 text-slate-400 hover:text-primary-600"
+                  className="p-1.5 text-ink-400 hover:text-primary-600"
                   title="تنزيل Word"
                 >
                   <Download className="w-4 h-4" />
@@ -148,10 +148,10 @@ export default function DraftsSection({ caseId, authToken }: { caseId: string; a
       {/* Generate modal */}
       {showCreate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" dir="rtl">
-          <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-6">
+          <div className="w-full max-w-md bg-white rounded-2xl border border-ink-100 shadow-card-hover p-6">
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-bold text-slate-900">صياغة مستند جديد</h2>
-              <button onClick={() => setShowCreate(false)} className="text-slate-400 hover:text-slate-600">
+              <h2 className="text-lg font-bold text-ink-900">صياغة مستند جديد</h2>
+              <button onClick={() => setShowCreate(false)} className="text-ink-400 hover:text-ink-600">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -162,7 +162,7 @@ export default function DraftsSection({ caseId, authToken }: { caseId: string; a
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">نوع المستند</label>
+                <label className="block text-sm font-medium text-ink-700 mb-1.5">نوع المستند</label>
                 <div className="grid grid-cols-2 gap-2">
                   {DOC_TYPES.map((t) => (
                     <button
@@ -172,7 +172,7 @@ export default function DraftsSection({ caseId, authToken }: { caseId: string; a
                       className={`py-2.5 px-3 rounded-xl text-sm font-medium border transition-colors ${
                         docType === t.key
                           ? 'bg-primary-600 text-white border-primary-600'
-                          : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-primary-300'
+                          : 'bg-ink-50 text-ink-600 border-ink-100 hover:border-primary-300'
                       }`}
                     >
                       {t.label}
@@ -181,13 +181,13 @@ export default function DraftsSection({ caseId, authToken }: { caseId: string; a
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">تعليمات إضافية (اختياري)</label>
+                <label className="block text-sm font-medium text-ink-700 mb-1.5">تعليمات إضافية (اختياري)</label>
                 <textarea
                   value={instructions}
                   onChange={(e) => setInstructions(e.target.value)}
                   rows={3}
                   placeholder="مثال: ركز على مطالبة التعويض عن الأضرار المادية فقط"
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-4 py-2.5 bg-ink-50 border border-ink-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
               </div>
             </div>
@@ -216,9 +216,9 @@ export default function DraftsSection({ caseId, authToken }: { caseId: string; a
       {/* View draft modal */}
       {viewed && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" dir="rtl">
-          <div className="w-full max-w-2xl bg-white rounded-2xl shadow-xl p-6 max-h-[85vh] overflow-y-auto">
+          <div className="w-full max-w-2xl bg-white rounded-2xl border border-ink-100 shadow-card-hover p-6 max-h-[85vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-slate-900">{typeLabel(viewed.doc_type)}</h3>
+              <h3 className="font-bold text-ink-900">{typeLabel(viewed.doc_type)}</h3>
               <div className="flex items-center gap-2">
                 <a
                   href={`/api/cases/drafts/${viewed.id}/export/docx?token=${authToken}`}
@@ -227,13 +227,13 @@ export default function DraftsSection({ caseId, authToken }: { caseId: string; a
                   <Download className="w-4 h-4" />
                   Word
                 </a>
-                <button onClick={() => setViewed(null)} className="text-slate-400 hover:text-slate-600">
+                <button onClick={() => setViewed(null)} className="text-ink-400 hover:text-ink-600">
                   <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
 
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-5">
+            <div className="bg-ink-50 border border-ink-100 rounded-xl p-5">
               {viewed.content.split('\n').map((line, i) => {
                 const trimmed = line.trim();
                 if (!trimmed) return <div key={i} className="h-1.5" />;
@@ -242,12 +242,12 @@ export default function DraftsSection({ caseId, authToken }: { caseId: string; a
                 return isHeading ? (
                   <p key={i} className="font-bold text-primary-900 text-sm mt-3 mb-1">{clean}</p>
                 ) : (
-                  <p key={i} className="text-sm text-slate-700 leading-relaxed mb-1.5">{clean}</p>
+                  <p key={i} className="text-sm text-ink-700 leading-relaxed mb-1.5">{clean}</p>
                 );
               })}
             </div>
 
-            <p className="text-xs text-slate-400 mt-3">
+            <p className="text-xs text-ink-400 mt-3">
               هذا المستند مولد آلياً ويخضع لمراجعة المحامي قبل الاعتماد
             </p>
           </div>

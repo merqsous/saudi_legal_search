@@ -187,7 +187,7 @@ export default function ChatWidget() {
 
       {/* Chat panel */}
       {isOpen && (
-        <div className="fixed bottom-5 left-5 z-50 w-[calc(100vw-2.5rem)] sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden" style={{ maxHeight: '80vh' }}>
+        <div className="fixed bottom-5 left-5 z-50 w-[calc(100vw-2.5rem)] sm:w-96 bg-white rounded-2xl shadow-2xl border border-ink-100 flex flex-col overflow-hidden" style={{ maxHeight: '80vh' }}>
           {/* Header */}
           <div className="bg-primary-600 text-white px-4 py-3 flex items-center justify-between flex-shrink-0">
             <div className="flex items-center gap-2">
@@ -203,7 +203,7 @@ export default function ChatWidget() {
           </div>
 
           {/* Body */}
-          <div className="flex-1 overflow-y-auto p-4 bg-slate-50 min-h-[200px]">
+          <div className="flex-1 overflow-y-auto p-4 bg-ink-50 min-h-[200px]">
             {error && (
               <div className="mb-3 bg-red-50 border border-red-200 rounded-lg p-2 text-red-700 text-xs text-center">
                 {error}
@@ -218,8 +218,8 @@ export default function ChatWidget() {
                     <div className="w-10 h-10 bg-primary-50 rounded-full flex items-center justify-center mx-auto mb-1">
                       <User className="w-5 h-5 text-primary-600" />
                     </div>
-                    <p className="text-sm text-slate-600 font-medium">ابدأ محادثة جديدة</p>
-                    <p className="text-xs text-slate-400 mt-0.5">أدخل بياناتك لنبدأ المحادثة</p>
+                    <p className="text-sm text-ink-600 font-medium">ابدأ محادثة جديدة</p>
+                    <p className="text-xs text-ink-400 mt-0.5">أدخل بياناتك لنبدأ المحادثة</p>
                   </div>
                 )}
 
@@ -228,8 +228,8 @@ export default function ChatWidget() {
                     <div className="w-10 h-10 bg-primary-50 rounded-full flex items-center justify-center mx-auto mb-1">
                       <User className="w-5 h-5 text-primary-600" />
                     </div>
-                    <p className="text-sm text-slate-600 font-medium">مرحباً {authUser?.first_name}</p>
-                    <p className="text-xs text-slate-400 mt-0.5">اكتب رسالتك وسنرد عليك</p>
+                    <p className="text-sm text-ink-600 font-medium">مرحباً {authUser?.first_name}</p>
+                    <p className="text-xs text-ink-400 mt-0.5">اكتب رسالتك وسنرد عليك</p>
                   </div>
                 )}
 
@@ -241,14 +241,14 @@ export default function ChatWidget() {
                         value={firstName}
                         onChange={(e) => setFirstName(e.target.value)}
                         placeholder="الاسم الأول"
-                        className="w-full rounded-lg border border-slate-200 p-2 text-sm focus:outline-none focus:border-primary-500"
+                        className="w-full rounded-lg border border-ink-100 p-2 text-sm focus:outline-none focus:border-primary-500"
                       />
                       <input
                         type="text"
                         value={lastName}
                         onChange={(e) => setLastName(e.target.value)}
                         placeholder="الاسم الأخير"
-                        className="w-full rounded-lg border border-slate-200 p-2 text-sm focus:outline-none focus:border-primary-500"
+                        className="w-full rounded-lg border border-ink-100 p-2 text-sm focus:outline-none focus:border-primary-500"
                       />
                       <input
                         type="text"
@@ -257,7 +257,7 @@ export default function ChatWidget() {
                         onChange={(e) => setPhone(e.target.value)}
                         placeholder="رقم الجوال (05XXXXXXXX)"
                         dir="ltr"
-                        className="w-full rounded-lg border border-slate-200 p-2 text-sm focus:outline-none focus:border-primary-500 text-right"
+                        className="w-full rounded-lg border border-ink-100 p-2 text-sm focus:outline-none focus:border-primary-500 text-right"
                       />
                     </>
                   )}
@@ -266,7 +266,7 @@ export default function ChatWidget() {
                     onChange={(e) => setFirstMessage(e.target.value)}
                     placeholder="اكتب رسالتك هنا..."
                     rows={2}
-                    className="w-full rounded-lg border border-slate-200 p-2 text-sm focus:outline-none focus:border-primary-500 resize-none"
+                    className="w-full rounded-lg border border-ink-100 p-2 text-sm focus:outline-none focus:border-primary-500 resize-none"
                   />
                   <button
                     type="submit"
@@ -293,7 +293,7 @@ export default function ChatWidget() {
                     <div
                       className={`max-w-[80%] rounded-xl p-3 text-sm leading-relaxed ${
                         msg.is_admin
-                          ? 'bg-primary-50 border border-primary-200 text-slate-800'
+                          ? 'bg-primary-50 border border-primary-200 text-ink-800'
                           : 'bg-primary-600 text-white'
                       }`}
                     >
@@ -301,7 +301,7 @@ export default function ChatWidget() {
                         <p className="text-xs font-bold text-primary-700 mb-1">فريق الدعم</p>
                       )}
                       <p className="whitespace-pre-wrap">{msg.message}</p>
-                      <p className={`text-xs mt-1 ${msg.is_admin ? 'text-slate-400' : 'text-primary-100'}`}>
+                      <p className={`text-xs mt-1 ${msg.is_admin ? 'text-ink-400' : 'text-primary-100'}`}>
                         {formatTime(msg.created_at)}
                       </p>
                     </div>
@@ -314,13 +314,13 @@ export default function ChatWidget() {
 
           {/* Input bar (only when chat exists) */}
           {hasChat && (
-            <form onSubmit={handleSend} noValidate className="flex items-center gap-2 p-3 border-t border-slate-200 bg-white flex-shrink-0">
+            <form onSubmit={handleSend} noValidate className="flex items-center gap-2 p-3 border-t border-ink-100 bg-white flex-shrink-0">
               <input
                 type="text"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 placeholder="اكتب رسالة..."
-                className="flex-1 rounded-full border border-slate-200 px-4 py-2 text-sm focus:outline-none focus:border-primary-500"
+                className="flex-1 rounded-full border border-ink-100 px-4 py-2 text-sm focus:outline-none focus:border-primary-500"
               />
               <button
                 type="submit"

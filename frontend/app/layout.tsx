@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Script from 'next/script';
-import { Amiri, Noto_Naskh_Arabic } from 'next/font/google';
+import { Amiri, IBM_Plex_Sans_Arabic } from 'next/font/google';
 import ChatWidget from './components/ChatWidget';
 import VisitTracker from './components/VisitTracker';
 import './globals.css';
@@ -12,11 +12,11 @@ const amiri = Amiri({
   variable: '--font-amiri',
 });
 
-const naskh = Noto_Naskh_Arabic({
+const plex = IBM_Plex_Sans_Arabic({
   subsets: ['arabic'],
-  weight: ['400', '500', '600', '700'],
+  weight: ['300', '400', '500', '600', '700'],
   display: 'swap',
-  variable: '--font-naskh',
+  variable: '--font-plex',
 });
 
 export const metadata: Metadata = {
@@ -60,7 +60,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ar" dir="rtl">
-      <body className={`${amiri.variable} ${naskh.variable}`}>
+      <body className={`${amiri.variable} ${plex.variable}`}>
         <Script src="https://www.googletagmanager.com/gtag/js?id=AW-18318854762" strategy="afterInteractive" />
         <Script id="google-ads" strategy="afterInteractive">
           {`

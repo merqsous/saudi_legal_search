@@ -156,27 +156,27 @@ export default function FirmPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center" dir="rtl">
+      <div className="min-h-screen app-bg flex items-center justify-center" dir="rtl">
         <Loader2 className="w-8 h-8 text-primary-600 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100" dir="rtl">
+    <div className="min-h-screen app-bg" dir="rtl">
       <Header />
 
       <main className="max-w-4xl mx-auto px-4 py-8">
         <div className="flex items-center gap-2 mb-6">
           <Building2 className="w-6 h-6 text-primary-600" />
-          <h1 className="text-2xl font-bold text-slate-900">مكتب المحاماة</h1>
+          <h1 className="text-2xl font-bold text-ink-900">مكتب المحاماة</h1>
         </div>
 
         {!firm ? (
-          <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
-            <Building2 className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-            <h2 className="font-bold text-slate-900 mb-2">أنشئ مكتبك لمشاركة القضايا مع فريقك</h2>
-            <p className="text-sm text-slate-500 mb-6">
+          <div className="card p-12 text-center">
+            <Building2 className="w-12 h-12 text-ink-300 mx-auto mb-4" />
+            <h2 className="font-bold text-ink-900 mb-2">أنشئ مكتبك لمشاركة القضايا مع فريقك</h2>
+            <p className="text-sm text-ink-500 mb-6">
               عند إنشاء المكتب، كل قضية جديدة تنشئها ستكون متاحة لجميع أعضاء المكتب
             </p>
             <button
@@ -190,11 +190,11 @@ export default function FirmPage() {
         ) : (
           <>
             {/* Firm header */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-6">
+            <div className="bg-white rounded-xl border border-ink-100 shadow-card p-6 mb-6">
               <div className="flex items-start justify-between gap-4 flex-wrap">
                 <div>
-                  <h2 className="text-xl font-bold text-slate-900 mb-1">{firm.name}</h2>
-                  <p className="text-sm text-slate-500">
+                  <h2 className="text-xl font-bold text-ink-900 mb-1">{firm.name}</h2>
+                  <p className="text-sm text-ink-500">
                     {members.length} عضو · القضايا مشتركة بين جميع الأعضاء
                   </p>
                 </div>
@@ -211,20 +211,20 @@ export default function FirmPage() {
             </div>
 
             {/* Invite */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-6">
-              <h3 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
+            <div className="bg-white rounded-xl border border-ink-100 shadow-card p-6 mb-6">
+              <h3 className="font-bold text-ink-900 mb-4 flex items-center gap-2">
                 <UserPlus className="w-5 h-5 text-primary-600" />
                 دعوة عضو جديد
               </h3>
               <div className="flex gap-2">
                 <div className="relative flex-1">
-                  <Phone className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Phone className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-400" />
                   <input
                     type="text"
                     value={invitePhone}
                     onChange={(e) => setInvitePhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
                     placeholder="0501234567"
-                    className="w-full pr-10 pl-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full pr-10 pl-4 py-2.5 bg-ink-50 border border-ink-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                     style={{ direction: 'ltr' }}
                   />
                 </div>
@@ -237,25 +237,25 @@ export default function FirmPage() {
                   دعوة
                 </button>
               </div>
-              {inviteMsg && <p className="text-xs text-slate-500 mt-2">{inviteMsg}</p>}
+              {inviteMsg && <p className="text-xs text-ink-500 mt-2">{inviteMsg}</p>}
             </div>
 
             {/* Members */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-6">
-              <h3 className="font-bold text-slate-900 mb-4">الأعضاء</h3>
+            <div className="bg-white rounded-xl border border-ink-100 shadow-card p-6 mb-6">
+              <h3 className="font-bold text-ink-900 mb-4">الأعضاء</h3>
               <div className="space-y-2">
                 {members.map((m) => (
-                  <div key={m.id} className="flex items-center justify-between border border-slate-200 bg-slate-50 rounded-xl p-3">
+                  <div key={m.id} className="flex items-center justify-between border border-ink-100 bg-ink-50 rounded-xl p-3">
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-full bg-primary-600 text-white flex items-center justify-center text-sm font-bold">
                         {m.first_name?.[0] || 'م'}
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-slate-700">
+                        <p className="text-sm font-medium text-ink-700">
                           {m.first_name} {m.last_name}
-                          {m.id === myUserId && <span className="text-xs text-slate-400 mr-1">(أنت)</span>}
+                          {m.id === myUserId && <span className="text-xs text-ink-400 mr-1">(أنت)</span>}
                         </p>
-                        <p className="text-xs text-slate-400" style={{ direction: 'ltr', textAlign: 'right' }}>{m.phone}</p>
+                        <p className="text-xs text-ink-400" style={{ direction: 'ltr', textAlign: 'right' }}>{m.phone}</p>
                       </div>
                       {m.role === 'owner' && (
                         <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 font-medium">
@@ -280,15 +280,15 @@ export default function FirmPage() {
 
             {/* Pending invitations */}
             {invitations.length > 0 && (
-              <div className="bg-white rounded-2xl border border-slate-200 p-6">
-                <h3 className="font-bold text-slate-900 mb-4">دعوات معلقة</h3>
-                <p className="text-xs text-slate-400 mb-3">
+              <div className="bg-white rounded-xl border border-ink-100 shadow-card p-6">
+                <h3 className="font-bold text-ink-900 mb-4">دعوات معلقة</h3>
+                <p className="text-xs text-ink-400 mb-3">
                   هذه الأرقام لم تُسجل في الباحث بعد — ستنضم تلقائياً إلى مكتبك عند تسجيلها
                 </p>
                 <div className="space-y-2">
                   {invitations.map((inv) => (
-                    <div key={inv.id} className="flex items-center justify-between border border-dashed border-slate-300 bg-slate-50 rounded-xl p-3">
-                      <span className="text-sm text-slate-600" style={{ direction: 'ltr' }}>{inv.phone}</span>
+                    <div key={inv.id} className="flex items-center justify-between border border-dashed border-ink-200 bg-ink-50 rounded-xl p-3">
+                      <span className="text-sm text-ink-600" style={{ direction: 'ltr' }}>{inv.phone}</span>
                       <button
                         onClick={() => cancelInvite(inv.id)}
                         className="p-1.5 text-red-400 hover:text-red-600"
@@ -308,10 +308,10 @@ export default function FirmPage() {
       {/* Create firm modal */}
       {showCreate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" dir="rtl">
-          <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-6">
+          <div className="w-full max-w-md bg-white rounded-2xl border border-ink-100 shadow-card-hover p-6">
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-bold text-slate-900">إنشاء مكتب محاماة</h2>
-              <button onClick={() => setShowCreate(false)} className="text-slate-400 hover:text-slate-600">
+              <h2 className="text-lg font-bold text-ink-900">إنشاء مكتب محاماة</h2>
+              <button onClick={() => setShowCreate(false)} className="text-ink-400 hover:text-ink-600">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -321,13 +321,13 @@ export default function FirmPage() {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">اسم المكتب</label>
+              <label className="block text-sm font-medium text-ink-700 mb-1.5">اسم المكتب</label>
               <input
                 type="text"
                 value={firmName}
                 onChange={(e) => setFirmName(e.target.value)}
                 placeholder="مثال: مكتب الرياض للمحاماة"
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full px-4 py-2.5 bg-ink-50 border border-ink-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                 autoFocus
               />
             </div>

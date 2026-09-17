@@ -166,7 +166,7 @@ export default function LandingAuth() {
 
   if (checkingAuth) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100">
+      <div className="min-h-screen flex items-center justify-center app-bg">
         <Loader2 className="w-8 h-8 text-primary-600 animate-spin" />
       </div>
     );
@@ -188,17 +188,17 @@ export default function LandingAuth() {
               onClick={() => {
                 setShowAuth(false); setStep('phone'); setError(null); setCode('');
               }}
-              className="absolute top-4 left-4 text-slate-400 hover:text-slate-600"
+              className="absolute top-4 left-4 text-ink-400 hover:text-ink-600"
             >
               <X className="w-5 h-5" />
             </button>
 
             <div className="flex flex-col items-center mb-6">
               <img src="/logo-rounded.png" alt="الباحث" className="w-14 h-14 rounded-2xl mb-3" width={56} height={56} />
-              <h2 className="text-xl font-bold text-slate-900">
+              <h2 className="text-xl font-bold text-ink-900">
                 {step === 'name' ? 'إنشاء حساب' : 'تسجيل الدخول'}
               </h2>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-ink-500 mt-1">
                 {step === 'phone' && 'أدخل رقم هاتفك للدخول أو إنشاء حساب'}
                 {step === 'verify' && 'أدخل رمز التحقق المرسل إلى هاتفك'}
                 {step === 'name' && 'أدخل اسمك لإكمال إنشاء الحساب'}
@@ -214,14 +214,14 @@ export default function LandingAuth() {
             {step === 'phone' && (
               <div className="space-y-4">
                 <div className="relative">
-                  <Phone className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <Phone className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-ink-400" />
                   <input
                     type="text"
                     value={phone}
                     onChange={(e) => setPhone(formatPhone(e.target.value))}
                     onKeyDown={(e) => e.key === 'Enter' && handlePhoneSubmit()}
                     placeholder="0501234567"
-                    className="w-full pr-11 pl-4 py-3 text-base bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full pr-11 pl-4 py-3 text-base bg-ink-50 border border-ink-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
                     style={{ direction: 'ltr' }}
                     autoFocus
                   />
@@ -240,26 +240,26 @@ export default function LandingAuth() {
             {step === 'name' && (
               <div className="space-y-4">
                 <div className="relative">
-                  <User className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <User className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-ink-400" />
                   <input
                     type="text"
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     placeholder="الاسم الأول"
-                    className="w-full pr-11 pl-4 py-3 text-base bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full pr-11 pl-4 py-3 text-base bg-ink-50 border border-ink-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
                     style={{ direction: 'rtl' }}
                     autoFocus
                   />
                 </div>
                 <div className="relative">
-                  <User className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <User className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-ink-400" />
                   <input
                     type="text"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleNameSubmit()}
                     placeholder="الاسم الأخير"
-                    className="w-full pr-11 pl-4 py-3 text-base bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full pr-11 pl-4 py-3 text-base bg-ink-50 border border-ink-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
                     style={{ direction: 'rtl' }}
                   />
                 </div>
@@ -286,7 +286,7 @@ export default function LandingAuth() {
                   onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
                   onKeyDown={(e) => e.key === 'Enter' && handleVerifyCode()}
                   placeholder="0000"
-                  className="w-full px-4 py-3 text-2xl text-center tracking-[0.5em] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-4 py-3 text-2xl text-center tracking-[0.5em] bg-ink-50 border border-ink-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
                   style={{ direction: 'ltr' }}
                   autoFocus
                 />
@@ -300,14 +300,14 @@ export default function LandingAuth() {
                 </button>
                 <button
                   onClick={() => { setStep('phone'); setCode(''); setError(null); }}
-                  className="w-full text-sm text-slate-500 hover:text-slate-700"
+                  className="w-full text-sm text-ink-500 hover:text-ink-700"
                 >
                   تغيير الرقم
                 </button>
               </div>
             )}
 
-            <p className="text-center text-xs text-slate-400 mt-4">
+            <p className="text-center text-xs text-ink-400 mt-4">
               بتسجيل الدخول، أنت توافق على شروط الاستخدام
             </p>
           </div>

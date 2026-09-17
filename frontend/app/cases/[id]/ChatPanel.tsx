@@ -51,7 +51,7 @@ export default function ChatPanel({ caseId, authToken }: { caseId: string; authT
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'فشل الإرسال');
       if (data.ai_unavailable) {
-        setAiNotice('الخدمة الذكية غير متاحة مؤقتاً — تم حفظ رسالتك وسيتم الرد عليها عند توفر الخدمة.');
+        setAiNotice('خدمة المساعد الذكي غير متاحة مؤقتاً. تم حفظ رسالتك وسيتم الرد عليها فور استعادة الخدمة.');
       }
       // Replace optimistic message with server response
       setMessages((prev) => [
@@ -100,16 +100,16 @@ export default function ChatPanel({ caseId, authToken }: { caseId: string; authT
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-6">
+    <div className="bg-white rounded-xl border border-ink-100 shadow-card p-6 mb-6">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Sparkles className="w-5 h-5 text-primary-600" />
-          <h2 className="text-lg font-bold text-slate-900">المساعد الذكي</h2>
+          <h2 className="text-lg font-bold text-ink-900">المساعد الذكي</h2>
         </div>
         {messages.length > 0 && (
           <button
             onClick={clearChat}
-            className="flex items-center gap-1 text-xs text-slate-400 hover:text-red-500"
+            className="flex items-center gap-1 text-xs text-ink-400 hover:text-red-500"
             title="مسح المحادثة"
           >
             <Trash2 className="w-3.5 h-3.5" />
@@ -118,26 +118,26 @@ export default function ChatPanel({ caseId, authToken }: { caseId: string; authT
         )}
       </div>
 
-      <p className="text-xs text-slate-400 mb-4">
-        اسأل عن أي شيء يخص هذه القضية — المساعد يعرف تفاصيل القضية وجلساتها ويمكنه البحث في قاعدة الأحكام السعودية
+      <p className="text-xs text-ink-400 mb-4">
+        مساعد قانوني متخصص يعرف تفاصيل هذه القضية — الأطراف والجلسات والأحكام المرتبطة — ويستند في إجاباته إلى قاعدة الأحكام السعودية.
       </p>
 
       {/* Messages */}
-      <div className="max-h-96 overflow-y-auto space-y-3 mb-4 bg-slate-50 rounded-xl p-4 border border-slate-100">
+      <div className="max-h-96 overflow-y-auto space-y-3 mb-4 bg-ink-50 rounded-xl p-4 border border-ink-100">
         {!loaded ? (
           <div className="flex justify-center py-8">
-            <Loader2 className="w-5 h-5 text-slate-400 animate-spin" />
+            <Loader2 className="w-5 h-5 text-ink-400 animate-spin" />
           </div>
         ) : messages.length === 0 ? (
           <div className="text-center py-8">
-            <Bot className="w-8 h-8 text-slate-300 mx-auto mb-3" />
-            <p className="text-sm text-slate-400 mb-2">ابدأ بطرح سؤال عن القضية</p>
+            <Bot className="w-8 h-8 text-ink-300 mx-auto mb-3" />
+            <p className="text-sm text-ink-400 mb-2">ابدأ بطرح سؤال عن القضية</p>
             <div className="flex flex-wrap gap-2 justify-center">
               {['ما هي نقاط القوة في هذه القضية؟', 'ابحث عن أحكام مشابهة', 'لخص الجلسات القادمة'].map((s) => (
                 <button
                   key={s}
                   onClick={() => setInput(s)}
-                  className="text-xs px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-600 hover:border-primary-300 hover:text-primary-600"
+                  className="text-xs px-3 py-1.5 bg-white border border-ink-100 rounded-lg text-ink-600 hover:border-primary-300 hover:text-primary-600"
                 >
                   {s}
                 </button>
@@ -162,7 +162,7 @@ export default function ChatPanel({ caseId, authToken }: { caseId: string; authT
                 className={`rounded-xl px-3.5 py-2.5 max-w-[85%] ${
                   m.role === 'user'
                     ? 'bg-primary-600 text-white rounded-tr-none'
-                    : 'bg-white border border-slate-200 rounded-tl-none'
+                    : 'bg-white border border-ink-100 rounded-tl-none'
                 }`}
               >
                 {m.role === 'user' ? (
@@ -179,11 +179,11 @@ export default function ChatPanel({ caseId, authToken }: { caseId: string; authT
             <div className="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
               <Bot className="w-4 h-4 text-emerald-600" />
             </div>
-            <div className="bg-white border border-slate-200 rounded-xl rounded-tl-none px-4 py-3">
+            <div className="bg-white border border-ink-100 rounded-xl rounded-tl-none px-4 py-3">
               <div className="flex gap-1">
-                <span className="w-2 h-2 bg-slate-300 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <span className="w-2 h-2 bg-slate-300 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <span className="w-2 h-2 bg-slate-300 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                <span className="w-2 h-2 bg-ink-300 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-2 h-2 bg-ink-300 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="w-2 h-2 bg-ink-300 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
               </div>
             </div>
           </div>
@@ -204,7 +204,7 @@ export default function ChatPanel({ caseId, authToken }: { caseId: string; authT
           onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
           placeholder="اكتب سؤالك عن القضية..."
           disabled={sending}
-          className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50"
+          className="flex-1 px-4 py-3 bg-ink-50 border border-ink-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50"
           dir="rtl"
         />
         <button

@@ -74,10 +74,10 @@ export default function FavoritesPage() {
 
   if (!authToken) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center" dir="rtl">
+      <div className="min-h-screen app-bg flex items-center justify-center" dir="rtl">
         <div className="text-center">
-          <Bookmark className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-          <p className="text-slate-600 mb-4">يجب تسجيل الدخول لعرض المفضلة</p>
+          <Bookmark className="w-12 h-12 text-ink-300 mx-auto mb-4" />
+          <p className="text-ink-600 mb-4">يجب تسجيل الدخول لعرض المفضلة</p>
           <button onClick={() => router.push('/')} className="px-6 py-3 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700">
             تسجيل الدخول
           </button>
@@ -87,14 +87,14 @@ export default function FavoritesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100" dir="rtl">
+    <div className="min-h-screen app-bg" dir="rtl">
       <Header />
 
       <main className="max-w-5xl mx-auto px-4 py-8">
         <div className="flex items-center gap-2 mb-6">
           <Bookmark className="w-6 h-6 text-primary-600" />
-          <h2 className="text-2xl font-bold text-slate-900">المفضلة</h2>
-          <span className="text-sm text-slate-600 mr-2">({favorites.length})</span>
+          <h2 className="text-2xl font-bold text-ink-900">المفضلة</h2>
+          <span className="text-sm text-ink-600 mr-2">({favorites.length})</span>
         </div>
 
         {loading ? (
@@ -103,8 +103,8 @@ export default function FavoritesPage() {
           </div>
         ) : favorites.length === 0 ? (
           <div className="text-center py-20">
-            <Bookmark className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-            <p className="text-slate-600 text-lg">لا توجد أحكام في المفضلة</p>
+            <Bookmark className="w-12 h-12 text-ink-300 mx-auto mb-4" />
+            <p className="text-ink-600 text-lg">لا توجد أحكام في المفضلة</p>
             <button
               onClick={() => router.push('/search')}
               className="mt-4 px-6 py-3 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700"
@@ -115,7 +115,7 @@ export default function FavoritesPage() {
         ) : (
           <div className="space-y-3">
             {favorites.map((result) => (
-              <div key={result.judgment_id} className="bg-white border border-slate-200 rounded-xl p-4">
+              <div key={result.judgment_id} className="bg-white border border-ink-100 rounded-xl p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-2">
@@ -129,7 +129,7 @@ export default function FavoritesPage() {
                           </span>
                         )}
                         {result.city && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-600">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-ink-100 text-ink-600">
                             {result.city}
                           </span>
                         )}
@@ -141,31 +141,31 @@ export default function FavoritesPage() {
                       </a>
                       <button
                         onClick={() => removeFavorite(result.judgment_id)}
-                        className="ml-auto p-1 text-slate-300 hover:text-red-500 transition-colors"
+                        className="ml-auto p-1 text-ink-300 hover:text-red-500 transition-colors"
                         title="إزالة من المفضلة"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
 
-                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 mb-2" dir="rtl">
+                    <div className="bg-ink-50 border border-ink-100 rounded-lg p-3 mb-2" dir="rtl">
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
                         {result.case_number && (
                           <div>
-                            <span className="text-slate-600">رقم القضية:</span>
-                            <span className="font-medium text-slate-700 mr-1">{result.case_number}/{result.case_year ?? ''}</span>
+                            <span className="text-ink-600">رقم القضية:</span>
+                            <span className="font-medium text-ink-700 mr-1">{result.case_number}/{result.case_year ?? ''}</span>
                           </div>
                         )}
                         {result.judgment_number && (
                           <div>
-                            <span className="text-slate-600">رقم الحكم:</span>
-                            <span className="font-medium text-slate-700 mr-1">{result.judgment_number}</span>
+                            <span className="text-ink-600">رقم الحكم:</span>
+                            <span className="font-medium text-ink-700 mr-1">{result.judgment_number}</span>
                           </div>
                         )}
                         {result.judgment_date_hijri && (
                           <div>
-                            <span className="text-slate-600">التاريخ:</span>
-                            <span className="font-medium text-slate-700 mr-1">{result.judgment_date_hijri}</span>
+                            <span className="text-ink-600">التاريخ:</span>
+                            <span className="font-medium text-ink-700 mr-1">{result.judgment_date_hijri}</span>
                           </div>
                         )}
                       </div>

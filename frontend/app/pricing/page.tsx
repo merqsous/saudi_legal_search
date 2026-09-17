@@ -51,8 +51,8 @@ export default function PricingPage() {
 
         {/* Page Title */}
         <div className="text-center mb-10">
-          <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">باقات الباحث</h1>
-          <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+          <h1 className="text-3xl md:text-4xl font-bold text-ink-900 mb-4">باقات الباحث</h1>
+          <p className="text-lg text-ink-600 max-w-2xl mx-auto">
             اختر الباقة المناسبة لك. ابحث في آلاف الأحكام القضائية السعودية بسهولة وذكاء.
           </p>
         </div>
@@ -60,33 +60,33 @@ export default function PricingPage() {
         {/* Pricing Plans */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
           {/* Free Plan */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 flex flex-col">
+          <div className="bg-white rounded-2xl border border-ink-100 p-6 flex flex-col">
             <div className="text-center mb-6">
-              <h3 className="text-lg font-bold text-slate-900 mb-2">تجربة مجانية</h3>
-              <p className="text-sm text-slate-600">سجل دخولك للبدء</p>
+              <h3 className="text-lg font-bold text-ink-900 mb-2">تجربة مجانية</h3>
+              <p className="text-sm text-ink-600">سجل دخولك للبدء</p>
               <div className="mt-4">
-                <span className="text-4xl font-bold text-slate-900">0</span>
-                <span className="text-slate-600 text-sm mr-1">ريال</span>
+                <span className="text-4xl font-bold text-ink-900">0</span>
+                <span className="text-ink-600 text-sm mr-1">ريال</span>
               </div>
             </div>
             <ul className="space-y-3 mb-6 flex-1">
-              <li className="flex items-center gap-2 text-sm text-slate-700">
+              <li className="flex items-center gap-2 text-sm text-ink-700">
                 <CheckCircle className="w-4 h-4 text-primary-500 shrink-0" />
                 تسجيل الدخول مطلوب للبحث
               </li>
-              <li className="flex items-center gap-2 text-sm text-slate-700">
+              <li className="flex items-center gap-2 text-sm text-ink-700">
                 <CheckCircle className="w-4 h-4 text-primary-500 shrink-0" />
                 بحث دلالي ذكي
               </li>
-              <li className="flex items-center gap-2 text-sm text-slate-700">
+              <li className="flex items-center gap-2 text-sm text-ink-700">
                 <CheckCircle className="w-4 h-4 text-primary-500 shrink-0" />
                 فلترة حسب المحكمة والمدينة
               </li>
-              <li className="flex items-center gap-2 text-sm text-slate-600">
+              <li className="flex items-center gap-2 text-sm text-ink-600">
                 <span className="w-4 h-4 shrink-0"></span>
                 بدون دراسة قانونية تحليلية
               </li>
-              <li className="flex items-center gap-2 text-sm text-slate-600">
+              <li className="flex items-center gap-2 text-sm text-ink-600">
                 <span className="w-4 h-4 shrink-0"></span>
                 بدون بحث غير محدود
               </li>
@@ -105,32 +105,32 @@ export default function PricingPage() {
               الأكثر شيوعاً
             </div>
             <div className="text-center mb-6">
-              <h3 className="text-lg font-bold text-slate-900 mb-2">باقة شهرية</h3>
-              <p className="text-sm text-slate-600">50 بحث يومياً</p>
+              <h3 className="text-lg font-bold text-ink-900 mb-2">باقة شهرية</h3>
+              <p className="text-sm text-ink-600">50 بحث يومياً</p>
               <div className="mt-4">
-                <span className="text-4xl font-bold text-slate-900">12</span>
-                <span className="text-slate-600 text-sm mr-1">ريال / شهر</span>
+                <span className="text-4xl font-bold text-ink-900">12</span>
+                <span className="text-ink-600 text-sm mr-1">ريال / شهر</span>
               </div>
-              <p className="text-xs text-slate-500 mt-1">شامل ضريبة القيمة المضافة</p>
+              <p className="text-xs text-ink-500 mt-1">شامل ضريبة القيمة المضافة</p>
             </div>
             <ul className="space-y-3 mb-6 flex-1">
-              <li className="flex items-center gap-2 text-sm text-slate-700">
+              <li className="flex items-center gap-2 text-sm text-ink-700">
                 <CheckCircle className="w-4 h-4 text-primary-500 shrink-0" />
                 50 بحث يومياً
               </li>
-              <li className="flex items-center gap-2 text-sm text-slate-700">
+              <li className="flex items-center gap-2 text-sm text-ink-700">
                 <CheckCircle className="w-4 h-4 text-primary-500 shrink-0" />
                 دراسة قانونية تحليلية لكل بحث
               </li>
-              <li className="flex items-center gap-2 text-sm text-slate-700">
+              <li className="flex items-center gap-2 text-sm text-ink-700">
                 <CheckCircle className="w-4 h-4 text-primary-500 shrink-0" />
                 فلترة متقدمة (محكمة، مدينة، سنة)
               </li>
-              <li className="flex items-center gap-2 text-sm text-slate-700">
+              <li className="flex items-center gap-2 text-sm text-ink-700">
                 <CheckCircle className="w-4 h-4 text-primary-500 shrink-0" />
                 عرض نص الحكم كاملاً
               </li>
-              <li className="flex items-center gap-2 text-sm text-slate-700">
+              <li className="flex items-center gap-2 text-sm text-ink-700">
                 <CheckCircle className="w-4 h-4 text-primary-500 shrink-0" />
                 أحكام ذات صلة لكل قضية
               </li>
@@ -152,32 +152,32 @@ export default function PricingPage() {
               أفضل قيمة
             </div>
             <div className="text-center mb-6">
-              <h3 className="text-lg font-bold text-slate-900 mb-2">باقة سنوية</h3>
-              <p className="text-sm text-slate-600">وفّر 44 ريال سنوياً</p>
+              <h3 className="text-lg font-bold text-ink-900 mb-2">باقة سنوية</h3>
+              <p className="text-sm text-ink-600">وفّر 44 ريال سنوياً</p>
               <div className="mt-4">
                 <span className="text-4xl font-bold text-primary-600">100</span>
-                <span className="text-slate-600 text-sm">ريال / سنة</span>
+                <span className="text-ink-600 text-sm">ريال / سنة</span>
               </div>
-              <p className="text-xs text-slate-500 mt-1">شامل ضريبة القيمة المضافة</p>
+              <p className="text-xs text-ink-500 mt-1">شامل ضريبة القيمة المضافة</p>
             </div>
             <ul className="space-y-3 mb-6 flex-1">
-              <li className="flex items-center gap-2 text-sm text-slate-700">
+              <li className="flex items-center gap-2 text-sm text-ink-700">
                 <CheckCircle className="w-4 h-4 text-primary-500 shrink-0" />
                 جميع مزايا الباقة الشهرية
               </li>
-              <li className="flex items-center gap-2 text-sm text-slate-700">
+              <li className="flex items-center gap-2 text-sm text-ink-700">
                 <CheckCircle className="w-4 h-4 text-primary-500 shrink-0" />
                 50 بحث يومياً طوال السنة
               </li>
-              <li className="flex items-center gap-2 text-sm text-slate-700">
+              <li className="flex items-center gap-2 text-sm text-ink-700">
                 <CheckCircle className="w-4 h-4 text-primary-500 shrink-0" />
                 دراسة قانونية تحليلية شاملة
               </li>
-              <li className="flex items-center gap-2 text-sm text-slate-700">
+              <li className="flex items-center gap-2 text-sm text-ink-700">
                 <CheckCircle className="w-4 h-4 text-primary-500 shrink-0" />
                 أولوية في الميزات الجديدة
               </li>
-              <li className="flex items-center gap-2 text-sm text-slate-700">
+              <li className="flex items-center gap-2 text-sm text-ink-700">
                 <CheckCircle className="w-4 h-4 text-primary-500 shrink-0" />
                 دعم فني مخصص
               </li>
@@ -194,16 +194,16 @@ export default function PricingPage() {
         </div>
 
         {/* Why AlBaheth Section */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 md:p-8 mb-8">
-          <h2 className="text-2xl font-bold text-slate-900 mb-6 text-center">لماذا الباحث؟</h2>
+        <div className="bg-white rounded-2xl border border-ink-100 p-6 md:p-8 mb-8">
+          <h2 className="text-2xl font-bold text-ink-900 mb-6 text-center">لماذا الباحث؟</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 bg-primary-50 text-primary-600 rounded-xl flex items-center justify-center shrink-0">
                 <Sparkles className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="font-bold text-slate-900 mb-1">بحث دلالي ذكي</h3>
-                <p className="text-sm text-slate-600">ابحث بالمعنى لا بالكلمة المفتاحية فقط. المحرك يفهم السياق القانوني ويجد الأحكام ذات الصلة.</p>
+                <h3 className="font-bold text-ink-900 mb-1">بحث دلالي ذكي</h3>
+                <p className="text-sm text-ink-600">ابحث بالمعنى لا بالكلمة المفتاحية فقط. المحرك يفهم السياق القانوني ويجد الأحكام ذات الصلة.</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
@@ -211,8 +211,8 @@ export default function PricingPage() {
                 <Crown className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="font-bold text-slate-900 mb-1">دراسة قانونية تحليلية</h3>
-                <p className="text-sm text-slate-600">احصل على دراسة قانونية شاملة لكل بحث، تستخلص المبادئ القانونية وتحلل الأحكام المرتبطة.</p>
+                <h3 className="font-bold text-ink-900 mb-1">دراسة قانونية تحليلية</h3>
+                <p className="text-sm text-ink-600">احصل على دراسة قانونية شاملة لكل بحث، تستخلص المبادئ القانونية وتحلل الأحكام المرتبطة.</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
@@ -220,8 +220,8 @@ export default function PricingPage() {
                 <CheckCircle className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="font-bold text-slate-900 mb-1">أحكام موثوقة</h3>
-                <p className="text-sm text-slate-600">جميع الأحكام من المصدر الرسمي لوزارة العدل السعودية. محاكم الدرجة الأولى والاستئناف.</p>
+                <h3 className="font-bold text-ink-900 mb-1">أحكام موثوقة</h3>
+                <p className="text-sm text-ink-600">جميع الأحكام من المصدر الرسمي لوزارة العدل السعودية. محاكم الدرجة الأولى والاستئناف.</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
@@ -229,8 +229,8 @@ export default function PricingPage() {
                 <Users className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="font-bold text-slate-900 mb-1">للمحامين والباحثين</h3>
-                <p className="text-sm text-slate-600">منصة مصممة خصيصاً للمحامين والمستشارين والباحثين القانونيين في المملكة العربية السعودية.</p>
+                <h3 className="font-bold text-ink-900 mb-1">للمحامين والباحثين</h3>
+                <p className="text-sm text-ink-600">منصة مصممة خصيصاً للمحامين والمستشارين والباحثين القانونيين في المملكة العربية السعودية.</p>
               </div>
             </div>
           </div>
@@ -244,7 +244,7 @@ export default function PricingPage() {
           >
             ابدأ البحث الآن
           </a>
-          <p className="text-sm text-slate-600 mt-3">سجل دخولك للبدء — التسجيل مجاني</p>
+          <p className="text-sm text-ink-600 mt-3">سجل دخولك للبدء — التسجيل مجاني</p>
         </div>
       </main>
 

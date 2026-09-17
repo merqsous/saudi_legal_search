@@ -119,16 +119,16 @@ export default function StudiesPage() {
         }
         return <span key={j}>{part}</span>;
       });
-      return <p key={i} className="text-sm text-slate-700 leading-relaxed mb-2" dir="rtl">{rendered}</p>;
+      return <p key={i} className="text-sm text-ink-700 leading-relaxed mb-2" dir="rtl">{rendered}</p>;
     });
   };
 
   if (!authToken) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center" dir="rtl">
+      <div className="min-h-screen app-bg flex items-center justify-center" dir="rtl">
         <div className="text-center">
-          <FileText className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-          <p className="text-slate-600 mb-4">يجب تسجيل الدخول لعرض الدراسات القانونية</p>
+          <FileText className="w-12 h-12 text-ink-300 mx-auto mb-4" />
+          <p className="text-ink-600 mb-4">يجب تسجيل الدخول لعرض الدراسات القانونية</p>
           <button onClick={() => router.push('/')} className="px-6 py-3 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700">
             تسجيل الدخول
           </button>
@@ -138,7 +138,7 @@ export default function StudiesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100" dir="rtl">
+    <div className="min-h-screen app-bg" dir="rtl">
       <Header />
 
       <main className="max-w-5xl mx-auto px-4 py-8">
@@ -170,21 +170,21 @@ export default function StudiesPage() {
               </div>
             </div>
 
-            <div className="bg-white border border-slate-200 rounded-xl p-6">
+            <div className="bg-white border border-ink-100 rounded-xl p-6">
               <h1 className="text-2xl font-bold text-primary-900 mb-2">{selectedStudy.query}</h1>
-              <p className="text-xs text-slate-500 mb-6">{formatDate(selectedStudy.created_at)}</p>
+              <p className="text-xs text-ink-500 mb-6">{formatDate(selectedStudy.created_at)}</p>
 
               <div className="prose prose-sm max-w-none" dir="rtl">
                 {formatStudyContent(selectedStudy.content)}
               </div>
 
               {selectedStudy.citations && selectedStudy.citations.length > 0 && (
-                <div className="mt-8 pt-6 border-t border-slate-200">
+                <div className="mt-8 pt-6 border-t border-ink-100">
                   <h2 className="font-bold text-primary-900 text-lg mb-4">الأحكام المرجعية</h2>
                   <div className="space-y-2">
                     {selectedStudy.citations.map((cite, i) => (
-                      <div key={i} className="text-sm text-slate-600 bg-slate-50 border border-slate-200 rounded-lg p-3">
-                        <span className="font-medium text-slate-700">{i + 1}.</span>{' '}
+                      <div key={i} className="text-sm text-ink-600 bg-ink-50 border border-ink-100 rounded-lg p-3">
+                        <span className="font-medium text-ink-700">{i + 1}.</span>{' '}
                         رقم الحكم: {cite.judgment_number || 'غير محدد'} —
                         المحكمة: {cite.court_type || ''} {cite.court_level || ''} —
                         المدينة: {cite.city || ''}
@@ -195,7 +195,7 @@ export default function StudiesPage() {
                 </div>
               )}
 
-              <div className="mt-8 pt-6 border-t border-slate-200">
+              <div className="mt-8 pt-6 border-t border-ink-100">
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
                   <h3 className="font-bold text-amber-800 text-sm mb-1">إخلاء مسؤولية</h3>
                   <p className="text-xs text-amber-700 leading-relaxed">
@@ -212,8 +212,8 @@ export default function StudiesPage() {
           <>
             <div className="flex items-center gap-2 mb-6">
               <FileText className="w-6 h-6 text-primary-600" />
-              <h2 className="text-2xl font-bold text-slate-900">الدراسات القانونية</h2>
-              <span className="text-sm text-slate-600 mr-2">({studies.length})</span>
+              <h2 className="text-2xl font-bold text-ink-900">الدراسات القانونية</h2>
+              <span className="text-sm text-ink-600 mr-2">({studies.length})</span>
             </div>
 
             {studyLoading ? (
@@ -226,8 +226,8 @@ export default function StudiesPage() {
               </div>
             ) : studies.length === 0 ? (
               <div className="text-center py-20">
-                <FileText className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                <p className="text-slate-600 text-lg">لا توجد دراسات قانونية محفوظة</p>
+                <FileText className="w-12 h-12 text-ink-300 mx-auto mb-4" />
+                <p className="text-ink-600 text-lg">لا توجد دراسات قانونية محفوظة</p>
                 <button
                   onClick={() => router.push('/search')}
                   className="mt-4 px-6 py-3 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700"
@@ -240,23 +240,23 @@ export default function StudiesPage() {
                 {studies.map((study) => (
                   <div
                     key={study.id}
-                    className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-shadow cursor-pointer"
+                    className="bg-white border border-ink-100 rounded-xl p-4 hover:shadow-md transition-shadow cursor-pointer"
                     onClick={() => openStudy(study.id)}
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-medium text-slate-900 mb-1">{study.query}</h3>
-                        <p className="text-xs text-slate-500">{formatDate(study.created_at)}</p>
+                        <h3 className="font-medium text-ink-900 mb-1">{study.query}</h3>
+                        <p className="text-xs text-ink-500">{formatDate(study.created_at)}</p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <button
                           onClick={(e) => { e.stopPropagation(); deleteStudy(study.id); }}
-                          className="p-1.5 text-slate-300 hover:text-red-500 transition-colors"
+                          className="p-1.5 text-ink-300 hover:text-red-500 transition-colors"
                           title="حذف"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
-                        <ChevronLeft className="w-5 h-5 text-slate-300" />
+                        <ChevronLeft className="w-5 h-5 text-ink-300" />
                       </div>
                     </div>
                   </div>

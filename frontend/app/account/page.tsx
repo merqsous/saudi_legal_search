@@ -124,7 +124,7 @@ export default function AccountPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100">
+      <div className="min-h-screen flex items-center justify-center app-bg">
         <Loader2 className="w-8 h-8 text-primary-600 animate-spin" />
       </div>
     );
@@ -135,14 +135,14 @@ export default function AccountPage() {
   const isAdmin = user.phone === '966514789632';
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100" dir="rtl">
+    <div className="min-h-screen app-bg" dir="rtl">
       <Header />
 
       <main className="max-w-4xl mx-auto px-4 py-8 space-y-6">
         {/* Profile Section */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-6">
+        <div className="bg-white rounded-2xl border border-ink-100 p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+            <h2 className="text-xl font-bold text-ink-900 flex items-center gap-2">
               <User className="w-5 h-5 text-primary-600" />
               الملف الشخصي
             </h2>
@@ -171,7 +171,7 @@ export default function AccountPage() {
                 </button>
                 <button
                   onClick={() => { setEditing(false); setProfileMsg(null); }}
-                  className="text-sm text-slate-500 px-3 py-1.5 rounded-lg hover:bg-slate-100"
+                  className="text-sm text-ink-500 px-3 py-1.5 rounded-lg hover:bg-ink-100"
                 >
                   إلغاء
                 </button>
@@ -185,44 +185,44 @@ export default function AccountPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="text-sm text-slate-500 mb-1 block">الاسم الأول</label>
+              <label className="text-sm text-ink-500 mb-1 block">الاسم الأول</label>
               {editing ? (
                 <input
                   type="text"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-4 py-2.5 bg-ink-50 border border-ink-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
               ) : (
-                <p className="px-4 py-2.5 bg-slate-50 rounded-xl text-slate-900">{user.first_name || '-'}</p>
+                <p className="px-4 py-2.5 bg-ink-50 rounded-xl text-ink-900">{user.first_name || '-'}</p>
               )}
             </div>
             <div>
-              <label className="text-sm text-slate-500 mb-1 block">الاسم الأخير</label>
+              <label className="text-sm text-ink-500 mb-1 block">الاسم الأخير</label>
               {editing ? (
                 <input
                   type="text"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-4 py-2.5 bg-ink-50 border border-ink-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
               ) : (
-                <p className="px-4 py-2.5 bg-slate-50 rounded-xl text-slate-900">{user.last_name || '-'}</p>
+                <p className="px-4 py-2.5 bg-ink-50 rounded-xl text-ink-900">{user.last_name || '-'}</p>
               )}
             </div>
             <div className="md:col-span-2">
-              <label className="text-sm text-slate-500 mb-1 block">رقم الهاتف</label>
-              <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 rounded-xl">
-                <Phone className="w-4 h-4 text-slate-400" />
-                <span className="text-slate-900" dir="ltr">{formatPhone(user.phone)}</span>
+              <label className="text-sm text-ink-500 mb-1 block">رقم الهاتف</label>
+              <div className="flex items-center gap-2 px-4 py-2.5 bg-ink-50 rounded-xl">
+                <Phone className="w-4 h-4 text-ink-400" />
+                <span className="text-ink-900" dir="ltr">{formatPhone(user.phone)}</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* Subscription Section */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-6">
-          <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2 mb-6">
+        <div className="bg-white rounded-2xl border border-ink-100 p-6">
+          <h2 className="text-xl font-bold text-ink-900 flex items-center gap-2 mb-6">
             <Crown className="w-5 h-5 text-primary-600" />
             الاشتراك
           </h2>
@@ -268,14 +268,14 @@ export default function AccountPage() {
         </div>
 
         {/* Payment History Section */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-6">
-          <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2 mb-6">
+        <div className="bg-white rounded-2xl border border-ink-100 p-6">
+          <h2 className="text-xl font-bold text-ink-900 flex items-center gap-2 mb-6">
             <CreditCard className="w-5 h-5 text-primary-600" />
             سجل المدفوعات
           </h2>
 
           {payments.length === 0 ? (
-            <p className="text-center text-slate-500 py-8">لا توجد مدفوعات بعد</p>
+            <p className="text-center text-ink-500 py-8">لا توجد مدفوعات بعد</p>
           ) : (
             <div className="space-y-3">
               {payments.map((payment) => {
@@ -294,49 +294,49 @@ export default function AccountPage() {
                   paid: 'text-green-600',
                   initiated: 'text-amber-600',
                   failed: 'text-red-500',
-                  refunded: 'text-slate-400',
+                  refunded: 'text-ink-400',
                   authorized: 'text-blue-600',
                   captured: 'text-green-600',
-                  voided: 'text-slate-400',
+                  voided: 'text-ink-400',
                   verified: 'text-green-600',
                 };
                 const iconColor: Record<string, string> = {
                   paid: 'text-green-600',
                   initiated: 'text-amber-600',
                   failed: 'text-red-500',
-                  refunded: 'text-slate-400',
+                  refunded: 'text-ink-400',
                   authorized: 'text-blue-600',
                   captured: 'text-green-600',
-                  voided: 'text-slate-400',
+                  voided: 'text-ink-400',
                   verified: 'text-green-600',
                 };
                 return (
                 <div
                   key={payment.id}
-                  className="flex items-center justify-between border border-slate-200 rounded-xl p-4"
+                  className="flex items-center justify-between border border-ink-100 rounded-xl p-4"
                 >
                   <div className="flex items-center gap-3">
                     {payment.status === 'paid' || payment.status === 'captured' || payment.status === 'verified' ? (
-                      <CheckCircle className={`w-5 h-5 ${iconColor[payment.status] || 'text-slate-400'}`} />
+                      <CheckCircle className={`w-5 h-5 ${iconColor[payment.status] || 'text-ink-400'}`} />
                     ) : (
-                      <XCircle className={`w-5 h-5 ${iconColor[payment.status] || 'text-slate-400'}`} />
+                      <XCircle className={`w-5 h-5 ${iconColor[payment.status] || 'text-ink-400'}`} />
                     )}
                     <div>
-                      <p className="font-medium text-slate-900">
+                      <p className="font-medium text-ink-900">
                         {plan === 'annual' ? 'باقة سنوية' : 'باقة شهرية'}
                       </p>
-                      <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+                      <p className="text-xs text-ink-500 flex items-center gap-1 mt-0.5">
                         <Clock className="w-3 h-3" />
                         {formatDate(payment.created_at)}
                       </p>
                       {payment.source?.number && (
-                        <p className="text-xs text-slate-400 mt-0.5" dir="ltr">{payment.source.number}</p>
+                        <p className="text-xs text-ink-400 mt-0.5" dir="ltr">{payment.source.number}</p>
                       )}
                     </div>
                   </div>
                   <div className="text-left">
-                    <p className="font-bold text-slate-900">{payment.amount_format || formatAmount(payment.amount)}</p>
-                    <p className={`text-xs mt-0.5 ${statusColor[payment.status] || 'text-slate-400'}`}>
+                    <p className="font-bold text-ink-900">{payment.amount_format || formatAmount(payment.amount)}</p>
+                    <p className={`text-xs mt-0.5 ${statusColor[payment.status] || 'text-ink-400'}`}>
                       {statusLabel[payment.status] || payment.status}
                     </p>
                   </div>
@@ -351,7 +351,7 @@ export default function AccountPage() {
         <div className="grid grid-cols-2 gap-4">
           <a
             href="/favorites"
-            className="bg-white rounded-2xl border border-slate-200 p-4 flex items-center gap-3 hover:border-primary-300 transition-colors"
+            className="bg-white rounded-2xl border border-ink-100 p-4 flex items-center gap-3 hover:border-primary-300 transition-colors"
           >
             <div className="w-10 h-10 bg-primary-50 rounded-xl flex items-center justify-center">
               <svg className="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -359,13 +359,13 @@ export default function AccountPage() {
               </svg>
             </div>
             <div>
-              <p className="font-bold text-slate-900">المفضلة</p>
-              <p className="text-xs text-slate-500">الأحكام المحفوظة</p>
+              <p className="font-bold text-ink-900">المفضلة</p>
+              <p className="text-xs text-ink-500">الأحكام المحفوظة</p>
             </div>
           </a>
           <a
             href="/studies"
-            className="bg-white rounded-2xl border border-slate-200 p-4 flex items-center gap-3 hover:border-primary-300 transition-colors"
+            className="bg-white rounded-2xl border border-ink-100 p-4 flex items-center gap-3 hover:border-primary-300 transition-colors"
           >
             <div className="w-10 h-10 bg-primary-50 rounded-xl flex items-center justify-center">
               <svg className="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -373,13 +373,13 @@ export default function AccountPage() {
               </svg>
             </div>
             <div>
-              <p className="font-bold text-slate-900">الدراسات</p>
-              <p className="text-xs text-slate-500">الدراسات القانونية</p>
+              <p className="font-bold text-ink-900">الدراسات</p>
+              <p className="text-xs text-ink-500">الدراسات القانونية</p>
             </div>
           </a>
           <a
             href="/support"
-            className="bg-white rounded-2xl border border-slate-200 p-4 flex items-center gap-3 hover:border-primary-300 transition-colors"
+            className="bg-white rounded-2xl border border-ink-100 p-4 flex items-center gap-3 hover:border-primary-300 transition-colors"
           >
             <div className="w-10 h-10 bg-primary-50 rounded-xl flex items-center justify-center">
               <svg className="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -387,8 +387,8 @@ export default function AccountPage() {
               </svg>
             </div>
             <div>
-              <p className="font-bold text-slate-900">الدعم الفني</p>
-              <p className="text-xs text-slate-500">تواصل معنا</p>
+              <p className="font-bold text-ink-900">الدعم الفني</p>
+              <p className="text-xs text-ink-500">تواصل معنا</p>
             </div>
           </a>
         </div>

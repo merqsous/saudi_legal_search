@@ -232,7 +232,7 @@ export default function CaseDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center" dir="rtl">
+      <div className="min-h-screen app-bg flex items-center justify-center" dir="rtl">
         <Loader2 className="w-8 h-8 text-primary-600 animate-spin" />
       </div>
     );
@@ -240,10 +240,10 @@ export default function CaseDetailPage() {
 
   if (notFound || !caseData) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center" dir="rtl">
+      <div className="min-h-screen app-bg flex items-center justify-center" dir="rtl">
         <div className="text-center">
-          <Briefcase className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-          <p className="text-slate-600 mb-4">القضية غير موجودة</p>
+          <Briefcase className="w-12 h-12 text-ink-300 mx-auto mb-4" />
+          <p className="text-ink-600 mb-4">القضية غير موجودة</p>
           <button onClick={() => router.push('/cases')} className="px-6 py-3 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700">
             العودة للقضايا
           </button>
@@ -253,7 +253,7 @@ export default function CaseDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100" dir="rtl">
+    <div className="min-h-screen app-bg" dir="rtl">
       <Header />
 
       <main className="max-w-5xl mx-auto px-4 py-8">
@@ -264,7 +264,7 @@ export default function CaseDetailPage() {
             كل القضايا
           </button>
           <div className="flex items-center gap-2">
-            <button onClick={() => setShowEdit(true)} className="px-3 py-1.5 text-sm text-slate-600 hover:text-primary-600 border border-slate-200 rounded-lg hover:border-primary-300 transition-colors">
+            <button onClick={() => setShowEdit(true)} className="px-3 py-1.5 text-sm text-ink-600 hover:text-primary-600 border border-ink-100 rounded-lg hover:border-primary-300 transition-colors">
               تعديل
             </button>
             <button onClick={deleteCase} className="px-3 py-1.5 text-sm text-red-600 hover:text-red-700 border border-red-200 rounded-lg hover:bg-red-50 transition-colors flex items-center gap-1">
@@ -275,12 +275,12 @@ export default function CaseDetailPage() {
         </div>
 
         {/* Case header */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-6">
+        <div className="bg-white rounded-xl border border-ink-100 shadow-card p-6 mb-6">
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap mb-3">
-                <h1 className="text-2xl font-bold text-slate-900">{caseData.title}</h1>
-                <span className={`text-xs px-2.5 py-1 rounded-lg font-medium ${caseData.status === 'active' ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+                <h1 className="text-2xl font-bold text-ink-900">{caseData.title}</h1>
+                <span className={`text-xs px-2.5 py-1 rounded-lg font-medium ${caseData.status === 'active' ? 'bg-green-50 text-green-700' : 'bg-ink-100 text-ink-500'}`}>
                   {statusLabel[caseData.status] || caseData.status}
                 </span>
                 {caseData.client_role && (
@@ -290,19 +290,19 @@ export default function CaseDetailPage() {
                 )}
               </div>
               {(caseData.plaintiff || caseData.defendant) && (
-                <div className="flex items-center gap-2 flex-wrap text-sm text-slate-500 mb-2">
+                <div className="flex items-center gap-2 flex-wrap text-sm text-ink-500 mb-2">
                   <span className="flex items-center gap-1.5">
                     <User className="w-4 h-4" />
-                    <span className={caseData.client_role === 'plaintiff' ? 'font-bold text-primary-700' : 'font-medium text-slate-600'}>المدعي: {caseData.plaintiff || '—'}</span>
+                    <span className={caseData.client_role === 'plaintiff' ? 'font-bold text-primary-700' : 'font-medium text-ink-600'}>المدعي: {caseData.plaintiff || '—'}</span>
                   </span>
-                  <span className="text-slate-400">ضد</span>
+                  <span className="text-ink-400">ضد</span>
                   <span className="flex items-center gap-1.5">
                     <Scale className="w-4 h-4" />
-                    <span className={caseData.client_role === 'defendant' ? 'font-bold text-primary-700' : 'font-medium text-slate-600'}>المدعي عليه: {caseData.defendant || '—'}</span>
+                    <span className={caseData.client_role === 'defendant' ? 'font-bold text-primary-700' : 'font-medium text-ink-600'}>المدعي عليه: {caseData.defendant || '—'}</span>
                   </span>
                 </div>
               )}
-              <div className="flex items-center gap-4 flex-wrap text-sm text-slate-500">
+              <div className="flex items-center gap-4 flex-wrap text-sm text-ink-500">
                 {caseData.case_number && (
                   <span className="flex items-center gap-1.5"><FileText className="w-4 h-4" />{caseData.case_number}{caseData.case_year ? `/${caseData.case_year}` : ''}</span>
                 )}
@@ -314,19 +314,19 @@ export default function CaseDetailPage() {
                 )}
               </div>
               {caseData.notes && (
-                <p className="mt-4 text-sm text-slate-600 bg-slate-50 border border-slate-200 rounded-xl p-4 leading-relaxed whitespace-pre-wrap">
+                <p className="mt-4 text-sm text-ink-600 bg-ink-50 border border-ink-100 rounded-xl p-4 leading-relaxed whitespace-pre-wrap">
                   {caseData.notes}
                 </p>
               )}
             </div>
             {/* Quick status change */}
-            <div className="flex gap-1 bg-slate-50 rounded-lg border border-slate-200 p-1">
+            <div className="flex gap-1 bg-ink-50 rounded-lg border border-ink-100 p-1">
               {['active', 'closed'].map((s) => (
                 <button
                   key={s}
                   onClick={() => changeStatus(s)}
                   className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                    caseData.status === s ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'
+                    caseData.status === s ? 'bg-white shadow-sm text-ink-900' : 'text-ink-500 hover:text-ink-700'
                   }`}
                 >
                   {statusLabel[s]}
@@ -341,11 +341,11 @@ export default function CaseDetailPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Hearings */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-6">
+          <div className="bg-white rounded-xl border border-ink-100 shadow-card p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <CalendarDays className="w-5 h-5 text-primary-600" />
-                <h2 className="text-lg font-bold text-slate-900">الجلسات</h2>
+                <h2 className="text-lg font-bold text-ink-900">الجلسات</h2>
               </div>
               <button
                 onClick={() => setShowAddHearing(true)}
@@ -357,7 +357,7 @@ export default function CaseDetailPage() {
             </div>
 
             {hearings.length === 0 ? (
-              <p className="text-sm text-slate-400 text-center py-8">لا توجد جلسات مسجلة</p>
+              <p className="text-sm text-ink-400 text-center py-8">لا توجد جلسات مسجلة</p>
             ) : (
               <div className="space-y-3">
                 {hearings.map((h) => {
@@ -369,30 +369,30 @@ export default function CaseDetailPage() {
                       className={`border rounded-xl p-4 ${
                         isUpcoming && days <= 3 ? 'border-red-200 bg-red-50' :
                         isUpcoming && days <= 7 ? 'border-amber-200 bg-amber-50' :
-                        'border-slate-200 bg-slate-50'
+                        'border-ink-100 bg-ink-50'
                       }`}
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 flex-wrap mb-1.5">
-                            <span className="font-bold text-slate-900 text-sm">{formatDate(h.hearing_date)}</span>
+                            <span className="font-bold text-ink-900 text-sm">{formatDate(h.hearing_date)}</span>
                             {h.hijri_date && <span className="text-xs text-primary-600 font-medium">{h.hijri_date}</span>}
                             {h.hearing_time && (
-                              <span className="text-xs text-slate-500 flex items-center gap-1">
+                              <span className="text-xs text-ink-500 flex items-center gap-1">
                                 <Clock className="w-3 h-3" />
                                 {h.hearing_time}
                               </span>
                             )}
                             <span className={`text-xs px-2 py-0.5 rounded-md font-medium ${
                               h.status === 'upcoming' ? 'bg-blue-50 text-blue-700' :
-                              h.status === 'done' ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-500'
+                              h.status === 'done' ? 'bg-green-50 text-green-700' : 'bg-ink-100 text-ink-500'
                             }`}>
                               {hearingStatusLabel[h.status] || h.status}
                             </span>
                           </div>
-                          {h.agenda && <p className="text-sm text-slate-600">{h.agenda}</p>}
+                          {h.agenda && <p className="text-sm text-ink-600">{h.agenda}</p>}
                           {isUpcoming && (
-                            <p className="text-xs mt-1.5 font-medium text-slate-500">
+                            <p className="text-xs mt-1.5 font-medium text-ink-500">
                               {days === 0 ? 'اليوم' : days === 1 ? 'غداً' : `بعد ${days} يوم`}
                             </p>
                           )}
@@ -433,16 +433,16 @@ export default function CaseDetailPage() {
           </div>
 
           {/* Linked judgments */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-6">
+          <div className="bg-white rounded-xl border border-ink-100 shadow-card p-6">
             <div className="flex items-center gap-2 mb-4">
               <FileText className="w-5 h-5 text-primary-600" />
-              <h2 className="text-lg font-bold text-slate-900">الأحكام المرتبطة</h2>
-              <span className="text-xs text-slate-400">({judgments.length})</span>
+              <h2 className="text-lg font-bold text-ink-900">الأحكام المرتبطة</h2>
+              <span className="text-xs text-ink-400">({judgments.length})</span>
             </div>
 
             {judgments.length === 0 ? (
               <div className="text-center py-8">
-                <p className="text-sm text-slate-400 mb-3">لا توجد أحكام مرتبطة بعد</p>
+                <p className="text-sm text-ink-400 mb-3">لا توجد أحكام مرتبطة بعد</p>
                 <button
                   onClick={() => router.push('/search')}
                   className="text-sm text-primary-600 hover:text-primary-700 font-medium"
@@ -453,15 +453,15 @@ export default function CaseDetailPage() {
             ) : (
               <div className="space-y-3">
                 {judgments.map((j) => (
-                  <div key={j.judgment_id} className="border border-slate-200 bg-slate-50 rounded-xl p-4">
+                  <div key={j.judgment_id} className="border border-ink-100 bg-ink-50 rounded-xl p-4">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap mb-1.5">
-                          <span className="font-bold text-slate-900 text-sm">حكم رقم {j.judgment_number || j.judgment_id}</span>
+                          <span className="font-bold text-ink-900 text-sm">حكم رقم {j.judgment_number || j.judgment_id}</span>
                           {j.court_level && <span className="text-xs text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md">{j.court_level}</span>}
                           {j.court_type && <span className="text-xs text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md">{j.court_type}</span>}
                         </div>
-                        <div className="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
+                        <div className="flex items-center gap-3 text-xs text-ink-500 flex-wrap">
                           {j.city && <span>{j.city}</span>}
                           {j.judgment_year && <span>{j.judgment_year}</span>}
                           {j.judgment_date_hijri && <span>{j.judgment_date_hijri}</span>}
@@ -510,10 +510,10 @@ export default function CaseDetailPage() {
       {/* Add hearing modal */}
       {showAddHearing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" dir="rtl">
-          <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-6">
+          <div className="w-full max-w-md bg-white rounded-2xl border border-ink-100 shadow-card-hover p-6">
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-bold text-slate-900">جلسة جديدة</h2>
-              <button onClick={() => setShowAddHearing(false)} className="text-slate-400 hover:text-slate-600">
+              <h2 className="text-lg font-bold text-ink-900">جلسة جديدة</h2>
+              <button onClick={() => setShowAddHearing(false)} className="text-ink-400 hover:text-ink-600">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -521,42 +521,42 @@ export default function CaseDetailPage() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">التاريخ *</label>
+                  <label className="block text-sm font-medium text-ink-700 mb-1.5">التاريخ *</label>
                   <input
                     type="date"
                     value={hearingDate}
                     onChange={(e) => setHearingDate(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-4 py-2.5 bg-ink-50 border border-ink-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">الوقت</label>
+                  <label className="block text-sm font-medium text-ink-700 mb-1.5">الوقت</label>
                   <input
                     type="time"
                     value={hearingTime}
                     onChange={(e) => setHearingTime(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-4 py-2.5 bg-ink-50 border border-ink-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">التاريخ الهجري (اختياري)</label>
+                <label className="block text-sm font-medium text-ink-700 mb-1.5">التاريخ الهجري (اختياري)</label>
                 <input
                   type="text"
                   value={hijriDate}
                   onChange={(e) => setHijriDate(e.target.value)}
                   placeholder="مثال: 15/3/1447"
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-4 py-2.5 bg-ink-50 border border-ink-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">موضوع الجلسة</label>
+                <label className="block text-sm font-medium text-ink-700 mb-1.5">موضوع الجلسة</label>
                 <textarea
                   value={agenda}
                   onChange={(e) => setAgenda(e.target.value)}
                   rows={3}
                   placeholder="مثال: مواصلة نظر الدعوى وسماع الشهود"
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-4 py-2.5 bg-ink-50 border border-ink-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
               </div>
             </div>
@@ -576,45 +576,45 @@ export default function CaseDetailPage() {
       {/* Edit case modal */}
       {showEdit && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" dir="rtl">
-          <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-6">
+          <div className="w-full max-w-md bg-white rounded-2xl border border-ink-100 shadow-card-hover p-6">
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-bold text-slate-900">تعديل القضية</h2>
-              <button onClick={() => setShowEdit(false)} className="text-slate-400 hover:text-slate-600">
+              <h2 className="text-lg font-bold text-ink-900">تعديل القضية</h2>
+              <button onClick={() => setShowEdit(false)} className="text-ink-400 hover:text-ink-600">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">عنوان القضية</label>
+                <label className="block text-sm font-medium text-ink-700 mb-1.5">عنوان القضية</label>
                 <input
                   type="text"
                   value={editTitle}
                   onChange={(e) => setEditTitle(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-4 py-2.5 bg-ink-50 border border-ink-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">المدعي</label>
+                <label className="block text-sm font-medium text-ink-700 mb-1.5">المدعي</label>
                 <input
                   type="text"
                   value={editPlaintiff}
                   onChange={(e) => setEditPlaintiff(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-4 py-2.5 bg-ink-50 border border-ink-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">المدعي عليه</label>
+                <label className="block text-sm font-medium text-ink-700 mb-1.5">المدعي عليه</label>
                 <input
                   type="text"
                   value={editDefendant}
                   onChange={(e) => setEditDefendant(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-4 py-2.5 bg-ink-50 border border-ink-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">موكلكم هو</label>
-                <div className="flex gap-1 bg-slate-50 border border-slate-200 rounded-xl p-1">
+                <label className="block text-sm font-medium text-ink-700 mb-1.5">موكلكم هو</label>
+                <div className="flex gap-1 bg-ink-50 border border-ink-100 rounded-xl p-1">
                   {[
                     { key: 'plaintiff', label: 'المدعي' },
                     { key: 'defendant', label: 'المدعي عليه' },
@@ -624,7 +624,7 @@ export default function CaseDetailPage() {
                       type="button"
                       onClick={() => setEditClientRole(r.key)}
                       className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        editClientRole === r.key ? 'bg-primary-600 text-white' : 'text-slate-600 hover:bg-slate-100'
+                        editClientRole === r.key ? 'bg-primary-600 text-white' : 'text-ink-600 hover:bg-ink-100'
                       }`}
                     >
                       {r.label}
@@ -633,12 +633,12 @@ export default function CaseDetailPage() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">ملاحظات</label>
+                <label className="block text-sm font-medium text-ink-700 mb-1.5">ملاحظات</label>
                 <textarea
                   value={editNotes}
                   onChange={(e) => setEditNotes(e.target.value)}
                   rows={4}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-4 py-2.5 bg-ink-50 border border-ink-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
               </div>
             </div>

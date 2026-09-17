@@ -322,65 +322,65 @@ export default function PaymentButtons({ plan, amount, label, discountedLabel, v
     <div className="space-y-4">
       {/* Payment method selector */}
       <div className="space-y-2">
-        <p className="text-xs text-slate-500 font-medium">طريقة الدفع</p>
+        <p className="text-xs text-ink-500 font-medium">طريقة الدفع</p>
         <div className="grid grid-cols-3 gap-2">
           <button
             onClick={() => { setPaymentMethod('creditcard'); setShowForm(false); setError(null); }}
             className={`flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl border-2 transition-all ${
-              paymentMethod === 'creditcard' ? 'border-primary-600 bg-primary-50' : 'border-slate-200 hover:border-slate-300'
+              paymentMethod === 'creditcard' ? 'border-primary-600 bg-primary-50' : 'border-ink-100 hover:border-ink-200'
             }`}
           >
-            <CreditCard className="w-5 h-5 text-slate-600" />
-            <span className="text-xs font-medium text-slate-600">بطاقة</span>
+            <CreditCard className="w-5 h-5 text-ink-600" />
+            <span className="text-xs font-medium text-ink-600">بطاقة</span>
           </button>
           <button
             onClick={() => { setPaymentMethod('applepay'); setShowForm(false); setError(null); }}
             className={`flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl border-2 transition-all ${
-              paymentMethod === 'applepay' ? 'border-primary-600 bg-primary-50' : 'border-slate-200 hover:border-slate-300'
+              paymentMethod === 'applepay' ? 'border-primary-600 bg-primary-50' : 'border-ink-100 hover:border-ink-200'
             }`}
           >
             <img src="/apple-pay-icon.svg" alt="Apple Pay" className="w-6 h-6" width={24} height={24} />
-            <span className="text-xs font-medium text-slate-600">Apple Pay</span>
+            <span className="text-xs font-medium text-ink-600">Apple Pay</span>
           </button>
           <button
             onClick={() => { setPaymentMethod('samsungpay'); setShowForm(false); setError(null); }}
             className={`flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl border-2 transition-all ${
-              paymentMethod === 'samsungpay' ? 'border-primary-600 bg-primary-50' : 'border-slate-200 hover:border-slate-300'
+              paymentMethod === 'samsungpay' ? 'border-primary-600 bg-primary-50' : 'border-ink-100 hover:border-ink-200'
             }`}
           >
             <img src="/samsung-pay-icon.svg" alt="Samsung Pay" className="w-6 h-6" width={24} height={24} />
-            <span className="text-xs font-medium text-slate-600">Samsung Pay</span>
+            <span className="text-xs font-medium text-ink-600">Samsung Pay</span>
           </button>
         </div>
       </div>
 
       {/* Card input form */}
       {showForm && paymentMethod === 'creditcard' && (
-        <div className="space-y-3 bg-slate-50 rounded-xl p-4 border border-slate-200">
+        <div className="space-y-3 bg-ink-50 rounded-xl p-4 border border-ink-100">
           <div>
-            <label className="text-xs text-slate-500 mb-1 block">الاسم على البطاقة</label>
+            <label className="text-xs text-ink-500 mb-1 block">الاسم على البطاقة</label>
             <div className="relative">
-              <User className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <User className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-400" />
               <input
                 type="text"
                 value={cardName}
                 onChange={(e) => setCardName(e.target.value)}
                 placeholder="John Doe"
-                className="w-full pr-10 pl-4 py-2.5 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                className="w-full pr-10 pl-4 py-2.5 bg-white border border-ink-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
                 dir="ltr"
               />
             </div>
           </div>
           <div>
-            <label className="text-xs text-slate-500 mb-1 block">رقم البطاقة</label>
+            <label className="text-xs text-ink-500 mb-1 block">رقم البطاقة</label>
             <div className="relative">
-              <CreditCard className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <CreditCard className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-400" />
               <input
                 type="text"
                 value={cardNumber}
                 onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
                 placeholder="4111 1111 1111 1111"
-                className="w-full pr-10 pl-4 py-2.5 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                className="w-full pr-10 pl-4 py-2.5 bg-white border border-ink-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
                 dir="ltr"
                 inputMode="numeric"
               />
@@ -388,37 +388,37 @@ export default function PaymentButtons({ plan, amount, label, discountedLabel, v
           </div>
           <div className="grid grid-cols-3 gap-2">
             <div>
-              <label className="text-xs text-slate-500 mb-1 block">الشهر</label>
+              <label className="text-xs text-ink-500 mb-1 block">الشهر</label>
               <input
                 type="text"
                 value={cardMonth}
                 onChange={(e) => setCardMonth(e.target.value.replace(/\D/g, '').slice(0, 2))}
                 placeholder="MM"
-                className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                className="w-full px-3 py-2.5 bg-white border border-ink-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
                 dir="ltr"
                 inputMode="numeric"
               />
             </div>
             <div>
-              <label className="text-xs text-slate-500 mb-1 block">السنة</label>
+              <label className="text-xs text-ink-500 mb-1 block">السنة</label>
               <input
                 type="text"
                 value={cardYear}
                 onChange={(e) => setCardYear(e.target.value.replace(/\D/g, '').slice(0, 4))}
                 placeholder="YYYY"
-                className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                className="w-full px-3 py-2.5 bg-white border border-ink-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
                 dir="ltr"
                 inputMode="numeric"
               />
             </div>
             <div>
-              <label className="text-xs text-slate-500 mb-1 block">CVC</label>
+              <label className="text-xs text-ink-500 mb-1 block">CVC</label>
               <input
                 type="text"
                 value={cardCvc}
                 onChange={(e) => setCardCvc(e.target.value.replace(/\D/g, '').slice(0, 4))}
                 placeholder="123"
-                className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                className="w-full px-3 py-2.5 bg-white border border-ink-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
                 dir="ltr"
                 inputMode="numeric"
               />
@@ -458,7 +458,7 @@ export default function PaymentButtons({ plan, amount, label, discountedLabel, v
         <p className="text-xs text-red-500 text-center">{error}</p>
       )}
 
-      <p className="text-xs text-slate-600 text-center flex items-center justify-center gap-1">
+      <p className="text-xs text-ink-600 text-center flex items-center justify-center gap-1">
         <Lock className="w-3 h-3" />
         دفع آمن عبر Moyasar
       </p>

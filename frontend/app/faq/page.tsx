@@ -79,40 +79,40 @@ export default function FAQPage() {
 
       <main className="max-w-4xl mx-auto px-4 py-12">
         <div className="text-center mb-10">
-          <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">الأسئلة الشائعة</h1>
-          <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+          <h1 className="text-3xl md:text-4xl font-bold text-ink-900 mb-4">الأسئلة الشائعة</h1>
+          <p className="text-lg text-ink-600 max-w-2xl mx-auto">
             كل ما تحتاج معرفته عن منصة الباحث لبحث الأحكام القضائية السعودية
           </p>
         </div>
 
         <div className="space-y-4 mb-12">
           {faqs.map((faq, idx) => (
-            <details key={idx} className="bg-white rounded-xl border border-slate-200 p-5 group">
-              <summary className="font-bold text-slate-900 cursor-pointer flex items-center justify-between list-none">
+            <details key={idx} className="bg-white rounded-xl border border-ink-100 p-5 group">
+              <summary className="font-bold text-ink-900 cursor-pointer flex items-center justify-between list-none">
                 {faq.q}
                 <span className="text-primary-600 group-open:rotate-180 transition-transform">▾</span>
               </summary>
-              <p className="mt-3 text-slate-600 leading-relaxed text-sm">{faq.a}</p>
+              <p className="mt-3 text-ink-600 leading-relaxed text-sm">{faq.a}</p>
             </details>
           ))}
         </div>
 
         {/* SEO Content */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 md:p-8 mb-8">
-          <h2 className="text-xl font-bold text-slate-900 mb-4">بحث الأحكام القضائية السعودية</h2>
-          <p className="text-slate-700 leading-relaxed mb-4">
+        <div className="bg-white rounded-2xl border border-ink-100 p-6 md:p-8 mb-8">
+          <h2 className="text-xl font-bold text-ink-900 mb-4">بحث الأحكام القضائية السعودية</h2>
+          <p className="text-ink-700 leading-relaxed mb-4">
             منصة الباحث هي أول محرك بحث دلالي متخصص في الأحكام القضائية السعودية. تتيح للمحامين
             والمستشارين القانونيين والباحثين البحث في آلاف الأحكام الصادرة من مختلف المحاكم
             في المملكة العربية السعودية، بما في ذلك المحاكم التجارية والمحاكم العامة ومحاكم التنفيذ
             ومحاكم الاستئناف.
           </p>
-          <p className="text-slate-700 leading-relaxed mb-4">
+          <p className="text-ink-700 leading-relaxed mb-4">
             يتميز الباحث بالبحث الدلالي الذكي الذي يفهم المعنى القانوني لاستعلام البحث،
             مما يسهل العثور على الأحكام ذات الصلة حتى لو لم تتطابق الكلمات المفتاحية بدقة.
             كما يقدم المحرك دراسة قانونية تحليلية شاملة لكل بحث، تستخلص المبادئ القانونية
             وتحلل التوجهات القضائية في القضايا المشابهة.
           </p>
-          <p className="text-slate-700 leading-relaxed">
+          <p className="text-ink-700 leading-relaxed">
             تشمل قاعدة بيانات الباحث أحكاماً من مدن متعددة مثل الرياض وجدة ومكة المكرمة
             والمدينة المنورة وبريدة والدمام وغيرها، مع إمكانية الفلترة حسب نوع المحكمة
             والمدينة والسنة ودرجة المحكمة. جميع الأحكام مصدرها وزارة العدل السعودية.

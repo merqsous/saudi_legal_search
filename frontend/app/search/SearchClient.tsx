@@ -2,9 +2,10 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Search, Loader2, ExternalLink, Scale, Filter, X, ChevronDown, Sparkles, LogOut, LayoutDashboard, CheckCircle, MapPin, Building2, Gavel, Bookmark, FileText, Download, BookOpen, User, ThumbsUp, ThumbsDown, Briefcase } from 'lucide-react';
+import { Search, Loader2, ExternalLink, Scale, Filter, X, ChevronDown, Sparkles, CheckCircle, MapPin, Building2, Gavel, Bookmark, FileText, Download, BookOpen, ThumbsUp, ThumbsDown, Briefcase } from 'lucide-react';
 import { judgmentUrl } from '@/lib/slug';
 import { getVisitSource } from '../components/VisitTracker';
+import Header from '../components/Header';
 
 interface AuthUser {
   id: number;
@@ -283,12 +284,6 @@ export default function SearchClient() {
     });
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('auth_user');
-    router.push('/');
-  };
-
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') doSearch();
   };
@@ -388,7 +383,7 @@ export default function SearchClient() {
         }
         return <span key={j}>{part}</span>;
       });
-      return <p key={i} className="text-sm text-slate-700 leading-relaxed mb-2" dir="rtl">{rendered}</p>;
+      return <p key={i} className="text-sm text-ink-700 leading-relaxed mb-2" dir="rtl">{rendered}</p>;
     });
   };
 
@@ -408,83 +403,22 @@ export default function SearchClient() {
     (selectedSection ? 1 : 0);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
-      {/* Header */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center gap-3">
-          <a href="/" className="flex items-center gap-3">
-            <img src="/logo-rounded.png" alt="الباحث" className="w-10 h-10 rounded-lg" width={40} height={40} />
-          </a>
-          <div className="flex-1" />
-          {authUser && (
-            <div className="flex items-center gap-3">
-              {authUser.phone === '966514789632' && (
-                <button
-                  onClick={() => router.push('/admin')}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-primary-600 hover:text-primary-700 font-medium"
-                >
-                  <LayoutDashboard className="w-4 h-4" />
-                  لوحة التحكم
-                </button>
-              )}
-              <button
-                onClick={() => router.push('/favorites')}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-slate-600 hover:text-primary-600 font-medium"
-              >
-                <Bookmark className="w-4 h-4" />
-                المفضلة
-              </button>
-              <button
-                onClick={() => router.push('/studies')}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-slate-600 hover:text-primary-600 font-medium"
-              >
-                <FileText className="w-4 h-4" />
-                الدراسات
-              </button>
-              <button
-                onClick={() => router.push('/account')}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-slate-600 hover:text-primary-600 font-medium"
-              >
-                <User className="w-4 h-4" />
-                حسابي
-              </button>
-              <button
-                onClick={() => router.push('/account')}
-                className="text-sm text-slate-600 hover:text-primary-600 font-medium"
-              >
-                {authUser.first_name} {authUser.last_name}
-              </button>
-              <button onClick={handleLogout} className="text-slate-400 hover:text-slate-600">
-                <LogOut className="w-5 h-5" />
-              </button>
-            </div>
-          )}
-          {!authUser && (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => router.push('/')}
-                className="px-4 py-2 text-sm font-medium bg-primary-600 text-white rounded-lg hover:bg-primary-700"
-              >
-                تسجيل الدخول
-              </button>
-            </div>
-          )}
-        </div>
-      </header>
+    <div className="min-h-screen app-bg">
+      <Header />
 
       <main className="max-w-5xl mx-auto px-4 py-8">
         {/* Search bar */}
         <div className="relative mb-6">
           <div className="flex gap-2">
             <div className="relative flex-1">
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-ink-400" />
               <input
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="ابحث عن حكم قضائي..."
-                className="w-full pr-11 pl-4 py-3.5 text-base bg-white border border-slate-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                placeholder="ابحث بالمعنى — مثال: تعويض عن إنهاء عقد عمل"
+                className="w-full pr-11 pl-4 py-3.5 text-base bg-white border border-ink-100 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
                 dir="rtl"
               />
             </div>
@@ -500,7 +434,7 @@ export default function SearchClient() {
               className={`px-4 py-3.5 rounded-xl border transition-all flex items-center gap-2 ${
                 showFilters || activeFilterCount > 0
                   ? 'bg-primary-50 border-primary-300 text-primary-700'
-                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                  : 'bg-white border-ink-100 text-ink-600 hover:bg-ink-50'
               }`}
             >
               <Filter className="w-5 h-5" />
@@ -514,7 +448,7 @@ export default function SearchClient() {
 
           {/* Quick Filters */}
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <span className="text-xs text-slate-500 font-medium">بحث سريع:</span>
+            <span className="text-xs text-ink-500 font-medium">تصفية سريعة:</span>
             {quickFilters.map((qf, idx) => {
               const Icon = qf.icon;
               const isActive = 
@@ -532,7 +466,7 @@ export default function SearchClient() {
                   className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                     isActive
                       ? 'bg-primary-600 text-white shadow-sm'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      : 'bg-ink-100 text-ink-700 hover:bg-ink-200'
                   }`}
                 >
                   <Icon className="w-3.5 h-3.5" />
@@ -544,9 +478,9 @@ export default function SearchClient() {
 
           {/* Filters */}
           {showFilters && (
-            <div className="mt-2 bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+            <div className="mt-2 bg-white border border-ink-100 rounded-xl p-4 shadow-sm">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-slate-700">تصفية النتائج</h3>
+                <h3 className="text-sm font-semibold text-ink-700">تصفية النتائج</h3>
                 {activeFilterCount > 0 && (
                   <button onClick={clearFilters} className="text-xs text-primary-600 hover:text-primary-700">
                     مسح الكل
@@ -599,7 +533,7 @@ export default function SearchClient() {
         {loading && (
           <div className="flex flex-col items-center py-20">
             <Loader2 className="w-8 h-8 text-primary-600 animate-spin mb-3" />
-            <p className="text-slate-500">جاري البحث...</p>
+            <p className="text-ink-500">جاري البحث...</p>
           </div>
         )}
 
@@ -613,10 +547,10 @@ export default function SearchClient() {
         {/* Subscription required */}
         {subscriptionRequired && (
           <div className="mt-6 bg-gradient-to-l from-primary-50 to-white border border-primary-200 rounded-xl p-6 text-center">
-            <h3 className="text-lg font-bold text-slate-800 mb-2">
+            <h3 className="text-lg font-bold text-ink-800 mb-2">
               لقد استخدمت جميع عمليات البحث المجانية
             </h3>
-            <p className="text-sm text-slate-600 mb-4">
+            <p className="text-sm text-ink-600 mb-4">
               اشترك الآن للوصول الكامل والمستمر إلى آلاف الأحكام القضائية السعودية.
             </p>
             <div className="flex items-center justify-center gap-3">
@@ -633,7 +567,9 @@ export default function SearchClient() {
         {/* No results */}
         {!loading && hasSearched && results.length === 0 && !error && !subscriptionRequired && (
           <div className="text-center py-20">
-            <p className="text-slate-400 text-lg">لا توجد نتائج</p>
+            <Search className="w-10 h-10 text-ink-300 mx-auto mb-4" />
+            <p className="text-ink-600 font-medium mb-1">لا توجد نتائج مطابقة</p>
+            <p className="text-sm text-ink-400">جرّب صياغة أخرى للموضوع، أو وسّع النطاق بإزالة بعض عوامل التصفية</p>
           </div>
         )}
 
@@ -644,19 +580,19 @@ export default function SearchClient() {
               <div className="mb-6 bg-gradient-to-l from-primary-50 to-white border border-primary-200 rounded-xl p-5 shadow-sm">
                 <div className="flex items-center gap-2 mb-3">
                   <Sparkles className="w-5 h-5 text-primary-600" />
-                  <h2 className="text-sm font-bold text-slate-800">إجابة قانونية مساعدة</h2>
+                  <h2 className="text-sm font-bold text-ink-800">إجابة قانونية مساعدة</h2>
                   {aiLoading && <Loader2 className="w-4 h-4 text-primary-500 animate-spin" />}
                 </div>
                 {aiAnswer ? (
-                  <p className="text-sm text-slate-700 leading-relaxed arabic-text" dir="rtl">
+                  <p className="text-sm text-ink-700 leading-relaxed arabic-text" dir="rtl">
                     {formatAiAnswer(aiAnswer)}
                   </p>
                 ) : (
-                  <p className="text-sm text-slate-400">جاري توليد الإجابة...</p>
+                  <p className="text-sm text-ink-400">جاري توليد الإجابة...</p>
                 )}
               </div>
             )}
-            <p className="text-sm text-slate-500 mb-4">
+            <p className="text-sm text-ink-500 mb-4">
               {total} نتيجة
             </p>
 
@@ -683,7 +619,7 @@ export default function SearchClient() {
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
                     <FileText className="w-5 h-5 text-primary-600" />
-                    <h2 className="text-lg font-bold text-slate-900">دراسة قانونية</h2>
+                    <h2 className="text-lg font-bold text-ink-900">دراسة قانونية</h2>
                   </div>
                   <div className="flex items-center gap-2">
                     {studyId && !studyLoading && (
@@ -706,7 +642,7 @@ export default function SearchClient() {
                     )}
                     <button
                       onClick={() => setShowStudy(false)}
-                      className="p-1.5 text-slate-400 hover:text-slate-600"
+                      className="p-1.5 text-ink-400 hover:text-ink-600"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -715,7 +651,7 @@ export default function SearchClient() {
                 {studyLoading ? (
                   <div className="flex flex-col items-center py-12">
                     <Loader2 className="w-8 h-8 text-primary-600 animate-spin mb-3" />
-                    <p className="text-sm text-slate-500">جاري توليد الدراسة القانونية الشاملة...</p>
+                    <p className="text-sm text-ink-500">جاري توليد الدراسة القانونية الشاملة...</p>
                   </div>
                 ) : studyContent ? (
                   <>
@@ -723,12 +659,12 @@ export default function SearchClient() {
                       {formatStudyContent(studyContent)}
                     </div>
                     {studyCitations.length > 0 && (
-                      <div className="mt-4 pt-4 border-t border-slate-200">
+                      <div className="mt-4 pt-4 border-t border-ink-100">
                         <h3 className="font-bold text-primary-900 text-sm mb-3">الأحكام المرجعية</h3>
                         <div className="space-y-2">
                           {studyCitations.map((cite, i) => (
-                            <div key={i} className="text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-lg p-2">
-                              <span className="font-medium text-slate-700">{i + 1}.</span>{' '}
+                            <div key={i} className="text-xs text-ink-600 bg-ink-50 border border-ink-100 rounded-lg p-2">
+                              <span className="font-medium text-ink-700">{i + 1}.</span>{' '}
                               رقم الحكم: {cite.judgment_number || 'غير محدد'} —
                               المحكمة: {cite.court_type || ''} {cite.court_level || ''} —
                               المدينة: {cite.city || ''}
@@ -738,7 +674,7 @@ export default function SearchClient() {
                         </div>
                       </div>
                     )}
-                    <div className="mt-4 pt-4 border-t border-slate-200">
+                    <div className="mt-4 pt-4 border-t border-ink-100">
                       <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
                         <p className="text-xs text-amber-700 leading-relaxed">
                           ⚠️ هذه الدراسة القانونية تم توليدها بواسطة نظام الباحث. مسؤولية التحقق من صحة المعلومات والوقائع تقع على المستخدم.
@@ -770,7 +706,7 @@ export default function SearchClient() {
                 <button
                   onClick={() => goToPage(currentPage - 1)}
                   disabled={currentPage === 1 || loadingPage}
-                  className="px-3 py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-sm"
+                  className="px-3 py-2 rounded-lg border border-ink-100 text-ink-600 hover:bg-ink-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-sm"
                 >
                   السابق
                 </button>
@@ -793,7 +729,7 @@ export default function SearchClient() {
                       className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
                         page === currentPage
                           ? 'bg-primary-600 text-white'
-                          : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
+                          : 'border border-ink-100 text-ink-600 hover:bg-ink-50'
                       }`}
                     >
                       {page}
@@ -803,7 +739,7 @@ export default function SearchClient() {
                 <button
                   onClick={() => goToPage(currentPage + 1)}
                   disabled={currentPage === totalPages || loadingPage}
-                  className="px-3 py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-sm"
+                  className="px-3 py-2 rounded-lg border border-ink-100 text-ink-600 hover:bg-ink-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-sm"
                 >
                   التالي
                 </button>
@@ -812,10 +748,10 @@ export default function SearchClient() {
             )}
             {isAnonymous && (
               <div className="mt-6 bg-gradient-to-l from-primary-50 to-white border border-primary-200 rounded-xl p-6 text-center">
-                <h3 className="text-lg font-bold text-slate-800 mb-2">
+                <h3 className="text-lg font-bold text-ink-800 mb-2">
                   يجب تسجيل الدخول للبحث
                 </h3>
-                <p className="text-sm text-slate-600 mb-4">
+                <p className="text-sm text-ink-600 mb-4">
                   سجّل الدخول للوصول إلى آلاف الأحكام القضائية السعودية.
                 </p>
                 <div className="flex items-center justify-center gap-3">
@@ -832,8 +768,8 @@ export default function SearchClient() {
         )}
       </main>
 
-      <footer className="border-t border-slate-200 mt-12">
-        <div className="max-w-5xl mx-auto px-4 py-6 text-center text-xs text-slate-400">
+      <footer className="border-t border-ink-100 mt-12">
+        <div className="max-w-5xl mx-auto px-4 py-6 text-center text-xs text-ink-400">
           الباحث — بحث في الأحكام القضائية السعودية
         </div>
       </footer>
@@ -854,12 +790,12 @@ function FilterSelect({
 }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-slate-500 mb-1">{label}</label>
+      <label className="block text-xs font-medium text-ink-500 mb-1">{label}</label>
       <div className="relative">
         <select
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full appearance-none bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-400 cursor-pointer"
+          className="w-full appearance-none bg-ink-50 border border-ink-100 rounded-lg px-3 py-2 text-sm text-ink-700 focus:outline-none focus:ring-2 focus:ring-primary-400 cursor-pointer"
         >
           <option value="">الكل</option>
           {options.map((opt) => (
@@ -868,7 +804,7 @@ function FilterSelect({
             </option>
           ))}
         </select>
-        <ChevronDown className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+        <ChevronDown className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-400 pointer-events-none" />
       </div>
     </div>
   );
@@ -963,7 +899,7 @@ function ResultCard({ result, query, favorited, onToggleFavorite, isLoggedIn, po
   };
 
   return (
-    <div className="block bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-shadow">
+    <div className="block bg-white border border-ink-100 rounded-xl p-4 hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           {/* Badges + Favorite */}
@@ -979,7 +915,7 @@ function ResultCard({ result, query, favorited, onToggleFavorite, isLoggedIn, po
                 </span>
               )}
               {result.city && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-600">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-ink-100 text-ink-600">
                   {result.city}
                 </span>
               )}
@@ -1000,7 +936,7 @@ function ResultCard({ result, query, favorited, onToggleFavorite, isLoggedIn, po
               )}
               <button
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); openCaseMenu(); }}
-                className={`p-1 transition-colors ${savedCaseTitle ? 'text-green-600' : 'text-slate-300 hover:text-primary-600'}`}
+                className={`p-1 transition-colors ${savedCaseTitle ? 'text-green-600' : 'text-ink-300 hover:text-primary-600'}`}
                 title="حفظ في قضية"
               >
                 <Briefcase className="w-4 h-4" />
@@ -1008,11 +944,11 @@ function ResultCard({ result, query, favorited, onToggleFavorite, isLoggedIn, po
               {caseMenuOpen && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setCaseMenuOpen(false); }} />
-                  <div className="absolute top-full left-0 z-20 mt-1 w-56 bg-white border border-slate-200 rounded-xl shadow-lg py-1 max-h-60 overflow-y-auto" dir="rtl">
-                    <p className="text-xs font-semibold text-slate-400 px-3 py-2">حفظ الحكم في قضية</p>
+                  <div className="absolute top-full left-0 z-20 mt-1 w-56 bg-white border border-ink-100 rounded-xl shadow-lg py-1 max-h-60 overflow-y-auto" dir="rtl">
+                    <p className="text-xs font-semibold text-ink-400 px-3 py-2">حفظ الحكم في قضية</p>
                     {userCases === null ? (
                       <div className="px-3 py-3 flex justify-center">
-                        <Loader2 className="w-4 h-4 text-slate-400 animate-spin" />
+                        <Loader2 className="w-4 h-4 text-ink-400 animate-spin" />
                       </div>
                     ) : userCases.length === 0 ? (
                       <a href="/cases" className="block px-3 py-2.5 text-sm text-primary-600 hover:bg-primary-50 font-medium">
@@ -1023,7 +959,7 @@ function ResultCard({ result, query, favorited, onToggleFavorite, isLoggedIn, po
                         <button
                           key={c.id}
                           onClick={(e) => { e.preventDefault(); e.stopPropagation(); saveToCase(c.id, c.title); }}
-                          className="block w-full text-right px-3 py-2 text-sm text-slate-700 hover:bg-primary-50 hover:text-primary-700 truncate"
+                          className="block w-full text-right px-3 py-2 text-sm text-ink-700 hover:bg-primary-50 hover:text-primary-700 truncate"
                         >
                           {c.title}
                         </button>
@@ -1034,7 +970,7 @@ function ResultCard({ result, query, favorited, onToggleFavorite, isLoggedIn, po
               )}
               <button
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleFavorite(); }}
-                className={`p-1 transition-colors ${favorited ? 'text-primary-600' : 'text-slate-300 hover:text-primary-600'}`}
+                className={`p-1 transition-colors ${favorited ? 'text-primary-600' : 'text-ink-300 hover:text-primary-600'}`}
                 title={favorited ? 'إزالة من المفضلة' : 'إضافة للمفضلة'}
               >
                 <Bookmark className="w-4 h-4" fill={favorited ? 'currentColor' : 'none'} />
@@ -1043,25 +979,25 @@ function ResultCard({ result, query, favorited, onToggleFavorite, isLoggedIn, po
           </div>
 
           {/* البيانات الأساسية */}
-          <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 mb-3" dir="rtl">
-            <h4 className="text-xs font-semibold text-slate-500 mb-2">البيانات الأساسية</h4>
+          <div className="bg-ink-50 border border-ink-100 rounded-lg p-3 mb-3" dir="rtl">
+            <h4 className="text-xs font-semibold text-ink-500 mb-2">البيانات الأساسية</h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
               {result.case_number && (
                 <div>
-                  <span className="text-slate-500">رقم القضية:</span>
-                  <span className="font-medium text-slate-700 mr-1">{result.case_number}/{result.case_year ?? ''}</span>
+                  <span className="text-ink-500">رقم القضية:</span>
+                  <span className="font-medium text-ink-700 mr-1">{result.case_number}/{result.case_year ?? ''}</span>
                 </div>
               )}
               {result.judgment_number && (
                 <div>
-                  <span className="text-slate-500">رقم الحكم:</span>
-                  <span className="font-medium text-slate-700 mr-1">{result.judgment_number}</span>
+                  <span className="text-ink-500">رقم الحكم:</span>
+                  <span className="font-medium text-ink-700 mr-1">{result.judgment_number}</span>
                 </div>
               )}
               {result.judgment_date_hijri && (
                 <div>
-                  <span className="text-slate-500">التاريخ:</span>
-                  <span className="font-medium text-slate-700 mr-1">{result.judgment_date_hijri}</span>
+                  <span className="text-ink-500">التاريخ:</span>
+                  <span className="font-medium text-ink-700 mr-1">{result.judgment_date_hijri}</span>
                 </div>
               )}
             </div>
@@ -1072,24 +1008,24 @@ function ResultCard({ result, query, favorited, onToggleFavorite, isLoggedIn, po
             href={judgmentUrl(result.judgment_id, { court_type: result.court_type, court_level: result.court_level, city: result.city, judgment_number: result.judgment_number })}
             onClick={() => sendFeedbackSignal('click')}
           >
-            <p className="text-sm text-slate-700 leading-relaxed arabic-text" dir="rtl">
+            <p className="text-sm text-ink-700 leading-relaxed arabic-text" dir="rtl">
               {highlightSnippet(result.snippet, query)}
             </p>
           </a>
 
           {/* Relevance feedback */}
           <div className="flex items-center gap-2 mt-3">
-            <span className="text-xs text-slate-400">هل هذا الحكم ذو صلة ببحثك؟</span>
+            <span className="text-xs text-ink-400">هل هذا الحكم ذو صلة ببحثك؟</span>
             <button
               onClick={() => { setUserRating('relevant'); sendFeedbackSignal('relevant'); }}
-              className={`p-1 rounded transition-colors ${userRating === 'relevant' ? 'text-green-600 bg-green-50' : 'text-slate-300 hover:text-green-600'}`}
+              className={`p-1 rounded transition-colors ${userRating === 'relevant' ? 'text-green-600 bg-green-50' : 'text-ink-300 hover:text-green-600'}`}
               title="ذو صلة"
             >
               <ThumbsUp className="w-4 h-4" fill={userRating === 'relevant' ? 'currentColor' : 'none'} />
             </button>
             <button
               onClick={() => { setUserRating('not_relevant'); sendFeedbackSignal('not_relevant'); }}
-              className={`p-1 rounded transition-colors ${userRating === 'not_relevant' ? 'text-red-600 bg-red-50' : 'text-slate-300 hover:text-red-600'}`}
+              className={`p-1 rounded transition-colors ${userRating === 'not_relevant' ? 'text-red-600 bg-red-50' : 'text-ink-300 hover:text-red-600'}`}
               title="غير ذو صلة"
             >
               <ThumbsDown className="w-4 h-4" fill={userRating === 'not_relevant' ? 'currentColor' : 'none'} />
@@ -1127,11 +1063,11 @@ function ResultCard({ result, query, favorited, onToggleFavorite, isLoggedIn, po
                   strokeLinecap="round"
                 />
               </svg>
-              <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-slate-700">
+              <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-ink-700">
                 {Math.round(relevance * 100)}٪
               </span>
             </div>
-            <span className="text-[10px] text-slate-400 mt-1">تطابق</span>
+            <span className="text-[10px] text-ink-400 mt-1">تطابق</span>
           </div>
         )}
       </div>
