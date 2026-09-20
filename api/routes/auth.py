@@ -465,6 +465,71 @@ def admin_stats(authorization: str = Header(None)):
     paid_annual = safe_query_one("SELECT COUNT(*) as cnt FROM user_subscriptions WHERE status = 'active' AND plan = 'annual' AND amount_paid > 0")["cnt"]
     free_trial = safe_query_one("SELECT COUNT(*) as cnt FROM user_subscriptions WHERE status = 'active' AND payment_id = 'FREE_TRIAL'")["cnt"]
 
+    # --- Feedback signals (relevance feedback system) ---
+    feedback_signals_total = safe_query_one("SELECT COUNT(*) as cnt FROM search_feedback")["cnt"]
+    feedback_clicks = safe_query_one("SELECT COUNT(*) as cnt FROM search_feedback WHERE signal_type = 'click'")["cnt"]
+    feedback_relevant = safe_query_one("SELECT COUNT(*) as cnt FROM search_feedback WHERE signal_type = 'relevant'")["cnt"]
+    feedback_not_relevant = safe_query_one("SELECT COUNT(*) as cnt FROM search_feedback WHERE signal_type = 'not_relevant'")["cnt"]
+    top_feedback_queries = safe_query_all(
+        """SELECT query, COUNT(*) as cnt,
+                  SUM(CASE WHEN signal_type = 'relevant' THEN 1 ELSE 0 END) as relevant_cnt,
+                  SUM(CASE WHEN signal_type = 'not_relevant' THEN 1 ELSE 0 END) as not_relevant_cnt
+           FROM search_feedback WHERE query IS NOT NULL
+           GROUP BY query ORDER BY cnt DESC LIMIT 10"""
+    )
+    recent_feedback_signals = safe_query_all(
+        """SELECT sf.query, sf.signal_type, sf.position, sf.created_at,
+                  j.judgment_number, u.first_name, u.last_name
+           FROM search_feedback sf
+           LEFT JOIN judgments j ON j.id = sf.judgment_id
+           LEFT JOIN users u ON u.id = sf.user_id
+           ORDER BY sf.created_at DESC LIMIT 30"""
+    )
+
+    # --- Firms (offices) and their members ---
+    firms_stats = safe_query_all(
+        """SELECT f.id, f.name, f.created_at,
+                  u.first_name AS owner_first_name, u.last_name AS owner_last_name,
+                  (SELECT COUNT(*) FROM firm_members fm WHERE fm.firm_id = f.id) AS members_count,
+                  (SELECT COUNT(*) FROM user_cases uc WHERE uc.firm_id = f.id) AS cases_count,
+                  (SELECT COUNT(*) FROM search_logs sl
+                     JOIN firm_members fm2 ON fm2.user_id = sl.user_id
+                    WHERE fm2.firm_id = f.id) AS searches_count
+           FROM firms f
+           LEFT JOIN users u ON u.id = f.owner_user_id
+           ORDER BY f.created_at DESC LIMIT 50"""
+    )
+    firm_members_detail = safe_query_all(
+        """SELECT fm.firm_id, fm.role, fm.created_at AS joined_at,
+                  u.id AS user_id, u.first_name, u.last_name, u.phone,
+                  (SELECT COUNT(*) FROM search_logs sl WHERE sl.user_id = u.id) AS searches_count,
+                  (SELECT COUNT(*) FROM user_cases uc WHERE uc.user_id = u.id) AS cases_created
+           FROM firm_members fm
+           JOIN users u ON u.id = fm.user_id
+           ORDER BY fm.created_at ASC LIMIT 200"""
+    )
+
+    # --- Feature usage (most used features, total and last 7 days) ---
+    def _feature(table, extra_where="", timestamp_col="created_at"):
+        total = safe_query_one(f"SELECT COUNT(*) as cnt FROM {table} {extra_where}")["cnt"]
+        weekly = safe_query_one(
+            f"SELECT COUNT(*) as cnt FROM {table} WHERE {timestamp_col} >= NOW() - INTERVAL '7 days' {extra_where.replace('WHERE', 'AND')}"
+        )["cnt"]
+        return {"total": total, "week": weekly}
+
+    feature_usage = [
+        {"key": "search", "label": "البحث في الأحكام", **_feature("search_logs")},
+        {"key": "cases", "label": "إنشاء القضايا", **_feature("user_cases")},
+        {"key": "hearings", "label": "تسجيل الجلسات", **_feature("case_hearings")},
+        {"key": "linked_judgments", "label": "ربط الأحكام بالقضايا", **_feature("case_judgments")},
+        {"key": "assistant", "label": "المساعد الذكي", **_feature("case_messages", "WHERE role = 'user'")},
+        {"key": "documents", "label": "رفع المستندات", **_feature("case_documents")},
+        {"key": "drafts", "label": "صياغة المستندات", **_feature("case_drafts")},
+        {"key": "studies", "label": "الدراسات القانونية", **_feature("legal_studies")},
+        {"key": "favorites", "label": "المفضلة", **_feature("favorites", "", "favorited_at")},
+        {"key": "firms", "label": "إنشاء المكاتب", **_feature("firms")},
+    ]
+
     return {
         "total_judgments": total_judgments,
         "total_cases": total_cases,
@@ -481,6 +546,15 @@ def admin_stats(authorization: str = Header(None)):
         "recent_searches": recent_searches,
         "searches_by_day": searches_by_day,
         "recent_cases": recent_cases,
+        "feedback_signals_total": feedback_signals_total,
+        "feedback_clicks": feedback_clicks,
+        "feedback_relevant": feedback_relevant,
+        "feedback_not_relevant": feedback_not_relevant,
+        "top_feedback_queries": top_feedback_queries,
+        "recent_feedback_signals": recent_feedback_signals,
+        "firms": firms_stats,
+        "firm_members": firm_members_detail,
+        "feature_usage": feature_usage,
     }
 
 

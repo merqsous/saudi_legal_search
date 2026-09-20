@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { useRouter } from 'next/navigation';
-import { Scale, LogOut, Loader2, Users, Search, Database, TrendingUp, Clock, ArrowRight, MessageSquare, Send, ChevronRight, CheckCircle, X, Globe } from 'lucide-react';
+import { Scale, LogOut, Loader2, Users, Search, Database, TrendingUp, Clock, ArrowRight, MessageSquare, Send, ChevronRight, CheckCircle, X, Globe, BarChart3, ThumbsUp, ThumbsDown, Building2, ChevronDown, MousePointerClick } from 'lucide-react';
 
 interface AdminStats {
   total_judgments: number;
@@ -47,6 +47,42 @@ interface AdminStats {
     source: string | null;
   }[];
   searches_by_day: { day: string; cnt: number }[];
+  feedback_signals_total: number;
+  feedback_clicks: number;
+  feedback_relevant: number;
+  feedback_not_relevant: number;
+  top_feedback_queries: { query: string; cnt: number; relevant_cnt: number; not_relevant_cnt: number }[];
+  recent_feedback_signals: {
+    query: string | null;
+    signal_type: string;
+    position: number | null;
+    created_at: string;
+    judgment_number: string | null;
+    first_name: string | null;
+    last_name: string | null;
+  }[];
+  firms: {
+    id: number;
+    name: string;
+    created_at: string;
+    owner_first_name: string | null;
+    owner_last_name: string | null;
+    members_count: number;
+    cases_count: number;
+    searches_count: number;
+  }[];
+  firm_members: {
+    firm_id: number;
+    role: string;
+    joined_at: string;
+    user_id: number;
+    first_name: string | null;
+    last_name: string | null;
+    phone: string;
+    searches_count: number;
+    cases_created: number;
+  }[];
+  feature_usage: { key: string; label: string; total: number; week: number }[];
   recent_cases: {
     id: number;
     judgment_number: string | null;
@@ -90,6 +126,7 @@ export default function AdminPage() {
   const [ticketReplies, setTicketReplies] = useState<SupportReply[]>([]);
   const [adminReply, setAdminReply] = useState('');
   const [replySubmitting, setReplySubmitting] = useState(false);
+  const [expandedFirm, setExpandedFirm] = useState<number | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem('auth_user');
@@ -399,6 +436,197 @@ export default function AdminPage() {
               ))}
             </div>
           </div>
+        </div>
+
+        {/* Feature Usage */}
+        <div className="bg-white rounded-2xl shadow-sm p-6 border border-ink-100 mb-8">
+          <div className="flex items-center gap-2 mb-2">
+            <BarChart3 className="w-5 h-5 text-primary-600" />
+            <h2 className="text-lg font-bold text-ink-900">مؤشرات استخدام الميزات</h2>
+          </div>
+          <p className="text-xs text-ink-400 mb-5">إجمالي الاستخدام وآخر 7 أيام لكل ميزة في المنصة</p>
+          {(() => {
+            const features = stats.feature_usage || [];
+            const max = Math.max(1, ...features.map((f) => f.total));
+            return (
+              <div className="space-y-3">
+                {features.map((f) => (
+                  <div key={f.key}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium text-ink-700">{f.label}</span>
+                      <span className="text-xs text-ink-400">
+                        <span className="font-bold text-primary-600">{f.total}</span> إجمالي
+                        <span className="mx-1.5">·</span>
+                        <span className="font-bold text-ink-600">{f.week}</span> هذا الأسبوع
+                      </span>
+                    </div>
+                    <div className="h-2 bg-ink-50 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${f.week > 0 ? 'bg-gradient-to-l from-primary-600 to-primary-400' : 'bg-ink-200'}`}
+                        style={{ width: `${Math.max(2, (f.total / max) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+        </div>
+
+        {/* Feedback Signals */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div className="bg-white rounded-2xl shadow-sm p-6 border border-ink-100">
+            <div className="flex items-center gap-2 mb-4">
+              <ThumbsUp className="w-5 h-5 text-primary-600" />
+              <h2 className="text-lg font-bold text-ink-900">إشارات الملاءمة</h2>
+            </div>
+            <div className="grid grid-cols-4 gap-2 mb-5">
+              <div className="bg-ink-50 rounded-xl p-3 text-center">
+                <p className="text-lg font-bold text-ink-900">{stats.feedback_signals_total || 0}</p>
+                <p className="text-xs text-ink-400">إجمالي</p>
+              </div>
+              <div className="bg-sky-50 rounded-xl p-3 text-center">
+                <p className="text-lg font-bold text-sky-700">{stats.feedback_clicks || 0}</p>
+                <p className="text-xs text-sky-500">نقرات</p>
+              </div>
+              <div className="bg-green-50 rounded-xl p-3 text-center">
+                <p className="text-lg font-bold text-green-700">{stats.feedback_relevant || 0}</p>
+                <p className="text-xs text-green-500">ذو صلة</p>
+              </div>
+              <div className="bg-red-50 rounded-xl p-3 text-center">
+                <p className="text-lg font-bold text-red-700">{stats.feedback_not_relevant || 0}</p>
+                <p className="text-xs text-red-500">غير ذي صلة</p>
+              </div>
+            </div>
+            <h3 className="text-sm font-semibold text-ink-700 mb-3">أكثر الاستعلامات تفاعلاً</h3>
+            <div className="space-y-2">
+              {(stats.top_feedback_queries || []).length === 0 && (
+                <p className="text-sm text-ink-400">لا توجد إشارات بعد</p>
+              )}
+              {(stats.top_feedback_queries || []).map((q, i) => (
+                <div key={i} className="flex items-center justify-between py-2 border-b border-ink-50 last:border-0">
+                  <span className="text-sm text-ink-700 truncate max-w-[55%]" dir="rtl">{q.query}</span>
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="flex items-center gap-0.5 text-sky-600"><MousePointerClick className="w-3 h-3" />{q.cnt}</span>
+                    <span className="flex items-center gap-0.5 text-green-600"><ThumbsUp className="w-3 h-3" />{q.relevant_cnt}</span>
+                    <span className="flex items-center gap-0.5 text-red-500"><ThumbsDown className="w-3 h-3" />{q.not_relevant_cnt}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm p-6 border border-ink-100">
+            <div className="flex items-center gap-2 mb-4">
+              <Clock className="w-5 h-5 text-primary-600" />
+              <h2 className="text-lg font-bold text-ink-900">أحدث الإشارات</h2>
+            </div>
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {(stats.recent_feedback_signals || []).length === 0 && (
+                <p className="text-sm text-ink-400">لا توجد إشارات بعد</p>
+              )}
+              {(stats.recent_feedback_signals || []).map((s, i) => (
+                <div key={i} className="flex items-center justify-between py-2 border-b border-ink-50 last:border-0">
+                  <div className="min-w-0">
+                    <p className="text-sm text-ink-700 truncate" dir="rtl">{s.query || '—'}</p>
+                    <p className="text-xs text-ink-400">
+                      {s.first_name ? `${s.first_name} ${s.last_name}` : 'زائر'}
+                      {s.judgment_number ? ` · حكم ${s.judgment_number}` : ''}
+                      {` · ${formatDate(s.created_at)}`}
+                    </p>
+                  </div>
+                  <span
+                    className={`shrink-0 text-xs px-2 py-0.5 rounded-md font-medium ${
+                      s.signal_type === 'relevant'
+                        ? 'bg-green-50 text-green-700'
+                        : s.signal_type === 'not_relevant'
+                        ? 'bg-red-50 text-red-600'
+                        : 'bg-sky-50 text-sky-700'
+                    }`}
+                  >
+                    {s.signal_type === 'relevant' ? 'ذو صلة' : s.signal_type === 'not_relevant' ? 'غير ذي صلة' : 'نقرة'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Firms / Offices */}
+        <div className="bg-white rounded-2xl shadow-sm p-6 border border-ink-100 mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <Building2 className="w-5 h-5 text-primary-600" />
+            <h2 className="text-lg font-bold text-ink-900">المكاتب المنشأة</h2>
+            <span className="text-xs text-ink-400">({(stats.firms || []).length})</span>
+          </div>
+          {(stats.firms || []).length === 0 ? (
+            <p className="text-sm text-ink-400 py-4 text-center">لا توجد مكاتب منشأة بعد</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-ink-100 text-ink-400 text-xs">
+                    <th className="text-right py-3 px-2">المكتب</th>
+                    <th className="text-right py-3 px-2">المالك</th>
+                    <th className="text-right py-3 px-2">الأعضاء</th>
+                    <th className="text-right py-3 px-2">القضايا المشتركة</th>
+                    <th className="text-right py-3 px-2">عمليات بحث الأعضاء</th>
+                    <th className="text-right py-3 px-2">تاريخ الإنشاء</th>
+                    <th className="py-3 px-2"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(stats.firms || []).map((f) => (
+                    <Fragment key={f.id}>
+                      <tr
+                        className="border-b border-ink-50 cursor-pointer hover:bg-ink-50"
+                        onClick={() => setExpandedFirm(expandedFirm === f.id ? null : f.id)}
+                      >
+                        <td className="py-3 px-2 font-medium text-ink-800" dir="rtl">{f.name}</td>
+                        <td className="py-3 px-2 text-ink-600" dir="rtl">
+                          {f.owner_first_name ? `${f.owner_first_name} ${f.owner_last_name}` : '—'}
+                        </td>
+                        <td className="py-3 px-2 font-bold text-primary-600">{f.members_count}</td>
+                        <td className="py-3 px-2 text-ink-600">{f.cases_count}</td>
+                        <td className="py-3 px-2 text-ink-600">{f.searches_count}</td>
+                        <td className="py-3 px-2 text-ink-400">{formatDate(f.created_at)}</td>
+                        <td className="py-3 px-2">
+                          <ChevronDown
+                            className={`w-4 h-4 text-ink-400 transition-transform ${expandedFirm === f.id ? 'rotate-180' : ''}`}
+                          />
+                        </td>
+                      </tr>
+                      {expandedFirm === f.id && (
+                        <tr key={`${f.id}-members`} className="bg-ink-50/50">                          <td colSpan={7} className="py-3 px-4">
+                            <p className="text-xs font-semibold text-ink-500 mb-2">أعضاء المكتب ونشاطهم:</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                              {(stats.firm_members || [])
+                                .filter((m) => m.firm_id === f.id)
+                                .map((m) => (
+                                  <div key={m.user_id} className="flex items-center justify-between bg-white border border-ink-100 rounded-lg px-3 py-2">
+                                    <div className="min-w-0">
+                                      <p className="text-sm font-medium text-ink-800 truncate" dir="rtl">
+                                        {m.first_name} {m.last_name}
+                                        {m.role === 'owner' && <span className="text-xs text-gold-600 mr-1">(المالك)</span>}
+                                      </p>
+                                      <p className="text-xs text-ink-400" style={{ direction: 'ltr', textAlign: 'right' }}>{m.phone}</p>
+                                    </div>
+                                    <div className="text-xs text-ink-500 shrink-0 text-left">
+                                      <p>{m.searches_count} بحث</p>
+                                      <p>{m.cases_created} قضية</p>
+                                    </div>
+                                  </div>
+                                ))}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* Users Table */}
