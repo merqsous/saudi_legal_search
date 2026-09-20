@@ -365,6 +365,85 @@ def log_search(phone: str, query: str, court_type: str = None, city: str = None,
         print(f"[LOG_SEARCH] Error: {e}")
 
 
+class AdminSubscriptionRequest(BaseModel):
+    plan: str  # 'monthly' | 'annual'
+
+
+def _require_admin(authorization: str | None) -> None:
+    if not authorization:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+    token = authorization.replace("Bearer ", "")
+    session = _sessions.get(token) or get_session(token)
+    if not session or session["phone"] != ADMIN_PHONE:
+        raise HTTPException(status_code=403, detail="غير مصرح")
+
+
+@router.post("/auth/admin/users/{user_id}/subscription")
+def admin_grant_subscription(user_id: int, req: AdminSubscriptionRequest, authorization: str = Header(None)):
+    """Grant a user a subscription (one month or one year) from the admin dashboard.
+
+    If the user already has an active subscription it is extended from its
+    current expiry, so granting never shortens an existing subscription.
+    """
+    _require_admin(authorization)
+
+    if req.plan not in ("monthly", "annual"):
+        raise HTTPException(status_code=400, detail="نوع الاشتراك يجب أن يكون monthly أو annual")
+
+    user = query_one("SELECT id FROM users WHERE id = %s;", [user_id])
+    if not user:
+        raise HTTPException(status_code=404, detail="المستخدم غير موجود")
+
+    from datetime import timedelta
+    interval = timedelta(days=365 if req.plan == "annual" else 30)
+
+    active = query_one(
+        """SELECT id, expires_at FROM user_subscriptions
+           WHERE user_id = %s AND status = 'active' AND expires_at > NOW()
+           ORDER BY expires_at DESC LIMIT 1;""",
+        [user_id],
+    )
+
+    with get_db() as conn:
+        cur = conn.cursor()
+        if active:
+            cur.execute(
+                "UPDATE user_subscriptions SET expires_at = expires_at + %s * INTERVAL '1 day' WHERE id = %s;",
+                (interval.days, active["id"]),
+            )
+            action = "extended"
+        else:
+            cur.execute(
+                """INSERT INTO user_subscriptions (user_id, plan, status, amount_paid, payment_id, started_at, expires_at)
+                   VALUES (%s, %s, 'active', 0, 'ADMIN_GRANT', NOW(), NOW() + %s * INTERVAL '1 day');""",
+                (user_id, req.plan, interval.days),
+            )
+            action = "granted"
+        cur.close()
+
+    sub = query_one(
+        "SELECT plan, status, started_at, expires_at FROM user_subscriptions "
+        "WHERE user_id = %s AND status = 'active' ORDER BY expires_at DESC LIMIT 1;",
+        [user_id],
+    )
+    return {"status": "ok", "action": action, "subscription": dict(sub)}
+
+
+@router.delete("/auth/admin/users/{user_id}/subscription")
+def admin_revoke_subscription(user_id: int, authorization: str = Header(None)):
+    """Cancel a user's active subscription."""
+    _require_admin(authorization)
+
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            "UPDATE user_subscriptions SET status = 'cancelled' WHERE user_id = %s AND status = 'active';",
+            [user_id],
+        )
+        cur.close()
+    return {"status": "ok"}
+
+
 @router.get("/auth/admin/stats")
 def admin_stats(authorization: str = Header(None)):
     if not authorization:

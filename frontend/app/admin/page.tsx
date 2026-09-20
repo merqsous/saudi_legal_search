@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Fragment } from 'react';
 import { useRouter } from 'next/navigation';
-import { Scale, LogOut, Loader2, Users, Search, Database, TrendingUp, Clock, ArrowRight, MessageSquare, Send, ChevronRight, CheckCircle, X, Globe, BarChart3, ThumbsUp, ThumbsDown, Building2, ChevronDown, MousePointerClick } from 'lucide-react';
+import { Scale, LogOut, Loader2, Users, Search, Database, TrendingUp, Clock, ArrowRight, MessageSquare, Send, ChevronRight, CheckCircle, X, Globe, BarChart3, ThumbsUp, ThumbsDown, Building2, ChevronDown, MousePointerClick, Crown } from 'lucide-react';
 
 interface AdminStats {
   total_judgments: number;
@@ -127,6 +127,55 @@ export default function AdminPage() {
   const [adminReply, setAdminReply] = useState('');
   const [replySubmitting, setReplySubmitting] = useState(false);
   const [expandedFirm, setExpandedFirm] = useState<number | null>(null);
+  const [subMenuUserId, setSubMenuUserId] = useState<number | null>(null);
+
+  const reloadStats = async () => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) return;
+    try {
+      const r = await fetch('/api/auth/admin/stats', { headers: { Authorization: `Bearer ${token}` } });
+      if (r.ok) setStats(await r.json());
+    } catch {}
+  };
+
+  const grantSubscription = async (userId: number, plan: 'monthly' | 'annual') => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) return;
+    setSubMenuUserId(null);
+    const label = plan === 'annual' ? 'سنة كاملة' : 'شهراً واحداً';
+    if (!confirm(`منح هذا المستخدم اشتراكاً لمدة ${label}؟`)) return;
+    try {
+      const res = await fetch(`/api/auth/admin/users/${userId}/subscription`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ plan }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'فشل منح الاشتراك');
+      alert(data.action === 'extended' ? 'تمت إضافة المدة على اشتراكه الحالي' : `تم منح الاشتراك (${label})`);
+      await reloadStats();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'فشل منح الاشتراك');
+    }
+  };
+
+  const revokeSubscription = async (userId: number) => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) return;
+    setSubMenuUserId(null);
+    if (!confirm('إلغاء الاشتراك النشط لهذا المستخدم؟')) return;
+    try {
+      const res = await fetch(`/api/auth/admin/users/${userId}/subscription`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('فشل إلغاء الاشتراك');
+      alert('تم إلغاء الاشتراك');
+      await reloadStats();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'فشل إلغاء الاشتراك');
+    }
+  };
 
   useEffect(() => {
     const saved = localStorage.getItem('auth_user');
@@ -648,6 +697,7 @@ export default function AdminPage() {
                   <th className="text-right py-3 px-2">عمليات البحث</th>
                   <th className="text-right py-3 px-2">آخر بحث</th>
                   <th className="text-right py-3 px-2">تاريخ التسجيل</th>
+                  <th className="text-right py-3 px-2">إدارة</th>
                 </tr>
               </thead>
               <tbody>
@@ -681,6 +731,48 @@ export default function AdminPage() {
                     <td className="py-3 px-2 font-bold text-primary-600">{u.search_count}</td>
                     <td className="py-3 px-2 text-ink-500">{u.last_search ? formatDate(u.last_search) : '-'}</td>
                     <td className="py-3 px-2 text-ink-500">{formatDate(u.created_at)}</td>
+                    <td className="py-3 px-2">
+                      <div className="relative">
+                        <button
+                          onClick={() => setSubMenuUserId(subMenuUserId === u.id ? null : u.id)}
+                          className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-primary-700 border border-primary-200 rounded-lg hover:bg-primary-50 transition-colors"
+                        >
+                          <Crown className="w-3.5 h-3.5" />
+                          الاشتراك
+                          <ChevronDown className={`w-3 h-3 transition-transform ${subMenuUserId === u.id ? 'rotate-180' : ''}`} />
+                        </button>
+                        {subMenuUserId === u.id && (
+                          <>
+                            <div className="fixed inset-0 z-10" onClick={() => setSubMenuUserId(null)} />
+                            <div className="absolute top-full left-0 z-20 mt-1 w-44 bg-white border border-ink-100 rounded-xl shadow-card-hover py-1" dir="rtl">
+                              <button
+                                onClick={() => grantSubscription(u.id, 'monthly')}
+                                className="w-full text-right px-3.5 py-2 text-sm text-ink-700 hover:bg-primary-50 hover:text-primary-700"
+                              >
+                                منح اشتراك — شهر
+                              </button>
+                              <button
+                                onClick={() => grantSubscription(u.id, 'annual')}
+                                className="w-full text-right px-3.5 py-2 text-sm text-ink-700 hover:bg-primary-50 hover:text-primary-700"
+                              >
+                                منح اشتراك — سنة
+                              </button>
+                              {u.sub_status === 'active' && (
+                                <>
+                                  <div className="border-t border-ink-100 my-1" />
+                                  <button
+                                    onClick={() => revokeSubscription(u.id)}
+                                    className="w-full text-right px-3.5 py-2 text-sm text-red-600 hover:bg-red-50"
+                                  >
+                                    إلغاء الاشتراك
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
