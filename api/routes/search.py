@@ -3,8 +3,7 @@ import os
 import re
 from fastapi import APIRouter, Query, HTTPException, Request
 from api.db import query_all, query_one, get_db
-from api.embeddings import embed_text, vector_to_pgvector, get_client
-from api.config import EMBEDDING_MODEL
+from api.embeddings import embed_text, vector_to_pgvector, get_client, get_embedding_column, get_embedding_model
 from api.query_intelligence import analyze_query
 from api.legal_kb import get_kb_expansions, CONCEPTS as KB_CONCEPTS
 from api.routes.auth import log_search, get_client_ip, get_country_from_ip, ADMIN_PHONE
@@ -372,6 +371,8 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset, u
 
     embedding = None
     vec_str = None
+    # Column serving this request (embedding or embedding_large once migration completes)
+    col = get_embedding_column()
     if has_query and not is_browse_only:
         try:
             # Use LLM-rewritten query if available, else dictionary expansion
@@ -399,7 +400,7 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset, u
         # judgment ids (bounded to `limit` rows, so this join is fast).
         step1_sql = f"""
             WITH matched AS (
-                SELECT j.id AS judgment_id, MIN(jc.embedding <=> %s::vector) AS distance
+                SELECT j.id AS judgment_id, MIN(jc.{col} <=> %s::vector) AS distance
                 FROM judgment_chunks jc
                 JOIN judgments j ON jc.judgment_id = j.id
                 JOIN cases c ON j.case_id = c.id
@@ -407,11 +408,11 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset, u
                 LEFT JOIN court_types ct ON c.court_type_id = ct.id
                 LEFT JOIN locations l ON c.location_id = l.id
                 LEFT JOIN court_levels cl ON j.court_level_id = cl.id
-                WHERE jc.embedding IS NOT NULL
+                WHERE jc.{col} IS NOT NULL
                   AND length(jc.chunk_text) >= 100
                   AND length(COALESCE(j.full_text, '')) > 800
                   {_FOOTER_CHUNK_FILTER}
-                  AND jc.embedding <=> %s::vector < 0.45
+                  AND jc.{col} <=> %s::vector < 0.45
                   {where_clause}
                 GROUP BY j.id
             )
@@ -451,7 +452,7 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset, u
                     cl.code AS court_level_code,
                     js.section_name_ar,
                     jc.chunk_text,
-                    jc.embedding <=> %s::vector AS distance
+                    jc.{col} <=> %s::vector AS distance
                 FROM judgment_chunks jc
                 JOIN judgments j ON jc.judgment_id = j.id
                 JOIN cases c ON j.case_id = c.id
@@ -460,10 +461,10 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset, u
                 LEFT JOIN locations l ON c.location_id = l.id
                 LEFT JOIN court_levels cl ON j.court_level_id = cl.id
                 WHERE j.id = ANY(%s)
-                  AND jc.embedding IS NOT NULL
+                  AND jc.{col} IS NOT NULL
                   AND length(jc.chunk_text) >= 100
                   {_FOOTER_CHUNK_FILTER}
-                ORDER BY j.id, jc.embedding <=> %s::vector;
+                ORDER BY j.id, jc.{col} <=> %s::vector;
             """
             try:
                 unordered_rows = query_all(step2_sql, [vec_str, page_ids, vec_str])
@@ -483,7 +484,7 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset, u
             LEFT JOIN court_types ct ON c.court_type_id = ct.id
             LEFT JOIN locations l ON c.location_id = l.id
             LEFT JOIN court_levels cl ON j.court_level_id = cl.id
-            WHERE jc.embedding IS NOT NULL
+            WHERE jc.{col} IS NOT NULL
               AND length(jc.chunk_text) >= 100
               {where_clause}
         """
@@ -523,7 +524,7 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset, u
                 LEFT JOIN court_types ct ON c.court_type_id = ct.id
                 LEFT JOIN locations l ON c.location_id = l.id
                 LEFT JOIN court_levels cl ON j.court_level_id = cl.id
-                WHERE jc.embedding IS NOT NULL
+                WHERE jc.{col} IS NOT NULL
                   AND length(jc.chunk_text) >= 100
                   {where_clause}
                 ORDER BY j.id
@@ -550,7 +551,7 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset, u
             LEFT JOIN court_types ct ON c.court_type_id = ct.id
             LEFT JOIN locations l ON c.location_id = l.id
             LEFT JOIN court_levels cl ON j.court_level_id = cl.id
-            WHERE jc.embedding IS NOT NULL
+            WHERE jc.{col} IS NOT NULL
               AND length(jc.chunk_text) >= 100
               AND length(COALESCE(j.full_text, '')) > 800
               {_FOOTER_CHUNK_FILTER}
@@ -592,7 +593,7 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset, u
                 LEFT JOIN court_types ct ON c.court_type_id = ct.id
                 LEFT JOIN locations l ON c.location_id = l.id
                 LEFT JOIN court_levels cl ON j.court_level_id = cl.id
-                WHERE jc.embedding IS NOT NULL
+                WHERE jc.{col} IS NOT NULL
                   AND length(jc.chunk_text) >= 100
                   AND length(COALESCE(j.full_text, '')) > 800
                   {_FOOTER_CHUNK_FILTER}
@@ -637,7 +638,7 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset, u
     if all_sentences:
         try:
             embed_data = get_client().embeddings.create(
-                model=EMBEDDING_MODEL,
+                model=get_embedding_model(),
                 input=all_sentences,
             ).data
             for owner_idx, sent, emb_obj in zip(sentence_owner, all_sentences, embed_data):
@@ -877,7 +878,7 @@ def get_stats():
     total_cases = query_one("SELECT COUNT(*) AS count FROM cases;")
     total_chunks = query_one("SELECT COUNT(*) AS count FROM judgment_chunks;")
     embedded_chunks = query_one(
-        "SELECT COUNT(*) AS count FROM judgment_chunks WHERE embedding IS NOT NULL;"
+        f"SELECT COUNT(*) AS count FROM judgment_chunks WHERE {get_embedding_column()} IS NOT NULL;"
     )
 
     by_court_type = query_all(
