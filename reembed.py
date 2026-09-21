@@ -140,7 +140,21 @@ def main():
             print(f"\n[STOP] Reached max batches ({args.max_batches})")
             break
 
-        result = embed_and_store(batch_num)
+        # Retry the whole batch on transient errors (DB connection drops,
+        # network blips). Batches are idempotent: UPDATE by id.
+        result = None
+        for attempt in range(5):
+            try:
+                result = embed_and_store(batch_num)
+                break
+            except Exception as e:
+                wait = 2 ** attempt * 10
+                print(f"  [BATCH RETRY {attempt+1}/5] {type(e).__name__}: {e} — waiting {wait}s")
+                time.sleep(wait)
+        if result is None:
+            print(f"  [FAIL] Batch {batch_num} failed after 5 retries, skipping (chunks stay NULL for a later sweep)")
+            result = -1
+
         if result == 0:
             print("\n[DONE] All chunks re-embedded!")
             break
