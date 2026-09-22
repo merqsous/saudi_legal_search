@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Script from 'next/script';
-import { Amiri, IBM_Plex_Sans_Arabic } from 'next/font/google';
+import { Amiri, Noto_Kufi_Arabic } from 'next/font/google';
 import ChatWidget from './components/ChatWidget';
 import VisitTracker from './components/VisitTracker';
 import './globals.css';
@@ -12,11 +12,11 @@ const amiri = Amiri({
   variable: '--font-amiri',
 });
 
-const plex = IBM_Plex_Sans_Arabic({
+const kufi = Noto_Kufi_Arabic({
   subsets: ['arabic'],
-  weight: ['300', '400', '500', '600', '700'],
+  weight: ['400', '500', '600', '700', '800'],
   display: 'swap',
-  variable: '--font-plex',
+  variable: '--font-kufi',
 });
 
 export const metadata: Metadata = {
@@ -40,8 +40,8 @@ export const metadata: Metadata = {
     images: ['/opengraph-image'],
   },
   icons: {
-    icon: '/logo-icon.png',
-    apple: '/logo-icon.png',
+    icon: '/logo-rounded.png',
+    apple: '/logo-rounded.png',
   },
   robots: 'index, follow',
   other: {
@@ -60,7 +60,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ar" dir="rtl">
-      <body className={`${amiri.variable} ${plex.variable}`}>
+      <body className={`${amiri.variable} ${kufi.variable}`}>
         <Script src="https://www.googletagmanager.com/gtag/js?id=AW-18318854762" strategy="afterInteractive" />
         <Script id="google-ads" strategy="afterInteractive">
           {`
@@ -96,7 +96,7 @@ export default function RootLayout({
               '@type': 'Organization',
               name: 'الباحث',
               url: 'https://albaheth.app',
-              logo: 'https://albaheth.app/logo-icon.png',
+              logo: 'https://albaheth.app/logo-rounded.png',
               description: 'منصة متخصصة للبحث في الأحكام القضائية السعودية',
               sameAs: ['https://x.com/albahethapp'],
             }),

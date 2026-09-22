@@ -194,7 +194,7 @@ export default function LandingAuth() {
             </button>
 
             <div className="flex flex-col items-center mb-6">
-              <img src="/logo-rounded.png" alt="الباحث" className="w-14 h-14 rounded-2xl mb-3" width={56} height={56} />
+              <img src="/logo-rounded.png" alt="شعار الباحث" className="w-14 h-14 mb-3" width={56} height={56} />
               <h2 className="text-xl font-bold text-ink-900">
                 {step === 'name' ? 'إنشاء حساب' : 'تسجيل الدخول'}
               </h2>

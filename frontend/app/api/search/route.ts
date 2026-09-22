@@ -8,6 +8,7 @@ export async function GET(request: NextRequest) {
   try {
     const res = await fetch(`${apiUrl}/api/search?${searchParams}`, {
       headers: { 'X-User-Phone': phone },
+      cache: 'no-store',
     });
 
     const data = await res.text();

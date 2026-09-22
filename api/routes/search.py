@@ -211,6 +211,67 @@ def generate_ai_answer(query: str, results: list[dict]) -> str | None:
         return None
 
 
+# ---------------------------------------------------------------
+# Chunk text sanitation — some scraped chunks start with the raw
+# page-metadata JSON object ({"page_number": ...}) followed by the
+# judgment text, plus MOJ website navigation junk. Strip it before
+# showing snippets.
+# ---------------------------------------------------------------
+_MOJ_NAV_PATTERNS = [
+    "الأنظمة العدلية الأحكام القضائية المصطلحات الدخول عربي بيانات الحكم",
+    "الأنظمة العدلية الأحكام القضائية المصطلحات الدخول عربي",
+]
+
+
+def _strip_leading_json(text: str) -> str:
+    """If the text starts with a JSON object, return its full_text value + the text after it."""
+    t = text.lstrip()
+    if not t.startswith("{"):
+        return text
+    depth = 0
+    in_str = False
+    esc = False
+    for i, ch in enumerate(t):
+        if esc:
+            esc = False
+            continue
+        if ch == "\\":
+            esc = True
+            continue
+        if ch == '"':
+            in_str = not in_str
+            continue
+        if in_str:
+            continue
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                blob, rest = t[: i + 1], t[i + 1 :]
+                inner = ""
+                try:
+                    obj = json.loads(blob)
+                    inner = obj.get("full_text") or obj.get("card_text") or ""
+                except Exception:
+                    pass
+                return (inner + " " + rest).strip()
+    return text
+
+
+def sanitize_chunk_text(text: str) -> str:
+    """Clean scraped boilerplate from a chunk for display."""
+    if not text:
+        return text
+    text = _strip_leading_json(text)
+    # Remove MOJ navigation junk if it sits near the start
+    for nav in _MOJ_NAV_PATTERNS:
+        pos = text.find(nav)
+        if pos != -1 and pos < 250:
+            text = (text[:pos] + " " + text[pos + len(nav) :]).strip()
+    return text.strip()
+
+
 @router.get("/search")
 def search(
     request: Request,
@@ -650,7 +711,7 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset, u
 
     results = []
     for row_idx, row in enumerate(rows):
-        chunk_text = row.get("chunk_text", "")
+        chunk_text = sanitize_chunk_text(row.get("chunk_text", ""))
         chunk_distance = float(row["distance"]) if row["distance"] else None
         sentences = row_sentences[row_idx]
 

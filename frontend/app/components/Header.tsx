@@ -76,10 +76,8 @@ function HeaderInner({ showSearchLink = true }: { showSearchLink?: boolean }) {
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
           {/* Logo */}
           <div className="flex items-center gap-4">
-            <a href={isLoggedIn ? '/search' : '/'} className="flex items-center gap-2.5">
-              <span className="bg-primary-700 rounded-lg px-3 py-1.5" style={{ fontFamily: 'B-Fantezy, var(--font-amiri), Amiri, serif' }}>
-                <span className="text-lg font-bold text-white leading-none">الباحث</span>
-              </span>
+            <a href={isLoggedIn ? '/search' : '/'} className="flex items-center">
+              <img src="/logo-rounded.png" alt="شعار الباحث" className="h-10 w-10" width={40} height={40} />
             </a>
 
             {/* App navigation — logged in users get the product nav only */}
@@ -178,7 +176,7 @@ function HeaderInner({ showSearchLink = true }: { showSearchLink?: boolean }) {
                 </a>
                 <button
                   onClick={() => setShowAuthModal(true)}
-                  className="px-5 py-2 text-sm font-semibold bg-primary-700 text-white rounded-lg hover:bg-primary-800 transition-colors"
+                  className="px-6 py-2.5 text-sm font-semibold bg-primary-700 text-white rounded-full hover:bg-primary-600 transition-colors"
                 >
                   تسجيل الدخول
                 </button>
@@ -233,9 +231,7 @@ export default function Header({ showSearchLink = true }: { showSearchLink?: boo
     <Suspense fallback={
       <header className="bg-white border-b border-ink-100">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <span className="bg-primary-700 rounded-lg px-3 py-1.5" style={{ fontFamily: 'B-Fantezy, var(--font-amiri), Amiri, serif' }}>
-            <span className="text-lg font-bold text-white leading-none">الباحث</span>
-          </span>
+          <img src="/logo-rounded.png" alt="شعار الباحث" className="h-10 w-10" width={40} height={40} />
         </div>
       </header>
     }>

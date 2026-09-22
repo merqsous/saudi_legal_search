@@ -136,7 +136,7 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
         </button>
 
         <div className="flex items-center gap-2 mb-6">
-          <img src="/logo-rounded.png" alt="الباحث" className="w-10 h-10 rounded-xl" width={40} height={40} />
+          <img src="/logo-rounded.png" alt="شعار الباحث" className="w-10 h-10" width={40} height={40} />
           <h2 className="text-lg font-bold text-ink-900">تسجيل الدخول</h2>
         </div>
 

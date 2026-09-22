@@ -7,9 +7,8 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
           {/* Brand */}
           <div className="md:col-span-1">
-            <div className="flex items-center gap-2 mb-4">
-              <img src="/logo-rounded.png" alt="الباحث" className="w-9 h-9 rounded-lg" width={36} height={36} />
-              <span className="text-lg font-bold text-white">الباحث</span>
+            <div className="flex items-center mb-4">
+              <img src="/logo-rounded.png" alt="شعار الباحث" className="w-12 h-12" width={48} height={48} />
             </div>
             <p className="text-sm text-ink-400 leading-relaxed">
               محرك بحث قانوني متخصص في الأحكام القضائية السعودية. ابحث بالمعنى في آلاف الأحكام.
