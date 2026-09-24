@@ -11,9 +11,10 @@ from api.routes.auth import log_search, get_client_ip, get_country_from_ip, ADMI
 router = APIRouter()
 
 # Registered users who have not subscribed get a fixed number of free searches
-# before being required to upgrade. Anonymous users get a smaller preview
-# (handled separately via the `anonymous` query param).
-FREE_SEARCH_LIMIT = 20
+# before being required to upgrade. Anonymous visitors get a single preview
+# search (tracked by IP) before being asked to register.
+FREE_SEARCH_LIMIT = 5
+ANON_SEARCH_LIMIT = 1
 
 # Phone numbers that always bypass the subscription requirement (admin/owner).
 UNLIMITED_SEARCH_PHONES = {ADMIN_PHONE, "966553466235"}
@@ -39,6 +40,14 @@ def _get_search_count(user_id: int) -> int:
     row = query_one(
         "SELECT COUNT(*) as c FROM search_logs WHERE user_id = %s AND is_anonymous = FALSE",
         [user_id],
+    )
+    return row["c"] if row else 0
+
+
+def _get_anonymous_search_count(ip: str) -> int:
+    row = query_one(
+        "SELECT COUNT(*) as c FROM search_logs WHERE ip_address = %s AND is_anonymous = TRUE",
+        [ip],
     )
     return row["c"] if row else 0
 
@@ -287,29 +296,35 @@ def search(
     source: str | None = Query(None, description="Traffic source (where the visitor came from)"),
 ):
     phone = request.headers.get("X-User-Phone", "")
+    ip = get_client_ip(request)
 
-    # Anonymous users are limited to a small preview of results
-    effective_limit = 3 if anonymous else limit
+    user_id = _get_user_id_by_phone(phone) if phone else None
 
-    # Registered, non-subscribed users are limited to a fixed number of free
-    # searches. Admin phone always bypasses this check.
-    user_id = None
-    if not anonymous and phone and phone not in UNLIMITED_SEARCH_PHONES:
-        user_id = _get_user_id_by_phone(phone)
-        if user_id and not _has_active_subscription(user_id):
+    if user_id is not None:
+        # Registered, non-subscribed users get FREE_SEARCH_LIMIT free searches
+        # before the paywall. Admin phone always bypasses this check.
+        if phone not in UNLIMITED_SEARCH_PHONES and not _has_active_subscription(user_id):
             prior_searches = _get_search_count(user_id)
             if prior_searches >= FREE_SEARCH_LIMIT:
                 raise HTTPException(
                     status_code=402,
                     detail="subscription_required",
                 )
-    elif phone:
-        user_id = _get_user_id_by_phone(phone)
+    else:
+        # Unauthenticated visitors get a single free preview search per IP
+        # before being asked to register.
+        if ip and _get_anonymous_search_count(ip) >= ANON_SEARCH_LIMIT:
+            raise HTTPException(
+                status_code=402,
+                detail="registration_required",
+            )
+
+    # Anonymous users are limited to a small preview of results
+    effective_limit = 3 if (anonymous or user_id is None) else limit
 
     result = _do_search(q, court_type, city, year, court_level, section, effective_limit, offset, user_id=user_id)
 
     # Log the search with IP for both authenticated and anonymous users
-    ip = get_client_ip(request)
     country = get_country_from_ip(ip)
     if anonymous or not phone:
         log_search("", q, court_type, city, year, court_level, result.get("total", 0), ip, country, is_anonymous=True, source=source)

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Search, ArrowLeft, Loader2, MapPin, Sparkles, Briefcase, Users, Building2, FileText } from 'lucide-react';
+import { Search, ArrowLeft, Loader2, MapPin, Sparkles, Briefcase, Users, Building2, FileText, UserPlus } from 'lucide-react';
 import { judgmentUrl } from '@/lib/slug';
 
 interface HeroResult {
@@ -30,6 +30,7 @@ export default function HeroSearch() {
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [error, setError] = useState(false);
+  const [registerRequired, setRegisterRequired] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Typewriter cycling through example queries (until the user types)
@@ -69,8 +70,13 @@ export default function HeroSearch() {
     setLoading(true);
     setError(false);
     setResults(null);
+    setRegisterRequired(false);
     try {
       const res = await fetch(`/api/search?anonymous=true&limit=3&q=${encodeURIComponent(text)}`);
+      if (res.status === 402) {
+        setRegisterRequired(true);
+        return;
+      }
       const data = await res.json();
       if (!res.ok || data.error) throw new Error();
       setResults(data.results || []);
@@ -144,12 +150,31 @@ export default function HeroSearch() {
       )}
 
       {/* Live results */}
-      {(loading || results || error) && (
+      {(loading || results || error || registerRequired) && (
         <div className="mt-6 bg-white rounded-[30px] shadow-brand p-5 md:p-6" dir="rtl">
           {loading && (
             <div className="flex items-center justify-center gap-3 py-10">
               <Loader2 className="w-5 h-5 text-primary-700 animate-spin" />
               <p className="text-sm text-ink-500">المحرك يفهم معنى استعلامك ويبحث في الأحكام…</p>
+            </div>
+          )}
+
+          {registerRequired && !loading && (
+            <div className="text-center py-8">
+              <div className="w-12 h-12 bg-primary-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <UserPlus className="w-6 h-6 text-primary-700" />
+              </div>
+              <p className="text-base font-bold text-ink-800 mb-1">استخدمت بحثك المجاني الوحيد</p>
+              <p className="text-sm text-ink-500 mb-5">
+                أنشئ حساباً مجانياً واحصل على 5 عمليات بحث إضافية في جميع الأحكام
+              </p>
+              <a
+                href="/?signup=1"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-primary-700 text-white rounded-full font-bold hover:bg-primary-600 transition-colors"
+              >
+                إنشاء حساب مجاني
+                <ArrowLeft className="w-4 h-4" />
+              </a>
             </div>
           )}
 

@@ -77,6 +77,7 @@ export default function SearchClient() {
   const [currentPage, setCurrentPage] = useState(1);
   const [loadingPage, setLoadingPage] = useState(false);
   const [subscriptionRequired, setSubscriptionRequired] = useState(false);
+  const [registrationRequired, setRegistrationRequired] = useState(false);
   const pageSize = 10;
   const isAnonymous = !authUser;
 
@@ -165,6 +166,7 @@ export default function SearchClient() {
     setLoading(true);
     setError(null);
     setSubscriptionRequired(false);
+    setRegistrationRequired(false);
     setHasSearched(true);
 
     const params = new URLSearchParams({ q: query, limit: String(pageSize) });
@@ -182,7 +184,12 @@ export default function SearchClient() {
       });
       if (!res.ok) {
         if (res.status === 402) {
-          setSubscriptionRequired(true);
+          const body = await res.json().catch(() => ({}));
+          if (body.detail === 'registration_required') {
+            setRegistrationRequired(true);
+          } else {
+            setSubscriptionRequired(true);
+          }
         } else if (res.status === 500) {
           setError('حدث خطأ مؤقت، يرجى إعادة المحاولة');
         } else {
@@ -253,7 +260,12 @@ export default function SearchClient() {
         setCurrentPage(page);
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } else if (res.status === 402) {
-        setSubscriptionRequired(true);
+        const body = await res.json().catch(() => ({}));
+        if (body.detail === 'registration_required') {
+          setRegistrationRequired(true);
+        } else {
+          setSubscriptionRequired(true);
+        }
       }
     } catch {
       // ignore
@@ -544,6 +556,26 @@ export default function SearchClient() {
           </div>
         )}
 
+        {/* Registration required (anonymous visitors after 1 free search) */}
+        {registrationRequired && (
+          <div className="mt-6 bg-gradient-to-l from-primary-50 to-white border border-primary-200 rounded-xl p-6 text-center">
+            <h3 className="text-lg font-bold text-ink-800 mb-2">
+              سجّل للمتابعة
+            </h3>
+            <p className="text-sm text-ink-600 mb-4">
+              أنشئ حساباً مجانياً واحصل على 5 عمليات بحث في جميع الأحكام القضائية السعودية.
+            </p>
+            <div className="flex items-center justify-center gap-3">
+              <button
+                onClick={() => router.push('/?signup=1')}
+                className="px-5 py-2.5 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors"
+              >
+                إنشاء حساب مجاني
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Subscription required */}
         {subscriptionRequired && (
           <div className="mt-6 bg-gradient-to-l from-primary-50 to-white border border-primary-200 rounded-xl p-6 text-center">
@@ -565,7 +597,7 @@ export default function SearchClient() {
         )}
 
         {/* No results */}
-        {!loading && hasSearched && results.length === 0 && !error && !subscriptionRequired && (
+        {!loading && hasSearched && results.length === 0 && !error && !subscriptionRequired && !registrationRequired && (
           <div className="text-center py-20">
             <Search className="w-10 h-10 text-ink-300 mx-auto mb-4" />
             <p className="text-ink-600 font-medium mb-1">لا توجد نتائج مطابقة</p>
