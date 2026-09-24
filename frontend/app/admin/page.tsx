@@ -425,7 +425,7 @@ export default function AdminPage() {
               <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-ink-100 text-ink-500">
                 <Users className="w-5 h-5" />
               </div>
-              <span className="text-sm text-ink-500">فترة تجريبية</span>
+              <span className="text-sm text-ink-500">اشتراك مجاني / ممنوح</span>
             </div>
             <p className="text-3xl font-bold text-ink-500">{stats.free_trial || 0}</p>
           </div>

@@ -499,7 +499,7 @@ def admin_stats(authorization: str = Header(None)):
            LEFT JOIN search_logs sl ON sl.user_id = u.id
            LEFT JOIN LATERAL (
                SELECT * FROM user_subscriptions
-               WHERE user_id = u.id AND status = 'active'
+               WHERE user_id = u.id AND status = 'active' AND expires_at > NOW()
                ORDER BY id DESC LIMIT 1
            ) us ON true
            GROUP BY u.id, u.phone, u.first_name, u.last_name, u.ip_address, u.country, u.source, u.medium, u.campaign, u.created_at,
@@ -540,9 +540,9 @@ def admin_stats(authorization: str = Header(None)):
            ORDER BY j.id DESC LIMIT 20"""
     )
 
-    paid_monthly = safe_query_one("SELECT COUNT(*) as cnt FROM user_subscriptions WHERE status = 'active' AND plan = 'monthly' AND amount_paid > 0")["cnt"]
-    paid_annual = safe_query_one("SELECT COUNT(*) as cnt FROM user_subscriptions WHERE status = 'active' AND plan = 'annual' AND amount_paid > 0")["cnt"]
-    free_trial = safe_query_one("SELECT COUNT(*) as cnt FROM user_subscriptions WHERE status = 'active' AND payment_id = 'FREE_TRIAL'")["cnt"]
+    paid_monthly = safe_query_one("SELECT COUNT(DISTINCT user_id) as cnt FROM user_subscriptions WHERE status = 'active' AND plan = 'monthly' AND amount_paid > 0 AND expires_at > NOW()")["cnt"]
+    paid_annual = safe_query_one("SELECT COUNT(DISTINCT user_id) as cnt FROM user_subscriptions WHERE status = 'active' AND plan = 'annual' AND amount_paid > 0 AND expires_at > NOW()")["cnt"]
+    free_trial = safe_query_one("SELECT COUNT(DISTINCT user_id) as cnt FROM user_subscriptions WHERE status = 'active' AND payment_id IN ('FREE_TRIAL','ADMIN_GRANT') AND expires_at > NOW()")["cnt"]
 
     # --- Feedback signals (relevance feedback system) ---
     feedback_signals_total = safe_query_one("SELECT COUNT(*) as cnt FROM search_feedback")["cnt"]
@@ -619,13 +619,13 @@ def admin_stats(authorization: str = Header(None)):
 
     if payment_outcomes.get("available"):
         failed_ids = {
-            f["user_id"] for f in payment_outcomes.get("failed", [])
+            int(f["user_id"]) for f in payment_outcomes.get("failed", [])
             if f.get("user_id") and str(f["user_id"]).isdigit()
         }
         failed_users = {}
         if failed_ids:
             rows = query_all(
-                "SELECT id, phone, first_name, last_name FROM users WHERE id = ANY(%s)",
+                "SELECT id, phone, first_name, last_name FROM users WHERE id = ANY(%s::int[])",
                 [list(failed_ids)],
             )
             for r in rows:
