@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Fragment } from 'react';
 import { useRouter } from 'next/navigation';
-import { Scale, LogOut, Loader2, Users, Search, Database, TrendingUp, Clock, ArrowRight, MessageSquare, Send, ChevronRight, CheckCircle, X, Globe, BarChart3, ThumbsUp, ThumbsDown, Building2, ChevronDown, MousePointerClick, Crown } from 'lucide-react';
+import { Scale, LogOut, Loader2, Users, Search, Database, TrendingUp, Clock, ArrowRight, MessageSquare, Send, ChevronRight, CheckCircle, X, Globe, BarChart3, ThumbsUp, ThumbsDown, Building2, ChevronDown, MousePointerClick, Crown, CreditCard } from 'lucide-react';
 
 interface AdminStats {
   total_judgments: number;
@@ -83,6 +83,20 @@ interface AdminStats {
     cases_created: number;
   }[];
   feature_usage: { key: string; label: string; total: number; week: number }[];
+  payment_outcomes?: {
+    available: boolean;
+    total?: number;
+    status_counts?: Record<string, number>;
+    failed?: {
+      payment_id: string;
+      status: string;
+      amount: number;
+      user_id: string | null;
+      reason: string;
+      created_at: string;
+      user_label: string | null;
+    }[];
+  };
   recent_cases: {
     id: number;
     judgment_number: string | null;
@@ -521,6 +535,49 @@ export default function AdminPage() {
             );
           })()}
         </div>
+
+        {/* Payment Outcomes (Moyasar) */}
+        {stats.payment_outcomes?.available && (
+          <div className="bg-white rounded-2xl shadow-sm p-6 border border-ink-100 mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <CreditCard className="w-5 h-5 text-primary-600" />
+              <h2 className="text-lg font-bold text-ink-900">حالة المدفوعات (مويسر)</h2>
+            </div>
+            <div className="grid grid-cols-3 gap-2 mb-5">
+              <div className="bg-ink-50 rounded-xl p-3 text-center">
+                <p className="text-lg font-bold text-ink-900">{stats.payment_outcomes.total || 0}</p>
+                <p className="text-xs text-ink-400">إجمالي المحاولات</p>
+              </div>
+              <div className="bg-green-50 rounded-xl p-3 text-center">
+                <p className="text-lg font-bold text-green-700">{stats.payment_outcomes.status_counts?.paid || 0}</p>
+                <p className="text-xs text-green-500">ناجحة</p>
+              </div>
+              <div className="bg-red-50 rounded-xl p-3 text-center">
+                <p className="text-lg font-bold text-red-700">{stats.payment_outcomes.status_counts?.failed || 0}</p>
+                <p className="text-xs text-red-500">فاشلة</p>
+              </div>
+            </div>
+            {(stats.payment_outcomes.failed || []).length > 0 ? (
+              <div className="space-y-2">
+                <p className="text-xs text-ink-400 mb-2">المحاولات غير المكتملة — من فقدناهم في عملية الدفع</p>
+                {stats.payment_outcomes.failed!.slice(0, 10).map((f) => (
+                  <div key={f.payment_id} className="flex items-center justify-between bg-red-50/50 border border-red-100 rounded-xl px-4 py-2.5">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-ink-700 truncate">{f.user_label || 'مستخدم غير معروف'}</p>
+                      <p className="text-xs text-red-500 truncate" dir="auto">{f.reason || f.status}</p>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="text-xs text-ink-400">{new Date(f.created_at).toLocaleDateString('ar-SA')}</span>
+                      <span className="text-sm font-bold text-ink-700">{f.amount} ريال</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-green-600 bg-green-50 rounded-xl px-4 py-3">لا توجد مدفوعات فاشلة</p>
+            )}
+          </div>
+        )}
 
         {/* Feedback Signals */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">

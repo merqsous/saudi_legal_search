@@ -609,6 +609,35 @@ def admin_stats(authorization: str = Header(None)):
         {"key": "firms", "label": "إنشاء المكاتب", **_feature("firms")},
     ]
 
+    # --- Moyasar payment outcomes (paid vs failed, with reasons) ---
+    try:
+        from api.routes.payments import get_moyasar_overview
+        payment_outcomes = get_moyasar_overview()
+    except Exception as e:
+        print(f"[ADMIN_STATS] Moyasar overview failed: {e}")
+        payment_outcomes = {"available": False}
+
+    if payment_outcomes.get("available"):
+        failed_ids = {
+            f["user_id"] for f in payment_outcomes.get("failed", [])
+            if f.get("user_id") and str(f["user_id"]).isdigit()
+        }
+        failed_users = {}
+        if failed_ids:
+            rows = query_all(
+                "SELECT id, phone, first_name, last_name FROM users WHERE id = ANY(%s)",
+                [list(failed_ids)],
+            )
+            for r in rows:
+                name = " ".join(x for x in [r["first_name"], r["last_name"]] if x)
+                failed_users[r["id"]] = name or r["phone"]
+        for f in payment_outcomes.get("failed", []):
+            uid = f.get("user_id")
+            try:
+                f["user_label"] = failed_users.get(int(uid), f"مستخدم #{uid}") if uid else None
+            except (TypeError, ValueError):
+                f["user_label"] = f"مستخدم #{uid}" if uid else None
+
     return {
         "total_judgments": total_judgments,
         "total_cases": total_cases,
@@ -618,6 +647,7 @@ def admin_stats(authorization: str = Header(None)):
         "paid_monthly": paid_monthly,
         "paid_annual": paid_annual,
         "free_trial": free_trial,
+        "payment_outcomes": payment_outcomes,
         "top_keywords": top_keywords,
         "top_court_types": top_court_types,
         "traffic_sources": traffic_sources,

@@ -252,6 +252,56 @@ def get_subscription_status(authorization: str = Header(None)):
     }
 
 
+def get_moyasar_overview(max_pages: int = 20) -> dict:
+    """Fetch all payments from Moyasar and build a status overview
+    (paid vs failed, with failure reasons) for the admin dashboard."""
+    secret_key = _get_secret_key()
+    if not secret_key:
+        return {"available": False}
+
+    auth = base64.b64encode(f"{secret_key}:".encode("utf-8")).decode("utf-8")
+    payments = []
+    for page in range(1, max_pages + 1):
+        req = urllib.request.Request(
+            f"{BASE_URL}/payments?page={page}",
+            headers={"Authorization": f"Basic {auth}", "Accept": "application/json", "User-Agent": "Albaheth/1.0"},
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=15) as response:
+                result = json.loads(response.read().decode("utf-8"))
+        except Exception:
+            break
+        batch = result.get("payments", [])
+        if not batch:
+            break
+        payments.extend(batch)
+        if page >= (result.get("meta", {}).get("total_pages") or 1):
+            break
+
+    status_counts: dict = {}
+    for p in payments:
+        status = p.get("status") or "unknown"
+        status_counts[status] = status_counts.get(status, 0) + 1
+
+    failed = []
+    for p in payments:
+        if p.get("status") == "paid":
+            continue
+        src = p.get("source", {}) or {}
+        meta = p.get("metadata", {}) or {}
+        failed.append({
+            "payment_id": p.get("id"),
+            "status": p.get("status"),
+            "amount": (p.get("amount") or 0) // 100,
+            "user_id": meta.get("user_id"),
+            "reason": src.get("message") or "",
+            "created_at": p.get("created_at"),
+        })
+    failed.sort(key=lambda f: f.get("created_at") or "", reverse=True)
+
+    return {"available": True, "total": len(payments), "status_counts": status_counts, "failed": failed}
+
+
 def _activate_subscription(user_id: int, plan: str, amount: int, payment_id: str):
     """Activate a user subscription after successful payment."""
     from datetime import datetime, timedelta
