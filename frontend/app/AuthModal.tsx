@@ -9,7 +9,7 @@ interface AuthModalProps {
   onAuthSuccess: (user: { id: number; phone: string; first_name: string; last_name: string }) => void;
 }
 
-type Step = 'phone' | 'verify' | 'name';
+type Step = 'phone' | 'verify' | 'name' | 'email';
 
 export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
   const [step, setStep] = useState<Step>('phone');
@@ -21,6 +21,7 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [needsName, setNeedsName] = useState(false);
+  const [loggedInToken, setLoggedInToken] = useState<string | null>(null);
 
   const formatPhone = (val: string) => {
     let cleaned = val.replace(/\D/g, '');
@@ -101,6 +102,14 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
       if (data.token) {
         localStorage.setItem('auth_token', data.token);
         localStorage.setItem('auth_user', JSON.stringify(data.user));
+        // Existing users who registered before email capture: ask once
+        // per login (skippable) until we have their email
+        if (!data.user.email && phone !== '0514789632') {
+          setLoggedInToken(data.token);
+          setEmail('');
+          setStep('email');
+          return;
+        }
         onAuthSuccess(data.user);
       }
     } catch (e: any) {
@@ -126,6 +135,32 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
       await sendOtp();
     } catch (e: any) {
       setError(e instanceof Error ? e.message : 'فشل إرسال رمز التحقق');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveEmail = async () => {
+    setError(null);
+    const token = loggedInToken || localStorage.getItem('auth_token');
+    if (!token) return;
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(email.trim())) {
+      setError('يرجى إدخال بريد إلكتروني صحيح');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch('/api/auth/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'فشل حفظ البريد');
+      localStorage.setItem('auth_user', JSON.stringify(data.user));
+      onAuthSuccess(data.user);
+    } catch (e: any) {
+      setError(e instanceof Error ? e.message : 'فشل حفظ البريد');
     } finally {
       setLoading(false);
     }
@@ -260,6 +295,45 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
             >
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
               إرسال رمز التحقق
+            </button>
+          </div>
+        )}
+
+        {/* Step 4: Email (existing users without an email on file) */}
+        {step === 'email' && (
+          <div className="space-y-4">
+            <p className="text-sm text-ink-600">
+              سجّل بريدك الإلكتروني ليصلك جديد الأحكام والعروض — يمكنك تخطي هذه الخطوة
+            </p>
+            <div className="relative">
+              <Mail className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-ink-400" />
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSaveEmail()}
+                placeholder="example@lawfirm.com"
+                className="w-full pr-11 pl-4 py-3 text-base bg-ink-50 border border-ink-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
+                style={{ direction: 'ltr' }}
+                autoFocus
+              />
+            </div>
+            <button
+              onClick={handleSaveEmail}
+              disabled={loading}
+              className="w-full py-3 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
+              حفظ البريد
+            </button>
+            <button
+              onClick={() => {
+                const saved = localStorage.getItem('auth_user');
+                if (saved) onAuthSuccess(JSON.parse(saved));
+              }}
+              className="w-full text-sm text-ink-500 hover:text-ink-700"
+            >
+              تخطي الآن
             </button>
           </div>
         )}
