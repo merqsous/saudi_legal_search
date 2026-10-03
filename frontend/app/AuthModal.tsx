@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { X, Phone, Loader2, User, CheckCircle } from 'lucide-react';
+import { X, Phone, Loader2, User, CheckCircle, Mail } from 'lucide-react';
 import { getVisitSource } from './components/VisitTracker';
 
 interface AuthModalProps {
@@ -17,6 +17,7 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
   const [code, setCode] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [needsName, setNeedsName] = useState(false);
@@ -90,6 +91,7 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
           code,
           first_name: needsName ? firstName : undefined,
           last_name: needsName ? lastName : undefined,
+          email: needsName ? email.trim() : undefined,
           ...(needsName ? getVisitSource() : {}),
         }),
       });
@@ -112,6 +114,10 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
     setError(null);
     if (!firstName.trim() || !lastName.trim()) {
       setError('يرجى إدخال الاسم الأول والأخير');
+      return;
+    }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(email.trim())) {
+      setError('يرجى إدخال بريد إلكتروني صحيح');
       return;
     }
 
@@ -234,6 +240,19 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
                 style={{ direction: 'rtl' }}
               />
             </div>
+            <div className="relative">
+              <Mail className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-ink-400" />
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleRegister()}
+                placeholder="البريد الإلكتروني (example@lawfirm.com)"
+                className="w-full pr-11 pl-4 py-3 text-base bg-ink-50 border border-ink-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
+                style={{ direction: 'ltr' }}
+              />
+            </div>
+            <p className="text-xs text-ink-400">نستخدم بريدك لإرسال العروض وأهم الأحكام الجديدة — بدون رسائل مزعجة</p>
             <button
               onClick={handleRegister}
               disabled={loading}

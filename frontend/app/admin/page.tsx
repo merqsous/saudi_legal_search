@@ -2,12 +2,13 @@
 
 import { useState, useEffect, Fragment } from 'react';
 import { useRouter } from 'next/navigation';
-import { Scale, LogOut, Loader2, Users, Search, Database, TrendingUp, Clock, ArrowRight, MessageSquare, Send, ChevronRight, CheckCircle, X, Globe, BarChart3, ThumbsUp, ThumbsDown, Building2, ChevronDown, MousePointerClick, Crown, CreditCard } from 'lucide-react';
+import { Scale, LogOut, Loader2, Users, Search, Database, TrendingUp, Clock, ArrowRight, MessageSquare, Send, ChevronRight, CheckCircle, X, Globe, BarChart3, ThumbsUp, ThumbsDown, Building2, ChevronDown, MousePointerClick, Crown, CreditCard, Mail } from 'lucide-react';
 
 interface AdminStats {
   total_judgments: number;
   total_cases: number;
   total_users: number;
+  users_with_email: number;
   total_searches: number;
   anonymous_searches: number;
   paid_monthly: number;
@@ -21,6 +22,7 @@ interface AdminStats {
     phone: string;
     first_name: string;
     last_name: string;
+    email: string | null;
     ip_address: string | null;
     country: string | null;
     source: string | null;
@@ -190,6 +192,24 @@ export default function AdminPage() {
       alert(e instanceof Error ? e.message : 'فشل إلغاء الاشتراك');
     }
   };
+
+  const exportEmails = async () => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) return;
+    try {
+      const res = await fetch('/api/auth/admin/emails/export', { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error('فشل تصدير القائمة');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'albaheth-emails.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'فشل تصدير القائمة');
+    }
+  };;
 
   useEffect(() => {
     const saved = localStorage.getItem('auth_user');
@@ -428,6 +448,18 @@ export default function AdminPage() {
               <span className="text-sm text-ink-500">اشتراك مجاني / ممنوح</span>
             </div>
             <p className="text-3xl font-bold text-ink-500">{stats.free_trial || 0}</p>
+          </div>
+          <div className="bg-white rounded-2xl shadow-sm p-6 border border-ink-100">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-sky-50 text-sky-600">
+                <Mail className="w-5 h-5" />
+              </div>
+              <span className="text-sm text-ink-500">بريد إلكتروني مسجل</span>
+            </div>
+            <p className="text-3xl font-bold text-sky-600">
+              {stats.users_with_email || 0}
+              <span className="text-base font-medium text-ink-400"> / {stats.total_users}</span>
+            </p>
           </div>
         </div>
 
@@ -740,13 +772,20 @@ export default function AdminPage() {
           <div className="flex items-center gap-2 mb-4">
             <Users className="w-5 h-5 text-primary-600" />
             <h2 className="text-lg font-bold text-ink-900">المستخدمين</h2>
+            <button
+              onClick={exportEmails}
+              className="mr-auto flex items-center gap-1.5 text-xs font-medium text-primary-700 bg-primary-50 px-3 py-1.5 rounded-lg hover:bg-primary-100 transition-colors"
+            >
+              <Mail className="w-3.5 h-3.5" />
+              تصدير قائمة الإيميلات (CSV)
+            </button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-ink-100 text-ink-500 text-xs">
                   <th className="text-right py-3 px-2">الاسم</th>
-                  <th className="text-right py-3 px-2">الهاتف</th>
+                  <th className="text-right py-3 px-2">الهاتف / البريد</th>
                   <th className="text-right py-3 px-2">المصدر</th>
                   <th className="text-right py-3 px-2">IP</th>
                   <th className="text-right py-3 px-2">الدولة</th>
@@ -761,7 +800,10 @@ export default function AdminPage() {
                 {stats.users.map((u) => (
                   <tr key={u.id} className="border-b border-ink-100 last:border-0">
                     <td className="py-3 px-2 text-ink-700" dir="rtl">{u.first_name} {u.last_name}</td>
-                    <td className="py-3 px-2 text-ink-600" dir="ltr">{u.phone}</td>
+                    <td className="py-3 px-2" dir="ltr">
+                      <div className="text-ink-600">{u.phone}</div>
+                      {u.email && <div className="text-xs text-primary-600">{u.email}</div>}
+                    </td>
                     <td className="py-3 px-2">
                       {u.source ? (
                         <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-blue-700">

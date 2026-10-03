@@ -1,4 +1,5 @@
 import os
+import re
 import time
 import secrets
 import urllib.parse
@@ -115,6 +116,7 @@ def init_auth_tables():
             cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS source VARCHAR(100)")
             cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS medium VARCHAR(100)")
             cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS campaign VARCHAR(200)")
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255)")
         except Exception:
             pass
         # Create persistent sessions table (survives server restarts)
@@ -223,6 +225,7 @@ class LoginRequest(BaseModel):
     phone: str
     first_name: str | None = None
     last_name: str | None = None
+    email: str | None = None
     source: str | None = None
     medium: str | None = None
     campaign: str | None = None
@@ -237,6 +240,7 @@ def simple_login(req: LoginRequest, request: Request):
 
     ip = get_client_ip(request)
     country = get_country_from_ip(ip)
+    email = _clean_email(req.email)
 
     user = query_one("SELECT * FROM users WHERE phone = %s", [phone])
 
@@ -247,12 +251,15 @@ def simple_login(req: LoginRequest, request: Request):
             if req.first_name and req.last_name:
                 cur.execute("UPDATE users SET first_name = %s, last_name = %s WHERE id = %s",
                             (req.first_name, req.last_name, user_id))
+            # Backfill email for users who registered before this field existed
+            if email and not user.get("email"):
+                cur.execute("UPDATE users SET email = %s WHERE id = %s", (email, user_id))
         else:
             if not req.first_name or not req.last_name:
                 raise HTTPException(status_code=400, detail="الاسم الأول والأخير مطلوبان للمستخدمين الجدد")
             cur.execute(
-                "INSERT INTO users (phone, first_name, last_name, ip_address, country, source, medium, campaign) VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
-                (phone, req.first_name, req.last_name, ip, country, req.source, req.medium, req.campaign),
+                "INSERT INTO users (phone, first_name, last_name, email, ip_address, country, source, medium, campaign) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
+                (phone, req.first_name, req.last_name, email, ip, country, req.source, req.medium, req.campaign),
             )
             user_id = cur.fetchone()[0]
         cur.close()
@@ -265,7 +272,7 @@ def simple_login(req: LoginRequest, request: Request):
     create_session(token, user_id, phone)
     _sessions[token] = {"user_id": user_id, "phone": phone}
 
-    user_data = query_one("SELECT id, phone, first_name, last_name FROM users WHERE id = %s", [user_id])
+    user_data = query_one("SELECT id, phone, first_name, last_name, email FROM users WHERE id = %s", [user_id])
     return {"status": "ok", "token": token, "user": user_data}
 
 
@@ -277,7 +284,7 @@ def get_me(authorization: str = Header(None)):
     session = _sessions.get(token) or get_session(token)
     if not session:
         raise HTTPException(status_code=401, detail="جلسة غير صالحة")
-    user = query_one("SELECT id, phone, first_name, last_name FROM users WHERE id = %s", [session["user_id"]])
+    user = query_one("SELECT id, phone, first_name, last_name, email FROM users WHERE id = %s", [session["user_id"]])
     if not user:
         raise HTTPException(status_code=401, detail="المستخدم غير موجود")
     return user
@@ -286,6 +293,7 @@ def get_me(authorization: str = Header(None)):
 class UpdateProfileRequest(BaseModel):
     first_name: str | None = None
     last_name: str | None = None
+    email: str | None = None
 
 
 @router.put("/auth/profile")
@@ -307,6 +315,12 @@ def update_profile(req: UpdateProfileRequest, authorization: str = Header(None))
     if req.last_name is not None:
         updates.append("last_name = %s")
         params.append(req.last_name.strip())
+    if req.email is not None:
+        email = _clean_email(req.email)
+        if not email:
+            raise HTTPException(status_code=400, detail="البريد الإلكتروني غير صحيح")
+        updates.append("email = %s")
+        params.append(email)
     if not updates:
         raise HTTPException(status_code=400, detail="لا توجد بيانات للتحديث")
 
@@ -316,7 +330,7 @@ def update_profile(req: UpdateProfileRequest, authorization: str = Header(None))
         cur.execute(f"UPDATE users SET {', '.join(updates)} WHERE id = %s", params)
         cur.close()
 
-    user_data = query_one("SELECT id, phone, first_name, last_name FROM users WHERE id = %s", [user_id])
+    user_data = query_one("SELECT id, phone, first_name, last_name, email FROM users WHERE id = %s", [user_id])
     return {"status": "ok", "user": user_data}
 
 
@@ -488,7 +502,7 @@ def admin_stats(authorization: str = Header(None)):
     )
 
     users_with_searches = safe_query_all(
-        """SELECT u.id, u.phone, u.first_name, u.last_name, u.ip_address, u.country, u.source, u.medium, u.campaign, u.created_at,
+        """SELECT u.id, u.phone, u.first_name, u.last_name, u.email, u.ip_address, u.country, u.source, u.medium, u.campaign, u.created_at,
                   COUNT(sl.id) as search_count,
                   MAX(sl.created_at) as last_search,
                   us.plan as sub_plan,
@@ -502,10 +516,12 @@ def admin_stats(authorization: str = Header(None)):
                WHERE user_id = u.id AND status = 'active' AND expires_at > NOW()
                ORDER BY id DESC LIMIT 1
            ) us ON true
-           GROUP BY u.id, u.phone, u.first_name, u.last_name, u.ip_address, u.country, u.source, u.medium, u.campaign, u.created_at,
+           GROUP BY u.id, u.phone, u.first_name, u.last_name, u.email, u.ip_address, u.country, u.source, u.medium, u.campaign, u.created_at,
                     us.plan, us.status, us.amount_paid, us.expires_at
            ORDER BY search_count DESC"""
     )
+
+    users_with_email = safe_query_one("SELECT COUNT(*) as cnt FROM users WHERE email IS NOT NULL AND email != ''")["cnt"]
 
     traffic_sources = safe_query_all(
         """SELECT COALESCE(source, 'غير معروف') as source, COUNT(*) as cnt,
@@ -642,6 +658,7 @@ def admin_stats(authorization: str = Header(None)):
         "total_judgments": total_judgments,
         "total_cases": total_cases,
         "total_users": total_users,
+        "users_with_email": users_with_email,
         "total_searches": total_searches,
         "anonymous_searches": anonymous_searches,
         "paid_monthly": paid_monthly,
@@ -665,6 +682,52 @@ def admin_stats(authorization: str = Header(None)):
         "firm_members": firm_members_detail,
         "feature_usage": feature_usage,
     }
+
+
+@router.get("/auth/admin/emails/export")
+def admin_export_emails(authorization: str = Header(None), active_only: bool = Query(False)):
+    """Export the user email list as CSV for marketing campaigns.
+
+    Includes each user's name, email, phone, signup date, last search, and
+    search count so offers can be targeted (e.g. inactive users, heavy users).
+    Set active_only=true to limit to users who searched in the last 30 days.
+    """
+    _require_admin(authorization)
+
+    where = "WHERE u.email IS NOT NULL AND u.email != ''"
+    if active_only:
+        where += " AND MAX(sl.created_at) >= NOW() - INTERVAL '30 days'"
+    rows = query_all(
+        f"""SELECT u.first_name, u.last_name, u.email, u.phone, u.created_at,
+                   COUNT(sl.id) as searches, MAX(sl.created_at) as last_search
+            FROM users u
+            LEFT JOIN search_logs sl ON sl.user_id = u.id AND sl.is_anonymous = FALSE
+            {where}
+            GROUP BY u.id, u.first_name, u.last_name, u.email, u.phone, u.created_at
+            ORDER BY u.created_at DESC"""
+    )
+
+    # UTF-8 BOM so Excel renders Arabic correctly
+    lines = ["first_name,last_name,email,phone,signup_date,last_search,searches"]
+    for r in rows:
+        name_last = (r["last_search"].strftime("%Y-%m-%d") if r["last_search"] else "")
+        lines.append(",".join([
+            str(r["first_name"] or ""),
+            str(r["last_name"] or ""),
+            str(r["email"] or ""),
+            str(r["phone"] or ""),
+            r["created_at"].strftime("%Y-%m-%d") if r["created_at"] else "",
+            name_last,
+            str(r["searches"] or 0),
+        ]))
+    csv = "\ufeff" + "\n".join(lines)
+
+    from fastapi.responses import Response
+    return Response(
+        content=csv,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": "attachment; filename=albaheth-emails.csv"},
+    )
 
 
 @router.post("/auth/admin-login")
@@ -700,7 +763,7 @@ def admin_login(req: LoginRequest, request: Request):
     create_session(token, user_id, phone)
     _sessions[token] = {"user_id": user_id, "phone": phone}
 
-    user_data = query_one("SELECT id, phone, first_name, last_name FROM users WHERE id = %s", [user_id])
+    user_data = query_one("SELECT id, phone, first_name, last_name, email FROM users WHERE id = %s", [user_id])
     return {"status": "ok", "token": token, "user": user_data}
 
 
@@ -751,9 +814,21 @@ class VerifyOtpRequest(BaseModel):
     code: str
     first_name: str | None = None
     last_name: str | None = None
+    email: str | None = None
     source: str | None = None
     medium: str | None = None
     campaign: str | None = None
+
+
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]{2,}$")
+
+
+def _clean_email(email: str | None) -> str | None:
+    """Return a validated lowercase email, or None if missing/invalid."""
+    if not email or not email.strip():
+        return None
+    email = email.strip().lower()
+    return email if _EMAIL_RE.match(email) else None
 
 
 @router.post("/auth/send-otp")
@@ -800,6 +875,7 @@ def verify_otp(req: VerifyOtpRequest, request: Request):
 
     ip = get_client_ip(request)
     country = get_country_from_ip(ip)
+    email = _clean_email(req.email)
 
     user = query_one("SELECT * FROM users WHERE phone = %s", [phone])
 
@@ -810,12 +886,15 @@ def verify_otp(req: VerifyOtpRequest, request: Request):
             if req.first_name and req.last_name:
                 cur.execute("UPDATE users SET first_name = %s, last_name = %s WHERE id = %s",
                             (req.first_name, req.last_name, user_id))
+            # Backfill email for users who registered before this field existed
+            if email and not user.get("email"):
+                cur.execute("UPDATE users SET email = %s WHERE id = %s", (email, user_id))
         else:
             if not req.first_name or not req.last_name:
                 raise HTTPException(status_code=400, detail="الاسم الأول والأخير مطلوبان للمستخدمين الجدد")
             cur.execute(
-                "INSERT INTO users (phone, first_name, last_name, ip_address, country, source, medium, campaign) VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
-                (phone, req.first_name, req.last_name, ip, country, req.source, req.medium, req.campaign),
+                "INSERT INTO users (phone, first_name, last_name, email, ip_address, country, source, medium, campaign) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
+                (phone, req.first_name, req.last_name, email, ip, country, req.source, req.medium, req.campaign),
             )
             user_id = cur.fetchone()[0]
         cur.close()
@@ -828,5 +907,5 @@ def verify_otp(req: VerifyOtpRequest, request: Request):
     create_session(token, user_id, phone)
     _sessions[token] = {"user_id": user_id, "phone": phone}
 
-    user_data = query_one("SELECT id, phone, first_name, last_name FROM users WHERE id = %s", [user_id])
+    user_data = query_one("SELECT id, phone, first_name, last_name, email FROM users WHERE id = %s", [user_id])
     return {"status": "ok", "token": token, "user": user_data}

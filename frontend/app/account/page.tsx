@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { User, Phone, CreditCard, CheckCircle, XCircle, Loader2, Edit2, Save, Crown, Calendar, Clock } from 'lucide-react';
+import { User, Phone, CreditCard, CheckCircle, XCircle, Loader2, Edit2, Save, Crown, Calendar, Clock, Mail } from 'lucide-react';
 import Header from '../components/Header';
 
 interface UserData {
@@ -10,6 +10,7 @@ interface UserData {
   phone: string;
   first_name: string;
   last_name: string;
+  email: string | null;
 }
 
 interface SubscriptionData {
@@ -45,6 +46,7 @@ export default function AccountPage() {
   const [editing, setEditing] = useState(false);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileMsg, setProfileMsg] = useState<string | null>(null);
 
@@ -86,7 +88,7 @@ export default function AccountPage() {
       const res = await fetch('/api/auth/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ first_name: firstName, last_name: lastName }),
+        body: JSON.stringify({ first_name: firstName, last_name: lastName, email: email.trim() || undefined }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'فشل التحديث');
@@ -151,6 +153,7 @@ export default function AccountPage() {
                 onClick={() => {
                   setFirstName(user.first_name || '');
                   setLastName(user.last_name || '');
+                  setEmail(user.email || '');
                   setEditing(true);
                   setProfileMsg(null);
                 }}
@@ -208,6 +211,27 @@ export default function AccountPage() {
                 />
               ) : (
                 <p className="px-4 py-2.5 bg-ink-50 rounded-xl text-ink-900">{user.last_name || '-'}</p>
+              )}
+            </div>
+            <div className="md:col-span-2">
+              <label className="text-sm text-ink-500 mb-1 block">البريد الإلكتروني</label>
+              {editing ? (
+                <div className="relative">
+                  <Mail className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-400" />
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="example@lawfirm.com"
+                    className="w-full pr-10 pl-4 py-2.5 bg-ink-50 border border-ink-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    style={{ direction: 'ltr' }}
+                  />
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 px-4 py-2.5 bg-ink-50 rounded-xl">
+                  <Mail className="w-4 h-4 text-ink-400" />
+                  <span className="text-ink-900" dir="ltr">{user.email || 'غير مسجل'}</span>
+                </div>
               )}
             </div>
             <div className="md:col-span-2">
