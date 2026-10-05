@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Search, Loader2, MessageSquare, ChevronDown, ChevronUp, BadgeCheck, Users } from 'lucide-react';
+import { Search, Loader2, MessageSquare, ChevronDown, ChevronUp, BadgeCheck, Users, Sparkles } from 'lucide-react';
 import { getVisitSource } from '../components/VisitTracker';
 import Header from '../components/Header';
 
@@ -62,6 +62,8 @@ export default function ProceduralClient() {
   const [subscriptionRequired, setSubscriptionRequired] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [loadingPage, setLoadingPage] = useState(false);
+  const [aiAnswer, setAiAnswer] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
 
   const PAGE_SIZE = 10;
 
@@ -112,12 +114,26 @@ export default function ProceduralClient() {
       if (!handleResponse(res, data)) return;
       setResults(data.results || []);
       setTotal(data.total || 0);
+
+      if (term.trim()) {
+        setAiLoading(true);
+        setAiAnswer(null);
+        const aParams = new URLSearchParams({ q: term });
+        if (selectedTopic) aParams.set('topic', selectedTopic);
+        fetch(`/api/procedural-answer?${aParams.toString()}`)
+          .then(r => r.json())
+          .then(d => setAiAnswer(d.ai_answer || null))
+          .catch(() => {})
+          .finally(() => setAiLoading(false));
+      } else {
+        setAiAnswer(null);
+      }
     } catch {
       setResults([]);
     } finally {
       setLoading(false);
     }
-  }, [query, buildParams, authUser]);
+  }, [query, buildParams, authUser, selectedTopic]);
 
   const goToPage = async (page: number) => {
     setLoadingPage(true);
@@ -283,6 +299,30 @@ export default function ProceduralClient() {
             <Search className="w-10 h-10 text-ink-300 mx-auto mb-4" />
             <p className="text-ink-600 font-medium mb-1">لا توجد نتائج مطابقة</p>
             <p className="text-sm text-ink-400">جرّب صياغة أخرى أو ابحث في <a href="/search" className="text-primary-600 hover:underline">الأحكام القضائية</a></p>
+          </div>
+        )}
+
+        {/* AI formal answer */}
+        {(aiLoading || aiAnswer) && !loading && (
+          <div className="mb-5 bg-gradient-to-l from-primary-50 to-white border border-primary-200 rounded-xl p-5">
+            <div className="flex items-center gap-2 mb-2">
+              <Sparkles className="w-4 h-4 text-primary-600" />
+              <span className="text-sm font-bold text-primary-800">الإجابة</span>
+            </div>
+            {aiLoading ? (
+              <div className="space-y-2 animate-pulse">
+                <div className="h-3.5 bg-primary-100 rounded w-full" />
+                <div className="h-3.5 bg-primary-100 rounded w-5/6" />
+                <div className="h-3.5 bg-primary-100 rounded w-2/3" />
+              </div>
+            ) : (
+              <>
+                <p className="text-sm text-ink-800 leading-relaxed whitespace-pre-line arabic-text">{aiAnswer}</p>
+                <p className="text-xs text-ink-400 mt-3 border-t border-primary-100 pt-2">
+                  صياغة آلية مبنية على إجابات المجتمع — راجع المصادر الرسمية قبل الاعتماد عليها
+                </p>
+              </>
+            )}
           </div>
         )}
 
