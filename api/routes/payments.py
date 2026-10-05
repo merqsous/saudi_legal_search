@@ -16,8 +16,16 @@ BASE_URL = "https://api.moyasar.com/v1"
 # The client sends a plan name only; the amount actually charged via Moyasar
 # is always taken from here, never trusted from the request body.
 PLAN_PRICES = {
-    "monthly": 1200,   # 12 SAR
-    "annual": 10000,   # 100 SAR
+    "monthly": 1200,     # 12 SAR
+    "annual": 10000,     # 100 SAR
+    "day_pass": 500,     # 5 SAR — 24 hours of unlimited searching
+}
+
+# How many days each plan grants
+PLAN_DAYS = {
+    "monthly": 30,
+    "annual": 365,
+    "day_pass": 1,
 }
 
 
@@ -306,15 +314,13 @@ def _activate_subscription(user_id: int, plan: str, amount: int, payment_id: str
     """Activate a user subscription after successful payment."""
     from datetime import datetime, timedelta
 
-    if plan == "annual":
-        expires = datetime.now() + timedelta(days=365)
-    else:
-        expires = datetime.now() + timedelta(days=30)
+    expires = datetime.now() + timedelta(days=PLAN_DAYS.get(plan, 30))
 
     with get_db() as conn:
         cur = conn.cursor()
-        # Deactivate old subscriptions
-        cur.execute("UPDATE user_subscriptions SET status = 'cancelled' WHERE user_id = %s AND status = 'active';", [user_id])
+        # A day pass is additive — it must never cancel a running subscription
+        if plan != "day_pass":
+            cur.execute("UPDATE user_subscriptions SET status = 'cancelled' WHERE user_id = %s AND status = 'active';", [user_id])
         # Create new subscription
         cur.execute(
             """INSERT INTO user_subscriptions (user_id, plan, status, amount_paid, payment_id, started_at, expires_at)

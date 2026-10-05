@@ -13,7 +13,9 @@ router = APIRouter()
 # Registered users who have not subscribed get a fixed number of free searches
 # before being required to upgrade. Anonymous visitors get a single preview
 # search (tracked by IP) before being asked to register.
-FREE_SEARCH_LIMIT = 5
+# Two full searches is enough to trust result quality while keeping the
+# paywall mid-task, where willingness to pay is highest.
+FREE_SEARCH_LIMIT = 2
 ANON_SEARCH_LIMIT = 1
 
 # Phone numbers that always bypass the subscription requirement (admin/owner).

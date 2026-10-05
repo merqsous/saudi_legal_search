@@ -63,7 +63,7 @@ export default function PricingPage() {
           <div className="bg-white rounded-2xl border border-ink-100 p-6 flex flex-col">
             <div className="text-center mb-6">
               <h3 className="text-lg font-bold text-ink-900 mb-2">تجربة مجانية</h3>
-              <p className="text-sm text-ink-600">سجل دخولك للبدء</p>
+              <p className="text-sm text-ink-600">عمليتا بحث مجانيتان</p>
               <div className="mt-4">
                 <span className="text-4xl font-bold text-ink-900">0</span>
                 <span className="text-ink-600 text-sm mr-1">ريال</span>
@@ -189,6 +189,30 @@ export default function PricingPage() {
               label="اشترك الآن - 100 ريال/سنة"
               variant="primary"
             />
+            </Suspense>
+          </div>
+        </div>
+
+        {/* Day Pass — the no-subscription option */}
+        <div className="bg-sand-50 rounded-2xl border-2 border-dashed border-primary-300 p-6 mb-12 flex flex-col md:flex-row items-center gap-6">
+          <div className="flex-1 text-center md:text-right">
+            <h3 className="text-lg font-bold text-ink-900 mb-1">تحتاج البحث ليوم واحد فقط؟</h3>
+            <p className="text-sm text-ink-600">
+              بحث غير محدود لمدة 24 ساعة في جميع الأحكام القضائية — بدون اشتراك شهري، بدون التزام.
+            </p>
+          </div>
+          <div className="shrink-0 w-full md:w-auto">
+            <div className="text-center mb-3">
+              <span className="text-3xl font-bold text-primary-600">5</span>
+              <span className="text-ink-600 text-sm mr-1">ريال / يوم واحد</span>
+            </div>
+            <Suspense fallback={<div className="w-full py-3 bg-primary-600 text-white rounded-xl font-bold text-center">يوم واحد — 5 ريال</div>}>
+              <PaymentButtons
+                plan="day_pass"
+                amount={500}
+                label="يوم واحد — 5 ريال"
+                variant="primary"
+              />
             </Suspense>
           </div>
         </div>

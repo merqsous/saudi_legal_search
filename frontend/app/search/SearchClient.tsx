@@ -563,7 +563,7 @@ export default function SearchClient() {
               سجّل للمتابعة
             </h3>
             <p className="text-sm text-ink-600 mb-4">
-              أنشئ حساباً مجانياً واحصل على 5 عمليات بحث في جميع الأحكام القضائية السعودية.
+              أنشئ حساباً مجانياً واحصل على عمليتي بحث إضافيتين في جميع الأحكام القضائية السعودية.
             </p>
             <div className="flex items-center justify-center gap-3">
               <button
@@ -583,14 +583,20 @@ export default function SearchClient() {
               لقد استخدمت جميع عمليات البحث المجانية
             </h3>
             <p className="text-sm text-ink-600 mb-4">
-              اشترك الآن للوصول الكامل والمستمر إلى آلاف الأحكام القضائية السعودية.
+              واصل البحث في جميع الأحكام القضائية — اشتراك شهري، أو يوم واحد بدون حدود.
             </p>
-            <div className="flex items-center justify-center gap-3">
+            <div className="flex items-center justify-center gap-3 flex-wrap">
               <button
                 onClick={() => router.push('/pricing')}
                 className="px-5 py-2.5 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors"
               >
-                عرض الباقات
+                اشتراك شهري — 12 ريال
+              </button>
+              <button
+                onClick={() => router.push('/pricing?plan=day_pass')}
+                className="px-5 py-2.5 bg-white text-primary-700 border-2 border-primary-600 rounded-lg font-medium hover:bg-primary-50 transition-colors"
+              >
+                يوم واحد بلا حدود — 5 ريال
               </button>
             </div>
           </div>

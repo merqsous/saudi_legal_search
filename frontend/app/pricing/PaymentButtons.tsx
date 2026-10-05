@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { CreditCard, Loader2, CheckCircle, Lock, User } from 'lucide-react';
 
 interface PaymentButtonsProps {
-  plan: 'monthly' | 'annual';
+  plan: 'monthly' | 'annual' | 'day_pass';
   amount: number; // in halalas (1 SAR = 100)
   label: string;
   discountedLabel?: string;
@@ -52,7 +52,8 @@ export default function PaymentButtons({ plan, amount, label, discountedLabel, v
           if (d.status === 'paid') {
             setSubscribed(true);
           } else if (d.status === 'failed') {
-            setError('فشل عملية الدفع. يرجى المحاولة مرة أخرى.');
+            const reason = d.source?.message;
+            setError(reason ? `فشل الدفع (${reason}) — أعد المحاولة الآن` : 'فشل عملية الدفع. يرجى المحاولة مرة أخرى.');
           }
         })
         .catch(() => {})
@@ -69,7 +70,7 @@ export default function PaymentButtons({ plan, amount, label, discountedLabel, v
             element: '.mysr-form-samsung',
             amount,
             currency: 'SAR',
-            description: `اشتراك ${plan === 'annual' ? 'سنوي' : 'شهري'} - الباحث`,
+            description: `اشتراك ${plan === 'annual' ? 'سنوي' : plan === 'day_pass' ? 'يومي' : 'شهري'} - الباحث`,
             publishable_api_key: process.env.NEXT_PUBLIC_MOYASAR_KEY || 'pk_test_9RMKuKUhtCwefPM8XeBjVpsdSKPwd6PkaaaRt8Ss',
             callback_url: window.location.origin + '/pricing?payment=callback',
             methods: ['samsungpay'],
@@ -99,6 +100,22 @@ export default function PaymentButtons({ plan, amount, label, discountedLabel, v
 
   const formatCardNumber = (val: string) => {
     return val.replace(/\D/g, '').slice(0, 16).replace(/(.{4})/g, '$1 ').trim();
+  };
+
+  // Luhn checksum — catches mistyped card numbers before hitting the bank
+  const luhnValid = (num: string) => {
+    let sum = 0;
+    let dbl = false;
+    for (let i = num.length - 1; i >= 0; i--) {
+      let d = parseInt(num[i], 10);
+      if (dbl) {
+        d *= 2;
+        if (d > 9) d -= 9;
+      }
+      sum += d;
+      dbl = !dbl;
+    }
+    return sum % 10 === 0;
   };
 
   const handleApplePay = async () => {
@@ -188,7 +205,7 @@ export default function PaymentButtons({ plan, amount, label, discountedLabel, v
             body: JSON.stringify({
               amount,
               currency: 'SAR',
-              description: `اشتراك ${plan === 'annual' ? 'سنوي' : 'شهري'} - الباحث`,
+              description: `اشتراك ${plan === 'annual' ? 'سنوي' : plan === 'day_pass' ? 'يومي' : 'شهري'} - الباحث`,
               plan,
               source: {
                 type: 'applepay',
@@ -247,8 +264,13 @@ export default function PaymentButtons({ plan, amount, label, discountedLabel, v
 
     if (paymentMethod === 'creditcard') {
       if (!cardName.trim()) { setError('الرجاء إدخال الاسم على البطاقة'); return; }
-      if (cardNumber.replace(/\s/g, '').length < 16) { setError('الرجاء إدخال رقم بطاقة صحيح'); return; }
-      if (!cardMonth || !cardYear) { setError('الرجاء إدخال تاريخ انتهاء البطاقة'); return; }
+      const digits = cardNumber.replace(/\s/g, '');
+      if (digits.length < 16 || !luhnValid(digits)) { setError('رقم البطاقة غير صحيح — تحقق من الأرقام'); return; }
+      const mm = parseInt(cardMonth, 10);
+      if (!mm || mm < 1 || mm > 12) { setError('شهر انتهاء البطاقة غير صحيح'); return; }
+      const yy = parseInt(cardYear.slice(-2), 10);
+      const expiryEnd = new Date(2000 + yy, mm, 0, 23, 59, 59);
+      if (expiryEnd < new Date()) { setError('البطاقة منتهية الصلاحية'); return; }
       if (cardCvc.length < 3) { setError('الرجاء إدخال رمز CVC صحيح'); return; }
     }
 
@@ -261,9 +283,10 @@ export default function PaymentButtons({ plan, amount, label, discountedLabel, v
       if (paymentMethod === 'creditcard') {
         source.name = cardName.trim();
         source.number = cardNumber.replace(/\s/g, '');
-        source.month = parseInt(cardMonth);
-        source.year = parseInt(cardYear);
-        source.cvc = parseInt(cardCvc);
+        source.month = parseInt(cardMonth, 10);
+        // Moyasar expects the expiry year in two-digit form
+        source.year = parseInt(cardYear.slice(-2), 10);
+        source.cvc = parseInt(cardCvc, 10);
       }
 
       const res = await fetch('/api/payments/create', {
@@ -272,7 +295,7 @@ export default function PaymentButtons({ plan, amount, label, discountedLabel, v
         body: JSON.stringify({
           amount,
           currency: 'SAR',
-          description: `اشتراك ${plan === 'annual' ? 'سنوي' : 'شهري'} - الباحث`,
+          description: `اشتراك ${plan === 'annual' ? 'سنوي' : plan === 'day_pass' ? 'يومي' : 'شهري'} - الباحث`,
           plan,
           source,
         }),

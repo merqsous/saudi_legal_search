@@ -257,7 +257,7 @@ export default function AccountPage() {
                 <CheckCircle className="w-6 h-6 text-green-600" />
                 <div>
                   <p className="font-bold text-green-900">
-                    مشترك — {subscription.plan === 'annual' ? 'باقة سنوية' : 'باقة شهرية'}
+                    مشترك — {subscription.plan === 'annual' ? 'باقة سنوية' : subscription.plan === 'day_pass' ? 'يوم واحد' : 'باقة شهرية'}
                   </p>
                   <p className="text-sm text-green-700 flex items-center gap-1 mt-1">
                     <Calendar className="w-3.5 h-3.5" />
@@ -347,7 +347,7 @@ export default function AccountPage() {
                     )}
                     <div>
                       <p className="font-medium text-ink-900">
-                        {plan === 'annual' ? 'باقة سنوية' : 'باقة شهرية'}
+                        {plan === 'annual' ? 'باقة سنوية' : plan === 'day_pass' ? 'يوم واحد' : 'باقة شهرية'}
                       </p>
                       <p className="text-xs text-ink-500 flex items-center gap-1 mt-0.5">
                         <Clock className="w-3 h-3" />

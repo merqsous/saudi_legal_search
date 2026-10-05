@@ -166,7 +166,7 @@ export default function HeroSearch() {
               </div>
               <p className="text-base font-bold text-ink-800 mb-1">استخدمت بحثك المجاني الوحيد</p>
               <p className="text-sm text-ink-500 mb-5">
-                أنشئ حساباً مجانياً واحصل على 5 عمليات بحث إضافية في جميع الأحكام
+                أنشئ حساباً مجانياً واحصل على عمليتي بحث إضافيتين في جميع الأحكام
               </p>
               <a
                 href="/?signup=1"

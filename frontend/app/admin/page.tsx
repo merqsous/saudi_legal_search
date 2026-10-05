@@ -834,8 +834,8 @@ export default function AdminPage() {
                     <td className="py-3 px-2 text-ink-500">{u.country || '-'}</td>
                     <td className="py-3 px-2">
                       {u.sub_status === 'active' && u.sub_plan ? (
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${u.sub_plan === 'annual' ? 'bg-purple-50 text-purple-700' : 'bg-green-50 text-green-700'}`}>
-                          {u.sub_plan === 'annual' ? 'سنوي' : 'شهري'}
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${u.sub_plan === 'annual' ? 'bg-purple-50 text-purple-700' : u.sub_plan === 'day_pass' ? 'bg-sky-50 text-sky-700' : 'bg-green-50 text-green-700'}`}>
+                          {u.sub_plan === 'annual' ? 'سنوي' : u.sub_plan === 'day_pass' ? 'يومي' : 'شهري'}
                           {u.sub_amount ? ` (${(u.sub_amount / 100).toFixed(0)} ر.س)` : ''}
                         </span>
                       ) : (
