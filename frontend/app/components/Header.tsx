@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { LogOut, User, LayoutDashboard, Menu, X, ChevronDown, Search, Briefcase, Building2, Bookmark, FileText, CreditCard, LifeBuoy, BookOpen } from 'lucide-react';
+import { LogOut, User, LayoutDashboard, Menu, X, ChevronDown, Search, Briefcase, Building2, Bookmark, FileText, CreditCard, LifeBuoy, BookOpen, MessageSquare } from 'lucide-react';
 import AuthModal from '../AuthModal';
 
 interface AuthUser {
@@ -14,6 +14,7 @@ interface AuthUser {
 
 const APP_LINKS = [
   { href: '/search', label: 'البحث', icon: Search },
+  { href: '/procedural', label: 'أسئلة إجرائية', icon: MessageSquare },
   { href: '/cases', label: 'القضايا', icon: Briefcase },
   { href: '/firm', label: 'المكتب', icon: Building2 },
   { href: '/studies', label: 'الدراسات', icon: FileText },

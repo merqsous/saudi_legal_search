@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api.routes import search, auth, payments, favorites, legal_study, export, support, cases, case_chat, case_docs, case_drafts, firms
+from api.routes import search, auth, payments, favorites, legal_study, export, support, cases, case_chat, case_docs, case_drafts, firms, procedural
 
 app = FastAPI(
     title="Saudi Legal Search API",
@@ -28,6 +28,7 @@ app.include_router(case_chat.router, prefix="/api", tags=["case-chat"])
 app.include_router(case_docs.router, prefix="/api", tags=["case-docs"])
 app.include_router(case_drafts.router, prefix="/api", tags=["case-drafts"])
 app.include_router(firms.router, prefix="/api", tags=["firms"])
+app.include_router(procedural.router, prefix="/api", tags=["procedural"])
 
 
 @app.on_event("startup")
