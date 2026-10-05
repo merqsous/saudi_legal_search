@@ -383,6 +383,91 @@ def _apply_feedback_boost(results: list[dict], q: str, user_id: int | None) -> l
     return results
 
 
+# Stage-1 keyword retrieval: Arabic full-text match on judgment full_text,
+# backed by a GIN index on to_tsvector('arabic', full_text). Keyword hits get
+# synthetic low distances so they sort ahead of semantic matches; snippets
+# come from ts_headline so they always show the matched terms in context.
+_FTS_EXPR = "to_tsvector('arabic', coalesce(j.full_text, ''))"
+
+
+def _keyword_search(q, where_clause, params, limit, offset):
+    """Return (rows, total, all_match_ids) for the Arabic FTS keyword stage."""
+    tsv_q = normalize_arabic(q).strip()
+    if not tsv_q:
+        return [], 0, []
+
+    phrase_pat = "%" + q.strip().replace("%", "").replace("_", " ") + "%"
+
+    from_clause = f"""
+        FROM judgments j
+        CROSS JOIN t
+        JOIN cases c ON j.case_id = c.id
+        LEFT JOIN judgment_sections js ON js.judgment_id = j.id
+        LEFT JOIN court_types ct ON c.court_type_id = ct.id
+        LEFT JOIN locations l ON c.location_id = l.id
+        LEFT JOIN court_levels cl ON j.court_level_id = cl.id
+        WHERE t.tsq <> ''::tsquery
+          AND length(coalesce(j.full_text, '')) > 800
+          AND {_FTS_EXPR} @@ t.tsq
+          {where_clause}
+    """
+    cte = "WITH t AS (SELECT plainto_tsquery('arabic', %s) AS tsq, %s::text AS pat)"
+
+    count_row = query_one(
+        f"{cte} SELECT COUNT(DISTINCT j.id) AS c {from_clause}",
+        [tsv_q, phrase_pat] + params,
+    )
+    total = count_row["c"] if count_row else 0
+    if not total:
+        return [], 0, []
+
+    fetch_sql = f"""
+        {cte}
+        SELECT * FROM (
+            SELECT DISTINCT ON (j.id)
+                j.id AS judgment_id,
+                j.judgment_number,
+                j.judgment_year,
+                j.judgment_date_hijri,
+                j.judgment_type,
+                j.details_url,
+                c.case_number,
+                c.case_year,
+                ct.name_ar AS court_type,
+                ct.code AS court_type_code,
+                l.city_ar AS city,
+                cl.name_ar AS court_level,
+                cl.code AS court_level_code,
+                NULL AS section_name_ar,
+                ts_headline('arabic', j.full_text, t.tsq,
+                    'MaxWords=50, MinWords=20, MaxFragments=2, FragmentDelimiter='' ... ''') AS chunk_text,
+                CASE WHEN j.full_text LIKE t.pat THEN 0.03 ELSE 0.08 END AS distance,
+                ts_rank({_FTS_EXPR}, t.tsq) AS kw_rank
+            {from_clause}
+            ORDER BY j.id
+        ) kw
+        ORDER BY distance, kw_rank DESC, judgment_year DESC NULLS LAST, judgment_id DESC
+        LIMIT %s OFFSET %s;
+    """
+    rows = query_all(fetch_sql, [tsv_q, phrase_pat] + params + [limit, offset])
+    for r in rows:
+        r["kw"] = True
+        r["match_type"] = "keyword"
+        r["chunk_text"] = re.sub(r"</?b>", "", r.get("chunk_text") or "")
+
+    # All matching judgment ids so the semantic stage can skip duplicates —
+    # only when the set is small enough to pass as a query parameter.
+    ids: list = []
+    if total <= 500:
+        id_rows = query_all(
+            f"{cte} SELECT DISTINCT j.id {from_clause}",
+            [tsv_q, phrase_pat] + params,
+        )
+        ids = [r["id"] for r in id_rows]
+
+    return rows, total, ids
+
+
 def _do_search(q, court_type, city, year, court_level, section, limit, offset, user_id: int | None = None):
     has_query = q and q.strip()
 
@@ -402,7 +487,12 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset, u
             # Use KB concept court type if consistent across all matched concepts
             kb_courts = {KB_CONCEPTS[cid]["court"] for cid in kb_concepts if cid in KB_CONCEPTS}
             if len(kb_courts) == 1:
-                kb_court_type = kb_courts.pop()
+                cand = kb_courts.pop()
+                # 'general' doubles as the LLM's "couldn't determine domain"
+                # sentinel, and the corpus holds almost no general-court
+                # judgments — a hard filter on it zeroes whole topics.
+                if cand != 'general':
+                    kb_court_type = cand
 
     # Detect metadata keywords in query (e.g. "تجاري" -> court_type filter)
     metadata_filters = {}
@@ -447,11 +537,30 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset, u
     if filters:
         where_clause = "AND " + " AND ".join(filters)
 
+    # Stage 1 — exact keyword match on judgment full text (Arabic FTS, GIN-indexed).
+    # Keyword hits take priority; semantic search fills the remaining slots so
+    # paraphrased queries still work and users never hit an empty page.
+    rows: list = []
+    total = 0
+    kw_ids: list = []
+    if has_query and not is_browse_only:
+        try:
+            kw_rows, kw_total, kw_ids = _keyword_search(q, where_clause, params, limit, offset)
+            rows = list(kw_rows)
+            total = kw_total
+        except Exception as e:
+            print(f"[SEARCH WARNING] Keyword search failed: {e}")
+
+    # Slots left for semantic results after keyword hits, and where the
+    # semantic window starts once earlier pages consumed the keyword block.
+    sem_limit = limit - len(rows)
+    sem_offset = max(0, offset - total)
+
     embedding = None
     vec_str = None
     # Column serving this request (embedding or embedding_large once migration completes)
     col = get_embedding_column()
-    if has_query and not is_browse_only:
+    if has_query and not is_browse_only and sem_limit > 0:
         try:
             # Use LLM-rewritten query if available, else dictionary expansion
             if intelligence and intelligence.get('rewritten_query'):
@@ -469,7 +578,8 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset, u
             embedding = None
             vec_str = None
 
-    if embedding and vec_str and has_query and not is_browse_only:
+    kw_exclude = "AND NOT (j.id = ANY(%s))" if kw_ids else ""
+    if embedding and vec_str and has_query and not is_browse_only and sem_limit > 0:
         # Two-step approach for accurate + fast pagination:
         # Step 1: GROUP BY judgment to get the best (min) distance per judgment
         # and an accurate COUNT(*) OVER() (computed post-dedup since each group
@@ -491,6 +601,7 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset, u
                   AND length(COALESCE(j.full_text, '')) > 800
                   {_FOOTER_CHUNK_FILTER}
                   AND jc.{col} <=> %s::vector < 0.45
+                  {kw_exclude}
                   {where_clause}
                 GROUP BY j.id
             )
@@ -500,17 +611,17 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset, u
             LIMIT %s OFFSET %s;
         """
 
-        step1_params = [vec_str, vec_str] + params + [limit, offset]
+        step1_params = [vec_str, vec_str] + ([kw_ids] if kw_ids else []) + params + [sem_limit, sem_offset]
 
         try:
             step1_rows = query_all(step1_sql, step1_params)
-            total = step1_rows[0]["total_count"] if step1_rows else 0
+            total += step1_rows[0]["total_count"] if step1_rows else 0
         except Exception as e:
             print(f"[SEARCH WARNING] Step1 query failed, returning empty: {e}")
             return {"results": [], "total": 0, "limit": limit, "offset": offset}
 
         if not step1_rows:
-            rows = []
+            pass
         else:
             page_ids = [r["judgment_id"] for r in step1_rows]
             step2_sql = f"""
@@ -547,7 +658,7 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset, u
             try:
                 unordered_rows = query_all(step2_sql, [vec_str, page_ids, vec_str])
                 rows_by_id = {r["judgment_id"]: r for r in unordered_rows}
-                rows = [rows_by_id[i] for i in page_ids if i in rows_by_id]
+                rows += [rows_by_id[i] for i in page_ids if i in rows_by_id]
             except Exception as e:
                 print(f"[SEARCH WARNING] Step2 query failed, returning empty: {e}")
                 return {"results": [], "total": 0, "limit": limit, "offset": offset}
@@ -618,8 +729,10 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset, u
         except Exception as e:
             print(f"[SEARCH WARNING] Fetch query failed, returning empty: {e}")
             return {"results": [], "total": 0, "limit": limit, "offset": offset}
-    else:
-        # Filter-only browsing (no query) - return latest judgments matching filters
+    elif not has_query or not rows:
+        # Filter-only browsing (no query) - return latest judgments matching
+        # filters. Also the fallback when a query produced no keyword hits and
+        # embedding failed.
         count_sql = f"""
             SELECT COUNT(DISTINCT j.id)
             FROM judgment_chunks jc
@@ -707,7 +820,7 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset, u
         sentences = [s.strip() for s in _re.split(r'(?<=[.؟!\n])\s+', chunk_text) if len(s.strip()) >= 20]
         row_sentences.append(sentences)
 
-        if do_rerank and len(sentences) > 1:
+        if do_rerank and len(sentences) > 1 and not row.get("kw"):
             for sent in sentences:
                 all_sentences.append(sent)
                 sentence_owner.append(row_idx)
@@ -773,6 +886,7 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset, u
             "section_name": row["section_name_ar"],
             "snippet": snippet,
             "distance": best_distance,
+            "match_type": row.get("match_type") or ("semantic" if has_query and not is_browse_only else "browse"),
         })
 
     # Re-sort results by sentence-level distance
@@ -796,7 +910,6 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset, u
                     filtered_results.append(r)
             if filtered_results:
                 results = filtered_results
-                total = len(results)
 
     # Relevance feedback boost: promote judgments with positive signals
     results = _apply_feedback_boost(results, q, user_id)
