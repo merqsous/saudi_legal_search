@@ -372,11 +372,16 @@ def _apply_feedback_boost(results: list[dict], q: str, user_id: int | None) -> l
 
         for r in results:
             jid = r.get("judgment_id")
-            if jid in boost_map and r.get("distance") is not None:
+            if jid in boost_map:
                 boost = max(-0.30, min(boost_map[jid] * 0.05, 0.30))
-                r["distance"] = max(0.0, r["distance"] - boost)
+                # Shift fused position or distance so positive signals surface.
+                if r.get("fused_rank") is not None:
+                    r["fused_rank"] = max(0.1, r["fused_rank"] - boost * 15)
+                if r.get("distance") is not None:
+                    r["distance"] = max(0.0, r["distance"] - boost)
 
-        results.sort(key=lambda x: x["distance"] if x["distance"] is not None else 1.0)
+        results.sort(key=lambda x: x["fused_rank"] if x.get("fused_rank") is not None
+                     else (x["distance"] if x["distance"] is not None else 1.0))
     except Exception as e:
         print(f"[FEEDBACK BOOST] Failed (non-fatal): {e}")
 
@@ -455,17 +460,25 @@ def _keyword_search(q, where_clause, params, limit, offset):
         r["match_type"] = "keyword"
         r["chunk_text"] = re.sub(r"</?b>", "", r.get("chunk_text") or "")
 
-    # All matching judgment ids so the semantic stage can skip duplicates —
-    # only when the set is small enough to pass as a query parameter.
-    ids: list = []
-    if total <= 500:
-        id_rows = query_all(
-            f"{cte} SELECT DISTINCT j.id {from_clause}",
-            [tsv_q, phrase_pat] + params,
-        )
-        ids = [r["id"] for r in id_rows]
+    return rows, total
 
-    return rows, total, ids
+
+def _rrf_merge(kw_rows: list, sem_rows: list, k: int = 60):
+    """Merge two ranked judgment lists with Reciprocal Rank Fusion.
+
+    A judgment matching BOTH the exact terms and the meaning gets the sum of
+    both rank scores and outranks single-signal matches. Rank-based, so it is
+    immune to the incompatible distance scales of FTS and vector search.
+    """
+    scores: dict[int, float] = {}
+    for i, r in enumerate(kw_rows):
+        jid = r["judgment_id"]
+        scores[jid] = scores.get(jid, 0.0) + 1.0 / (k + i + 1)
+    for i, r in enumerate(sem_rows):
+        jid = r["judgment_id"]
+        scores[jid] = scores.get(jid, 0.0) + 1.0 / (k + i + 1)
+    fused = sorted(scores, key=lambda j: scores[j], reverse=True)
+    return fused, scores
 
 
 def _do_search(q, court_type, city, year, court_level, section, limit, offset, user_id: int | None = None):
@@ -537,30 +550,30 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset, u
     if filters:
         where_clause = "AND " + " AND ".join(filters)
 
-    # Stage 1 — exact keyword match on judgment full text (Arabic FTS, GIN-indexed).
-    # Keyword hits take priority; semantic search fills the remaining slots so
-    # paraphrased queries still work and users never hit an empty page.
+    # Hybrid retrieval: keyword FTS (exact terms, judgment full text) and
+    # vector semantic (meaning, chunk embeddings) each rank candidates
+    # independently; the two lists are merged with Reciprocal Rank Fusion so
+    # a judgment matching BOTH signals outranks single-signal matches.
     rows: list = []
     total = 0
-    kw_ids: list = []
-    if has_query and not is_browse_only:
-        try:
-            kw_rows, kw_total, kw_ids = _keyword_search(q, where_clause, params, limit, offset)
-            rows = list(kw_rows)
-            total = kw_total
-        except Exception as e:
-            print(f"[SEARCH WARNING] Keyword search failed: {e}")
-
-    # Slots left for semantic results after keyword hits, and where the
-    # semantic window starts once earlier pages consumed the keyword block.
-    sem_limit = limit - len(rows)
-    sem_offset = max(0, offset - total)
-
     embedding = None
     vec_str = None
     # Column serving this request (embedding or embedding_large once migration completes)
     col = get_embedding_column()
-    if has_query and not is_browse_only and sem_limit > 0:
+
+    if has_query and not is_browse_only:
+        # Candidate depth — enough to cover the requested page plus fusion buffer.
+        cand_k = min(max(offset + limit + 40, 60), 300)
+
+        kw_rows: list = []
+        kw_total = 0
+        try:
+            kw_rows, kw_total = _keyword_search(q, where_clause, params, cand_k, 0)
+        except Exception as e:
+            print(f"[SEARCH WARNING] Keyword search failed: {e}")
+
+        sem_rows: list = []
+        sem_total = 0
         try:
             # Use LLM-rewritten query if available, else dictionary expansion
             if intelligence and intelligence.get('rewritten_query'):
@@ -574,56 +587,55 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset, u
             embedding = embed_text(embedding_q)
             vec_str = vector_to_pgvector(embedding)
         except Exception as e:
-            print(f"[SEARCH WARNING] Embedding failed, falling back to browse mode: {e}")
+            print(f"[SEARCH WARNING] Embedding failed, keyword-only mode: {e}")
             embedding = None
             vec_str = None
 
-    kw_exclude = "AND NOT (j.id = ANY(%s))" if kw_ids else ""
-    if embedding and vec_str and has_query and not is_browse_only and sem_limit > 0:
-        # Two-step approach for accurate + fast pagination:
-        # Step 1: GROUP BY judgment to get the best (min) distance per judgment
-        # and an accurate COUNT(*) OVER() (computed post-dedup since each group
-        # produces exactly one row). Only id/distance columns are projected here.
-        # Step 2: fetch full metadata + chunk text only for the current page's
-        # judgment ids (bounded to `limit` rows, so this join is fast).
-        step1_sql = f"""
-            WITH matched AS (
-                SELECT j.id AS judgment_id, MIN(jc.{col} <=> %s::vector) AS distance
-                FROM judgment_chunks jc
-                JOIN judgments j ON jc.judgment_id = j.id
-                JOIN cases c ON j.case_id = c.id
-                LEFT JOIN judgment_sections js ON jc.section_id = js.id
-                LEFT JOIN court_types ct ON c.court_type_id = ct.id
-                LEFT JOIN locations l ON c.location_id = l.id
-                LEFT JOIN court_levels cl ON j.court_level_id = cl.id
-                WHERE jc.{col} IS NOT NULL
-                  AND length(jc.chunk_text) >= 100
-                  AND length(COALESCE(j.full_text, '')) > 800
-                  {_FOOTER_CHUNK_FILTER}
-                  AND jc.{col} <=> %s::vector < 0.45
-                  {kw_exclude}
-                  {where_clause}
-                GROUP BY j.id
-            )
-            SELECT judgment_id, distance, COUNT(*) OVER() AS total_count
-            FROM matched
-            ORDER BY distance
-            LIMIT %s OFFSET %s;
-        """
+        if embedding and vec_str:
+            # GROUP BY judgment to get the best (min) distance per judgment.
+            # Fetches cand_k ranked candidates (no OFFSET — fusion needs the
+            # head of the semantic list regardless of the requested page).
+            step1_sql = f"""
+                WITH matched AS (
+                    SELECT j.id AS judgment_id, MIN(jc.{col} <=> %s::vector) AS distance
+                    FROM judgment_chunks jc
+                    JOIN judgments j ON jc.judgment_id = j.id
+                    JOIN cases c ON j.case_id = c.id
+                    LEFT JOIN judgment_sections js ON jc.section_id = js.id
+                    LEFT JOIN court_types ct ON c.court_type_id = ct.id
+                    LEFT JOIN locations l ON c.location_id = l.id
+                    LEFT JOIN court_levels cl ON j.court_level_id = cl.id
+                    WHERE jc.{col} IS NOT NULL
+                      AND length(jc.chunk_text) >= 100
+                      AND length(COALESCE(j.full_text, '')) > 800
+                      {_FOOTER_CHUNK_FILTER}
+                      AND jc.{col} <=> %s::vector < 0.45
+                      {where_clause}
+                    GROUP BY j.id
+                )
+                SELECT judgment_id, distance, COUNT(*) OVER() AS total_count
+                FROM matched
+                ORDER BY distance
+                LIMIT %s;
+            """
+            try:
+                sem_rows = query_all(step1_sql, [vec_str, vec_str] + params + [cand_k])
+                sem_total = sem_rows[0]["total_count"] if sem_rows else 0
+            except Exception as e:
+                print(f"[SEARCH WARNING] Semantic query failed: {e}")
 
-        step1_params = [vec_str, vec_str] + ([kw_ids] if kw_ids else []) + params + [sem_limit, sem_offset]
+        fused_ids, _scores = _rrf_merge(kw_rows, sem_rows)
+        sem_id_set = {r["judgment_id"] for r in sem_rows}
+        kw_by_id = {r["judgment_id"]: r for r in kw_rows}
+        # Union total — exact overlap is only known within the candidate window.
+        total = max(kw_total + sem_total - len(sem_id_set & set(kw_by_id)), len(fused_ids))
 
-        try:
-            step1_rows = query_all(step1_sql, step1_params)
-            total += step1_rows[0]["total_count"] if step1_rows else 0
-        except Exception as e:
-            print(f"[SEARCH WARNING] Step1 query failed, returning empty: {e}")
-            return {"results": [], "total": 0, "limit": limit, "offset": offset}
+        page_ids = fused_ids[offset:offset + limit]
 
-        if not step1_rows:
-            pass
-        else:
-            page_ids = [r["judgment_id"] for r in step1_rows]
+        # Chunk + metadata for page hits that keyword didn't already provide.
+        sem_meta: dict = {}
+        fetch_ids = [j for j in page_ids if j not in kw_by_id]
+        if fetch_ids and embedding and vec_str:
             step2_sql = f"""
                 SELECT DISTINCT ON (j.id)
                     j.id AS judgment_id,
@@ -656,12 +668,20 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset, u
                 ORDER BY j.id, jc.{col} <=> %s::vector;
             """
             try:
-                unordered_rows = query_all(step2_sql, [vec_str, page_ids, vec_str])
-                rows_by_id = {r["judgment_id"]: r for r in unordered_rows}
-                rows += [rows_by_id[i] for i in page_ids if i in rows_by_id]
+                unordered_rows = query_all(step2_sql, [vec_str, fetch_ids, vec_str])
+                sem_meta = {r["judgment_id"]: r for r in unordered_rows}
             except Exception as e:
-                print(f"[SEARCH WARNING] Step2 query failed, returning empty: {e}")
-                return {"results": [], "total": 0, "limit": limit, "offset": offset}
+                print(f"[SEARCH WARNING] Chunk fetch failed: {e}")
+
+        for pos, jid in enumerate(page_ids, start=1):
+            row = kw_by_id.get(jid) or sem_meta.get(jid)
+            if not row:
+                continue
+            row = dict(row)
+            row["_fp"] = pos
+            if jid in kw_by_id and jid in sem_id_set:
+                row["match_type"] = "hybrid"
+            rows.append(row)
     elif is_browse_only:
         # Pure metadata term like "تجاري" - browse all cases of that type
         count_sql = f"""
@@ -729,10 +749,11 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset, u
         except Exception as e:
             print(f"[SEARCH WARNING] Fetch query failed, returning empty: {e}")
             return {"results": [], "total": 0, "limit": limit, "offset": offset}
-    elif not has_query or not rows:
+    elif not has_query or (not rows and embedding is None):
         # Filter-only browsing (no query) - return latest judgments matching
-        # filters. Also the fallback when a query produced no keyword hits and
-        # embedding failed.
+        # filters. Also the fallback when retrieval itself failed (embedding
+        # API down AND no keyword hits). A query that ran but matched nothing
+        # correctly shows zero results instead of unfiltered latest.
         count_sql = f"""
             SELECT COUNT(DISTINCT j.id)
             FROM judgment_chunks jc
@@ -887,10 +908,12 @@ def _do_search(q, court_type, city, year, court_level, section, limit, offset, u
             "snippet": snippet,
             "distance": best_distance,
             "match_type": row.get("match_type") or ("semantic" if has_query and not is_browse_only else "browse"),
+            "fused_rank": row.get("_fp"),
         })
 
-    # Re-sort results by sentence-level distance
-    results.sort(key=lambda x: x["distance"] if x["distance"] is not None else 1.0)
+    # Order by fused rank when present (hybrid queries), else by distance.
+    results.sort(key=lambda x: x["fused_rank"] if x.get("fused_rank") is not None
+                 else (x["distance"] if x["distance"] is not None else 1.0))
 
     # Keyword overlap post-filter: for multi-word queries (3+ words), require
     # at least 2 significant query terms to appear in the result snippet.
