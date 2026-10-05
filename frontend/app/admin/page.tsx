@@ -4,6 +4,17 @@ import { useState, useEffect, Fragment } from 'react';
 import { useRouter } from 'next/navigation';
 import { Scale, LogOut, Loader2, Users, Search, Database, TrendingUp, Clock, ArrowRight, MessageSquare, Send, ChevronRight, CheckCircle, X, Globe, BarChart3, ThumbsUp, ThumbsDown, Building2, ChevronDown, MousePointerClick, Crown, CreditCard, Mail } from 'lucide-react';
 
+const FILTER_LABELS: Record<string, string> = {
+  commercial: 'تجاري',
+  labor: 'عمالي',
+  general: 'عام',
+  personal_status: 'أحوال شخصية',
+  criminal: 'جنائي',
+  unknown: 'غير محدد',
+  first_instance: 'الدرجة الأولى',
+  appeal: 'استئناف',
+};
+
 interface AdminStats {
   total_judgments: number;
   total_cases: number;
@@ -16,6 +27,8 @@ interface AdminStats {
   free_trial: number;
   top_keywords: { query: string; cnt: number }[];
   top_court_types: { court_type: string; name_ar: string; cnt: number }[];
+  filter_usage: { filter_combo: string; cnt: number }[];
+  filtered_searches_total: number;
   traffic_sources: { source: string; cnt: number; users_cnt: number }[];
   users: {
     id: number;
@@ -43,6 +56,10 @@ interface AdminStats {
     last_name: string | null;
     created_at: string;
     results_count: number;
+    court_type: string | null;
+    city: string | null;
+    year: string | null;
+    court_level: string | null;
     ip_address: string | null;
     country: string | null;
     is_anonymous: boolean;
@@ -879,6 +896,58 @@ export default function AdminPage() {
           </div>
         </div>
 
+        {/* Filter Usage */}
+        <div className="bg-white rounded-2xl shadow-sm p-6 border border-ink-100 mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <Database className="w-5 h-5 text-primary-600" />
+            <h2 className="text-lg font-bold text-ink-900">استخدام الفلاتر</h2>
+            <span className="text-xs text-ink-400 mr-auto">
+              {stats.filtered_searches_total || 0} عملية بحث مستخدمة فيها فلاتر
+            </span>
+          </div>
+          {(() => {
+            const combos = stats.filter_usage || [];
+            if (!combos.length) {
+              return <p className="text-sm text-ink-400">لا يوجد استخدام للفلاتر بعد</p>;
+            }
+            const max = Math.max(1, ...combos.map((c) => c.cnt));
+            return (
+              <div className="space-y-3">
+                {combos.map((c) => {
+                  const parts = c.filter_combo.split(' · ');
+                  return (
+                    <div key={c.filter_combo}>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {parts.map((p, idx) => (
+                            <span
+                              key={`${c.filter_combo}-${idx}`}
+                              className={`text-xs px-2 py-0.5 rounded-md font-medium ${
+                                idx === 0
+                                  ? 'bg-primary-50 text-primary-700'
+                                  : 'bg-ink-50 text-ink-500'
+                              }`}
+                            >
+                              {FILTER_LABELS[p] || p}
+                            </span>
+                          ))}
+                        </div>
+                        <span className="text-xs font-bold text-ink-600">{c.cnt}</span>
+                      </div>
+                      <div className="h-2 bg-ink-50 rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-l from-primary-600 to-primary-400"
+                          style={{ width: `${Math.max(4, (c.cnt / max) * 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+        </div>
+
         {/* Recent Searches */}
         <div className="bg-white rounded-2xl shadow-sm p-6 border border-ink-100">
           <div className="flex items-center gap-2 mb-4">
@@ -901,7 +970,39 @@ export default function AdminPage() {
               <tbody>
                 {stats.recent_searches.map((s, i) => (
                   <tr key={i} className="border-b border-ink-100 last:border-0">
-                    <td className="py-3 px-2 text-ink-700" dir="rtl">{s.query}</td>
+                    <td className="py-3 px-2 text-ink-700" dir="rtl">
+                      {s.query ? (
+                        <span>{s.query}</span>
+                      ) : s.court_type || s.city || s.year || s.court_level ? (
+                        <span className="text-ink-400">تصفية فقط</span>
+                      ) : (
+                        <span className="text-ink-300">—</span>
+                      )}
+                      {(s.court_type || s.city || s.year || s.court_level) && (
+                        <div className="flex items-center gap-1 flex-wrap mt-1">
+                          {s.court_type && (
+                            <span className="text-[11px] px-1.5 py-0.5 rounded bg-primary-50 text-primary-700 font-medium">
+                              {FILTER_LABELS[s.court_type] || s.court_type}
+                            </span>
+                          )}
+                          {s.city && (
+                            <span className="text-[11px] px-1.5 py-0.5 rounded bg-ink-50 text-ink-500">
+                              {s.city}
+                            </span>
+                          )}
+                          {s.court_level && (
+                            <span className="text-[11px] px-1.5 py-0.5 rounded bg-ink-50 text-ink-500">
+                              {FILTER_LABELS[s.court_level] || s.court_level}
+                            </span>
+                          )}
+                          {s.year && (
+                            <span className="text-[11px] px-1.5 py-0.5 rounded bg-sand-100 text-sand-700">
+                              {s.year}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </td>
                     <td className="py-3 px-2 text-ink-600" dir="rtl">
                       {s.is_anonymous ? (
                         <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-orange-50 text-orange-700">

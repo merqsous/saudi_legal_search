@@ -532,11 +532,34 @@ def admin_stats(authorization: str = Header(None)):
     )
 
     recent_searches = safe_query_all(
-        """SELECT sl.query, sl.phone, u.first_name, u.last_name, sl.created_at, sl.results_count, sl.ip_address, sl.country, sl.is_anonymous, sl.source
+        """SELECT sl.query, sl.phone, u.first_name, u.last_name, sl.created_at, sl.results_count, sl.ip_address, sl.country, sl.is_anonymous, sl.source,
+                  NULLIF(sl.court_type, '') as court_type, NULLIF(sl.city, '') as city,
+                  NULLIF(sl.year, '') as year, NULLIF(sl.court_level, '') as court_level
            FROM search_logs sl
            LEFT JOIN users u ON u.id = sl.user_id
            ORDER BY sl.created_at DESC LIMIT 50"""
     )
+
+    # --- Filter usage: how users browse via filters (query-less and filtered searches) ---
+    filter_usage = safe_query_all(
+        """SELECT TRIM(BOTH ' · ' FROM CONCAT_WS(' · ',
+                    sl.court_type, sl.city, sl.court_level, sl.year)) AS filter_combo,
+                  COUNT(*) as cnt
+           FROM search_logs sl
+           WHERE (sl.court_type IS NOT NULL AND sl.court_type != '')
+              OR (sl.city IS NOT NULL AND sl.city != '')
+              OR (sl.court_level IS NOT NULL AND sl.court_level != '')
+              OR (sl.year IS NOT NULL AND sl.year != '')
+           GROUP BY sl.court_type, sl.city, sl.court_level, sl.year
+           ORDER BY cnt DESC LIMIT 15"""
+    )
+    filtered_searches_total = safe_query_one(
+        """SELECT COUNT(*) as cnt FROM search_logs
+           WHERE (court_type IS NOT NULL AND court_type != '')
+              OR (city IS NOT NULL AND city != '')
+              OR (court_level IS NOT NULL AND court_level != '')
+              OR (year IS NOT NULL AND year != '')"""
+    )["cnt"]
 
     searches_by_day = safe_query_all(
         """SELECT DATE(created_at) as day, COUNT(*) as cnt
@@ -667,6 +690,8 @@ def admin_stats(authorization: str = Header(None)):
         "payment_outcomes": payment_outcomes,
         "top_keywords": top_keywords,
         "top_court_types": top_court_types,
+        "filter_usage": filter_usage,
+        "filtered_searches_total": filtered_searches_total,
         "traffic_sources": traffic_sources,
         "users": users_with_searches,
         "recent_searches": recent_searches,
