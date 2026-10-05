@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Search, Loader2, ExternalLink, Scale, Filter, X, ChevronDown, Sparkles, CheckCircle, MapPin, Building2, Gavel, Bookmark, FileText, Download, BookOpen, ThumbsUp, ThumbsDown, Briefcase } from 'lucide-react';
+import { Search, Loader2, ExternalLink, Scale, Filter, X, ChevronDown, Sparkles, CheckCircle, MapPin, Building2, Gavel, Bookmark, FileText, Download, BookOpen, ThumbsUp, ThumbsDown, Briefcase, MessageSquare } from 'lucide-react';
 import { judgmentUrl } from '@/lib/slug';
 import { getVisitSource } from '../components/VisitTracker';
 import Header from '../components/Header';
@@ -33,12 +33,23 @@ interface SearchResult {
   distance: number | null;
 }
 
+interface ProceduralResult {
+  thread_id: string;
+  topic: string | null;
+  question: string;
+  answer: string;
+  confidence: string | null;
+  match_type: string;
+}
+
 interface SearchResponse {
   results: SearchResult[];
   total: number;
   limit: number;
   offset: number;
   ai_answer?: string | null;
+  procedural?: ProceduralResult[];
+  procedural_total?: number;
 }
 
 interface Filters {
@@ -66,6 +77,8 @@ export default function SearchClient() {
   const [selectedSection, setSelectedSection] = useState('');
   const [aiAnswer, setAiAnswer] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [procResults, setProcResults] = useState<ProceduralResult[]>([]);
+  const [procTotal, setProcTotal] = useState(0);
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [favoritedIds, setFavoritedIds] = useState<Set<number>>(new Set());
@@ -204,6 +217,8 @@ export default function SearchClient() {
       const data: SearchResponse = await res.json();
       setResults(data.results);
       setTotal(data.total);
+      setProcResults(data.procedural || []);
+      setProcTotal(data.procedural_total || 0);
       setCurrentPage(1);
       setAiAnswer(null);
 
@@ -602,8 +617,8 @@ export default function SearchClient() {
           </div>
         )}
 
-        {/* No results */}
-        {!loading && hasSearched && results.length === 0 && !error && !subscriptionRequired && !registrationRequired && (
+        {/* No results — only when neither corpus has anything */}
+        {!loading && hasSearched && results.length === 0 && procResults.length === 0 && !error && !subscriptionRequired && !registrationRequired && (
           <div className="text-center py-20">
             <Search className="w-10 h-10 text-ink-300 mx-auto mb-4" />
             <p className="text-ink-600 font-medium mb-1">لا توجد نتائج مطابقة</p>
@@ -612,7 +627,7 @@ export default function SearchClient() {
         )}
 
         {/* Results */}
-        {!loading && results.length > 0 && (
+        {!loading && (results.length > 0 || procResults.length > 0) && (
           <>
             {(aiAnswer || aiLoading) && (
               <div className="mb-6 bg-gradient-to-l from-primary-50 to-white border border-primary-200 rounded-xl p-5 shadow-sm">
@@ -630,12 +645,51 @@ export default function SearchClient() {
                 )}
               </div>
             )}
+            {/* Procedural Q&A — practical how-to threads, labeled as إجرائي */}
+            {procResults.length > 0 && (
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-sm font-bold text-ink-800 flex items-center gap-2">
+                    <MessageSquare className="w-4 h-4 text-emerald-600" />
+                    أسئلة إجرائية ذات صلة
+                    <span className="text-xs font-normal text-ink-400">({procTotal} سؤال)</span>
+                  </h2>
+                  <a
+                    href={`/procedural?q=${encodeURIComponent(query)}`}
+                    className="text-xs text-primary-600 hover:text-primary-700 font-medium"
+                  >
+                    البحث الإجرائي فقط ←
+                  </a>
+                </div>
+                <div className="space-y-2">
+                  {procResults.map((t) => (
+                    <a
+                      key={t.thread_id}
+                      href={`/procedural?q=${encodeURIComponent(query)}`}
+                      className="block bg-white border border-emerald-100 rounded-xl p-4 hover:shadow-card transition-all"
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded text-xs font-medium">إجرائي</span>
+                        {t.topic && (
+                          <span className="px-2 py-0.5 bg-ink-50 text-ink-600 rounded text-xs">{t.topic}</span>
+                        )}
+                      </div>
+                      <p className="text-sm font-bold text-ink-800 leading-relaxed mb-1 arabic-text">{t.question}</p>
+                      <p className="text-xs text-ink-500 leading-relaxed arabic-text line-clamp-2">{t.answer}</p>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {results.length > 0 && (
             <p className="text-sm text-ink-500 mb-4">
               {total} نتيجة
             </p>
+            )}
 
             {/* Legal Study Button */}
-            {!isAnonymous && (
+            {!isAnonymous && results.length > 0 && (
               <div className="mb-4">
                 <button
                   onClick={generateStudy}

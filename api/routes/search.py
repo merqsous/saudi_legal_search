@@ -178,36 +178,69 @@ def expand_query(query: str) -> str:
     return ' '.join(expanded_words[:20]) if len(expanded_words) > len(words) else query
 
 
-def generate_ai_answer(query: str, results: list[dict]) -> str | None:
-    """Generate an AI summary answer based on search results, like Google AI Overview."""
-    if not results:
-        return None
+def generate_ai_answer(query: str, results: list[dict], threads: list[dict] | None = None) -> str | None:
+    """Generate an AI summary answer from judgments AND procedural threads.
 
-    # Skip if top results are not relevant enough (distance > 0.45 means < 55% match)
-    best_distance = min((r.get("distance") or 1.0) for r in results[:3])
-    if best_distance > 0.45:
-        return None
-
-    top_results = results[:5]
+    The prompt keeps the two sources explicitly labeled: judgments are legal
+    authority, threads are practical how-to from the community. The model may
+    only use the provided text — if neither source addresses the question it
+    must say there is no answer yet.
+    """
     context_parts = []
-    for i, r in enumerate(top_results):
-        context_parts.append(
-            f"القضية {i+1}: رقم الحكم {r.get('judgment_number', 'غير محدد')} - "
-            f"المحكمة: {r.get('court_type', '')} - {r.get('court_level', '')}\n"
-            f"النص: {r.get('snippet', '')[:300]}"
-        )
-    context = "\n\n".join(context_parts)
 
-    user_question = query.strip() if query.strip() else "الأحكام المعروضة"
+    if results:
+        # Skip judgments that are not relevant enough (distance > 0.45)
+        best_distance = min((r.get("distance") or 1.0) for r in results[:3])
+        if best_distance <= 0.45:
+            top_results = results[:5]
+            judgment_ctx = []
+            for i, r in enumerate(top_results):
+                judgment_ctx.append(
+                    f"القضية {i+1}: رقم الحكم {r.get('judgment_number', 'غير محدد')} - "
+                    f"المحكمة: {r.get('court_type', '')} - {r.get('court_level', '')}\n"
+                    f"النص: {r.get('snippet', '')[:300]}"
+                )
+            context_parts.append(
+                "أحكام قضائية (مصدر نظامي/قضائي):\n" + "\n\n".join(judgment_ctx)
+            )
+
+    if threads:
+        seen: set[str] = set()
+        thread_ctx = []
+        for r in threads[:5]:
+            ans = (r.get("answer") or "").strip()
+            if not ans or ans in seen:
+                continue
+            seen.add(ans)
+            thread_ctx.append(
+                f"سؤال مشابه: {r.get('question', '')[:200]}\nإجابته: {ans[:400]}"
+            )
+        if thread_ctx:
+            context_parts.append(
+                "أسئلة إجرائية وأجوبتها (إرشاد عملي من المجتمع، ليس حكماً قضائياً):\n"
+                + "\n\n".join(thread_ctx)
+            )
+
+    if not context_parts:
+        return None
+
+    context = "\n\n".join(context_parts)
+    user_question = query.strip() if query.strip() else "النتائج المعروضة"
     prompt = (
-        "أنت مساعد قانوني سعودي متخصص. بناءً على الأحكام القضائية التالية، "
-        "أجب على سؤال المستخدم بشكل مباشر وواضح.\n\n"
+        "أنت مساعد قانوني سعودي متخصص. لديك مصدران للإجابة: أحكام قضائية "
+        "(الجانب النظامي والقضائي) وأسئلة إجرائية بأجوبتها من المجتمع "
+        "(الجانب العملي والتطبيقي).\n\n"
         f"سؤال المستخدم: {user_question}\n\n"
-        f"الأحكام المرتبطة:\n{context}\n\n"
-        "اكتب إجابة مختصرة (3-5 أسطر) تلخص الموقف القانوني، "
-        "واشرح المبدأ القانوني المستخلص من هذه الأحكام. "
-        "اذكر أرقام الأحكام المرتبطة في الإجابة. "
-        "اكتب بالعربية الفصحى بأسلوب قانوني واضح."
+        f"{context}\n\n"
+        "اكتب إجابة موجزة (4-7 أسطر) بالعربية الفصحى تلخص الموقف القانوني.\n"
+        "قواعد صارمة:\n"
+        "- استخدم المعلومات الواردة أعلاه فقط ولا تضف من معرفتك.\n"
+        "- ميّز المصدرين بوضوح: ما هو مستند للأحكام القضائية اذكره كموقف قضائي "
+        "(مثال: «قضائياً...» أو «وفق الأحكام...»)، وما هو من الإرشاد العملي "
+        "اذكره كإجراء عملي (مثال: «عملياً...» أو «من تجارب المستخدمين...»).\n"
+        "- اذكر أرقام الأحكام عند الاستناد إليها.\n"
+        "- إن لم تتضمن المصادر إجابة حقيقية على السؤال، أجب حرفياً: "
+        "«لا تتوفر إجابة على هذا السؤال حالياً.»"
     )
 
     try:
@@ -215,9 +248,12 @@ def generate_ai_answer(query: str, results: list[dict]) -> str | None:
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3,
-            max_tokens=500,
+            max_tokens=600,
         )
-        return response.choices[0].message.content.strip()
+        text = (response.choices[0].message.content or "").strip()
+        if not text or "لا تتوفر إجابة" in text:
+            return None
+        return text
     except Exception:
         return None
 
@@ -325,6 +361,21 @@ def search(
     effective_limit = 3 if (anonymous or user_id is None) else limit
 
     result = _do_search(q, court_type, city, year, court_level, section, effective_limit, offset, user_id=user_id)
+
+    # Unified search: attach matching procedural Q&A threads so one query
+    # serves both corpora — judgments (legal authority) and threads
+    # (practical how-to). Lazy import: procedural.py already imports us.
+    if q and q.strip() and offset == 0:
+        try:
+            from api.routes.procedural import _search_threads
+            proc_limit = 2 if (anonymous or user_id is None) else 4
+            proc_results, proc_total, _ = _search_threads(q, None, proc_limit, 0)
+            result["procedural"] = proc_results
+            result["procedural_total"] = proc_total
+        except Exception as e:
+            print(f"[SEARCH WARNING] Procedural merge failed: {e}")
+            result["procedural"] = []
+            result["procedural_total"] = 0
 
     # Log the search with IP for both authenticated and anonymous users
     country = get_country_from_ip(ip)
@@ -984,7 +1035,14 @@ def get_ai_answer(
     limit: int = Query(20, ge=1, le=100),
 ):
     search_result = _do_search(q, court_type, city, year, court_level, section, limit, 0)
-    return {"ai_answer": generate_ai_answer(q, search_result["results"])}
+    threads = []
+    if q and q.strip():
+        try:
+            from api.routes.procedural import _search_threads
+            threads, _, _ = _search_threads(q, None, 5, 0)
+        except Exception as e:
+            print(f"[SEARCH WARNING] Procedural merge for ai-answer failed: {e}")
+    return {"ai_answer": generate_ai_answer(q, search_result["results"], threads)}
 
 
 @router.get("/judgments/ids")

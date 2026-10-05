@@ -62,6 +62,7 @@ export default function ProceduralClient() {
   const [subscriptionRequired, setSubscriptionRequired] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [loadingPage, setLoadingPage] = useState(false);
+  const [autoSearchDone, setAutoSearchDone] = useState(false);
   const [aiAnswer, setAiAnswer] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
 
@@ -74,7 +75,7 @@ export default function ProceduralClient() {
       .then(r => r.json())
       .then(d => setTopics(d.topics || []))
       .catch(() => {});
-  }, []);
+  }, [searchParams]);
 
   const buildParams = useCallback((q: string, page: number) => {
     const params = new URLSearchParams();
@@ -134,6 +135,16 @@ export default function ProceduralClient() {
       setLoading(false);
     }
   }, [query, buildParams, authUser, selectedTopic]);
+
+  // Auto-search when arriving with ?q= (e.g. linked from unified search results)
+  useEffect(() => {
+    const initialQ = searchParams.get('q') || '';
+    if (initialQ && !autoSearchDone) {
+      setQuery(initialQ);
+      setAutoSearchDone(true);
+      doSearch(initialQ);
+    }
+  }, [searchParams, autoSearchDone, doSearch]);
 
   const goToPage = async (page: number) => {
     setLoadingPage(true);
