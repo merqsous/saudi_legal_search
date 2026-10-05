@@ -50,6 +50,7 @@ def _kw_fetch(tsq_expr, tsq_param, topic, limit, offset):
     rows = query_all(f"""
         {cte}
         SELECT t.id AS thread_pk, t.thread_id, t.topic, t.canonical_question,
+               t.formal_question,
                t.consolidated_answer, t.confidence, t.status, t.responder_count,
                t.turn_count, t.conversation,
                ts_headline('arabic', coalesce(t.consolidated_answer,''), q.tsq,
@@ -150,6 +151,7 @@ def _search_threads(q, topic, limit, offset):
         if fetch_ids:
             for r in query_all("""
                 SELECT t.id AS thread_pk, t.thread_id, t.topic, t.canonical_question,
+                       t.formal_question,
                        t.consolidated_answer, t.confidence, t.status, t.responder_count,
                        t.turn_count, t.conversation, NULL AS answer_headline
                 FROM legal_threads t WHERE t.id = ANY(%s)
@@ -172,6 +174,7 @@ def _search_threads(q, topic, limit, offset):
                            [topic] if topic else []) or {"c": 0})["c"]
         rows = query_all(f"""
             SELECT t.id AS thread_pk, t.thread_id, t.topic, t.canonical_question,
+               t.formal_question,
                t.consolidated_answer, t.confidence, t.status, t.responder_count,
                t.turn_count, t.conversation, NULL AS answer_headline
             FROM legal_threads t {topic_filter}
@@ -184,7 +187,7 @@ def _search_threads(q, topic, limit, offset):
         results.append({
             "thread_id": row["thread_id"],
             "topic": row["topic"],
-            "question": row["canonical_question"],
+            "question": row["formal_question"] or row["canonical_question"],
             "answer": answer,
             "confidence": row["confidence"],
             "status": row["status"],
