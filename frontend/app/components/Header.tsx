@@ -78,7 +78,7 @@ function HeaderInner({ showSearchLink = true }: { showSearchLink?: boolean }) {
           {/* Logo */}
           <div className="flex items-center gap-4">
             <a href={isLoggedIn ? '/search' : '/'} className="flex items-center">
-              <img src="/logo-rounded.png" alt="شعار الباحث" className="h-10 w-10" width={40} height={40} />
+              <img src="/arabic-logo.svg" alt="شعار الباحث" className="h-10 w-10" width={40} height={40} />
             </a>
 
             {/* App navigation — logged in users get the product nav only */}
@@ -232,7 +232,7 @@ export default function Header({ showSearchLink = true }: { showSearchLink?: boo
     <Suspense fallback={
       <header className="bg-white border-b border-ink-100">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <img src="/logo-rounded.png" alt="شعار الباحث" className="h-10 w-10" width={40} height={40} />
+          <img src="/arabic-logo.svg" alt="شعار الباحث" className="h-10 w-10" width={40} height={40} />
         </div>
       </header>
     }>

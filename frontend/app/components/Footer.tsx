@@ -8,7 +8,7 @@ export default function Footer() {
           {/* Brand */}
           <div className="md:col-span-1">
             <div className="flex items-center mb-4">
-              <img src="/logo-rounded.png" alt="شعار الباحث" className="w-12 h-12" width={48} height={48} />
+              <img src="/arabic-logo.svg" alt="شعار الباحث" className="w-12 h-12" width={48} height={48} />
             </div>
             <p className="text-sm text-ink-400 leading-relaxed">
               محرك بحث قانوني متخصص في الأحكام القضائية السعودية. ابحث بالمعنى في آلاف الأحكام.
