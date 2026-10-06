@@ -41,7 +41,8 @@ def _kw_fetch(tsq_expr, tsq_param, topic, limit, offset):
 
     count_row = query_one(f"""
         {cte} SELECT COUNT(*) AS c FROM legal_threads t CROSS JOIN q
-        WHERE q.tsq <> ''::tsquery AND {_FTS_EXPR} @@ q.tsq {topic_filter}
+        WHERE q.tsq <> ''::tsquery AND {_FTS_EXPR} @@ q.tsq
+          AND t.quality_ok IS DISTINCT FROM false {topic_filter}
     """, params)
     total = count_row["c"] if count_row else 0
     if not total:
@@ -59,7 +60,8 @@ def _kw_fetch(tsq_expr, tsq_param, topic, limit, offset):
                ts_rank({_FTS_EXPR}, q.tsq) AS kw_rank,
                0.08 AS distance
         FROM legal_threads t CROSS JOIN q
-        WHERE q.tsq <> ''::tsquery AND {_FTS_EXPR} @@ q.tsq {topic_filter}
+        WHERE q.tsq <> ''::tsquery AND {_FTS_EXPR} @@ q.tsq
+          AND t.quality_ok IS DISTINCT FROM false {topic_filter}
         ORDER BY kw_rank DESC, t.id
         LIMIT %s OFFSET %s
     """, params + [limit, offset])
@@ -108,7 +110,7 @@ def _semantic_threads(q, topic, cand_k):
                COUNT(*) OVER() AS total_count
         FROM legal_threads t
         WHERE t.embedding IS NOT NULL AND t.embedding <=> %s::vector < 0.45
-          {topic_filter}
+          AND t.quality_ok IS DISTINCT FROM false {topic_filter}
         GROUP BY t.id
         ORDER BY distance
         LIMIT %s
@@ -171,7 +173,9 @@ def _search_threads(q, topic, limit, offset):
             rows.append(row)
     else:
         # Browse: latest topics when no query — newest threads first.
-        topic_filter = "WHERE t.topic = %s" if topic else ""
+        topic_filter = "WHERE t.quality_ok IS DISTINCT FROM false"
+        if topic:
+            topic_filter += " AND t.topic = %s"
         total = (query_one(f"SELECT COUNT(*) c FROM legal_threads t {topic_filter}",
                            [topic] if topic else []) or {"c": 0})["c"]
         rows = query_all(f"""
@@ -244,7 +248,8 @@ def procedural_search(
 def procedural_topics():
     rows = query_all("""
         SELECT topic, COUNT(*) AS c FROM legal_threads
-        WHERE topic IS NOT NULL GROUP BY topic ORDER BY c DESC
+        WHERE topic IS NOT NULL AND quality_ok IS DISTINCT FROM false
+        GROUP BY topic ORDER BY c DESC
     """)
     return {"topics": [{"topic": r["topic"], "count": r["c"]} for r in rows]}
 
