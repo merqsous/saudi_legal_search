@@ -51,7 +51,8 @@ def _kw_fetch(tsq_expr, tsq_param, topic, limit, offset):
         {cte}
         SELECT t.id AS thread_pk, t.thread_id, t.topic, t.canonical_question,
                t.formal_question,
-               t.consolidated_answer, t.confidence, t.status, t.responder_count,
+               t.consolidated_answer, t.formal_answer, t.confidence, t.status,
+               t.responder_count,
                t.turn_count, t.conversation,
                ts_headline('arabic', coalesce(t.consolidated_answer,''), q.tsq,
                    'MaxWords=50, MinWords=15, MaxFragments=2, FragmentDelimiter='' ... ''') AS answer_headline,
@@ -152,7 +153,8 @@ def _search_threads(q, topic, limit, offset):
             for r in query_all("""
                 SELECT t.id AS thread_pk, t.thread_id, t.topic, t.canonical_question,
                        t.formal_question,
-                       t.consolidated_answer, t.confidence, t.status, t.responder_count,
+                       t.consolidated_answer, t.formal_answer, t.confidence,
+                       t.status, t.responder_count,
                        t.turn_count, t.conversation, NULL AS answer_headline
                 FROM legal_threads t WHERE t.id = ANY(%s)
             """, [fetch_ids]):
@@ -175,7 +177,8 @@ def _search_threads(q, topic, limit, offset):
         rows = query_all(f"""
             SELECT t.id AS thread_pk, t.thread_id, t.topic, t.canonical_question,
                t.formal_question,
-               t.consolidated_answer, t.confidence, t.status, t.responder_count,
+               t.consolidated_answer, t.formal_answer, t.confidence, t.status,
+               t.responder_count,
                t.turn_count, t.conversation, NULL AS answer_headline
             FROM legal_threads t {topic_filter}
             ORDER BY t.id DESC LIMIT %s OFFSET %s
@@ -183,7 +186,7 @@ def _search_threads(q, topic, limit, offset):
 
     results = []
     for row in rows:
-        answer = re.sub(r"</?b>", "", row.get("answer_headline") or row.get("consolidated_answer") or "")
+        answer = re.sub(r"</?b>", "", row.get("formal_answer") or row.get("answer_headline") or row.get("consolidated_answer") or "")
         results.append({
             "thread_id": row["thread_id"],
             "topic": row["topic"],
