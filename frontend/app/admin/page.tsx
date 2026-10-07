@@ -161,6 +161,8 @@ export default function AdminPage() {
   const [replySubmitting, setReplySubmitting] = useState(false);
   const [expandedFirm, setExpandedFirm] = useState<number | null>(null);
   const [subMenuUserId, setSubMenuUserId] = useState<number | null>(null);
+  const [userFilter, setUserFilter] = useState('');
+  const [userSortNewest, setUserSortNewest] = useState(false);
 
   const reloadStats = async () => {
     const token = localStorage.getItem('auth_token');
@@ -786,9 +788,27 @@ export default function AdminPage() {
 
         {/* Users Table */}
         <div className="bg-white rounded-2xl shadow-sm p-6 border border-ink-100 mb-8">
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-2 mb-4 flex-wrap">
             <Users className="w-5 h-5 text-primary-600" />
             <h2 className="text-lg font-bold text-ink-900">المستخدمين</h2>
+            <input
+              type="text"
+              value={userFilter}
+              onChange={(e) => setUserFilter(e.target.value)}
+              placeholder="بحث بالاسم أو الجوال أو البريد..."
+              className="px-3 py-1.5 text-sm border border-ink-200 rounded-lg w-56 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              dir="rtl"
+            />
+            <button
+              onClick={() => setUserSortNewest((v) => !v)}
+              className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
+                userSortNewest
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-ink-100 text-ink-600 hover:bg-ink-200'
+              }`}
+            >
+              {userSortNewest ? 'الأحدث أولاً' : 'الأنشط أولاً'}
+            </button>
             <button
               onClick={exportEmails}
               className="mr-auto flex items-center gap-1.5 text-xs font-medium text-primary-700 bg-primary-50 px-3 py-1.5 rounded-lg hover:bg-primary-100 transition-colors"
@@ -814,7 +834,15 @@ export default function AdminPage() {
                 </tr>
               </thead>
               <tbody>
-                {stats.users.map((u) => (
+                {(userSortNewest
+                  ? [...stats.users].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                  : stats.users
+                ).filter((u) => {
+                  const q = userFilter.trim().toLowerCase();
+                  if (!q) return true;
+                  return [u.first_name, u.last_name, u.phone, u.email]
+                    .some((f) => (f || '').toLowerCase().includes(q));
+                }).map((u) => (
                   <tr key={u.id} className="border-b border-ink-100 last:border-0">
                     <td className="py-3 px-2 text-ink-700" dir="rtl">{u.first_name} {u.last_name}</td>
                     <td className="py-3 px-2" dir="ltr">
