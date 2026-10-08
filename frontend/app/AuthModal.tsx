@@ -306,6 +306,7 @@ export default function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
               <span>تم إرسال الرمز إلى {maskedEmail}</span>
             </div>
             <p className="text-sm text-ink-600">أدخل رمز التحقق المرسل إلى بريدك الإلكتروني</p>
+            <p className="text-xs text-ink-400">لم يصلك؟ تحقق من مجلد الرسائل غير المرغوب فيها أو تبويب العروض (Promotions)</p>
             <input
               type="text"
               value={code}

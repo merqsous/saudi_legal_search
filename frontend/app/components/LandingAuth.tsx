@@ -381,6 +381,7 @@ export default function LandingAuth() {
                   <CheckCircle className="w-4 h-4" />
                   <span>تم إرسال رمز التحقق إلى {maskedEmail}</span>
                 </div>
+                <p className="text-xs text-ink-400">لم يصلك؟ تحقق من مجلد الرسائل غير المرغوب فيها أو تبويب العروض (Promotions)</p>
                 <input
                   type="text"
                   value={code}
