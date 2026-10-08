@@ -1,22 +1,28 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Phone, Loader2, User, CheckCircle, X } from 'lucide-react';
+import { Phone, Loader2, User, CheckCircle, X, Mail } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getVisitSource } from './VisitTracker';
 
-type Step = 'phone' | 'name' | 'verify';
+type Step = 'identifier' | 'link-email' | 'name' | 'verify';
+
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/;
 
 export default function LandingAuth() {
   const router = useRouter();
   const [showAuth, setShowAuth] = useState(false);
-  const [step, setStep] = useState<Step>('phone');
-  const [phone, setPhone] = useState('');
+  const [step, setStep] = useState<Step>('identifier');
+  const [identifier, setIdentifier] = useState('');
+  const [verifyId, setVerifyId] = useState('');
+  const [maskedEmail, setMaskedEmail] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [unknownPhone, setUnknownPhone] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isNewUser, setIsNewUser] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [code, setCode] = useState('');
 
@@ -46,33 +52,37 @@ export default function LandingAuth() {
     return cleaned;
   };
 
-  const sendOtp = async () => {
+  const ADMIN_PHONE = '0514789632';
+
+  const sendOtp = async (body: Record<string, string>) => {
     const res = await fetch('/api/auth/send-otp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone }),
+      body: JSON.stringify(body),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || 'فشل إرسال رمز التحقق');
-    setStep('verify');
+    return data;
   };
 
-  const ADMIN_PHONE = '0514789632';
-
-  const handlePhoneSubmit = async () => {
+  const handleIdentifierSubmit = async () => {
     setError(null);
-    if (phone.length !== 10 || !phone.startsWith('05')) {
-      setError('رقم الهاتف يجب أن يبدأ بـ 05 ويتكون من 10 أرقام');
+    const id = identifier.trim();
+    const isEmail = EMAIL_RE.test(id);
+    const fmtPhone = formatPhone(id);
+    const isPhone = !isEmail && /^[0-9+\s-]{9,}$/.test(id) && fmtPhone.length === 10 && fmtPhone.startsWith('05');
+    if (!isEmail && !isPhone) {
+      setError('أدخل بريداً إلكترونياً صحيحاً أو رقم جوال يبدأ بـ 05');
       return;
     }
 
-    if (phone === ADMIN_PHONE) {
+    if (isPhone && fmtPhone === ADMIN_PHONE) {
       setLoading(true);
       try {
         const res = await fetch('/api/auth/admin-login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone }),
+          body: JSON.stringify({ phone: fmtPhone }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || 'فشل تسجيل الدخول');
@@ -91,22 +101,18 @@ export default function LandingAuth() {
 
     setLoading(true);
     try {
-      const checkRes = await fetch('/api/auth/check-user', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone }),
-      });
-      const checkData = await checkRes.json();
-
-      if (checkData.is_new) {
-        setIsNewUser(true);
-        setStep('name');
-        setLoading(false);
+      const data = await sendOtp({ identifier: isPhone ? fmtPhone : id });
+      if (data.status === 'needs_email') {
+        setUnknownPhone(!!data.unknown_phone);
+        setEmail('');
+        setStep('link-email');
         return;
       }
-
-      setIsNewUser(false);
-      await sendOtp();
+      if (isPhone) setPhone(fmtPhone);
+      setVerifyId(isPhone ? fmtPhone : id);
+      setMaskedEmail(data.masked_email || '');
+      setCode('');
+      setStep('verify');
     } catch (e: any) {
       setError(e instanceof Error ? e.message : 'فشل إرسال الرمز');
     } finally {
@@ -114,17 +120,22 @@ export default function LandingAuth() {
     }
   };
 
-  const handleNameSubmit = async () => {
+  const handleLinkEmail = async () => {
     setError(null);
-    if (!firstName.trim() || !lastName.trim()) {
-      setError('يرجى إدخال الاسم الأول والأخير');
+    const e = email.trim();
+    if (!EMAIL_RE.test(e)) {
+      setError('يرجى إدخال بريد إلكتروني صحيح');
       return;
     }
     setLoading(true);
     try {
-      await sendOtp();
-    } catch (e: any) {
-      setError(e instanceof Error ? e.message : 'فشل إرسال رمز التحقق');
+      const data = await sendOtp({ identifier: formatPhone(identifier.trim()), email: e });
+      setVerifyId(e);
+      setMaskedEmail(data.masked_email || e);
+      setCode('');
+      setStep('verify');
+    } catch (e2: any) {
+      setError(e2 instanceof Error ? e2.message : 'فشل إرسال الرمز');
     } finally {
       setLoading(false);
     }
@@ -142,16 +153,16 @@ export default function LandingAuth() {
       const res = await fetch('/api/auth/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          phone,
-          code,
-          first_name: isNewUser ? firstName.trim() : undefined,
-          last_name: isNewUser ? lastName.trim() : undefined,
-          ...(isNewUser ? getVisitSource() : {}),
-        }),
+        body: JSON.stringify({ identifier: verifyId, code }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'فشل التحقق');
+
+      if (data.status === 'needs_registration') {
+        setStep('name');
+        return;
+      }
+
       if (data.token) {
         localStorage.setItem('auth_token', data.token);
         localStorage.setItem('auth_user', JSON.stringify(data.user));
@@ -164,6 +175,44 @@ export default function LandingAuth() {
     }
   };
 
+  const handleRegister = async () => {
+    setError(null);
+    if (!firstName.trim() || !lastName.trim()) {
+      setError('يرجى إدخال الاسم الأول والأخير');
+      return;
+    }
+    if (phone.length !== 10 || !phone.startsWith('05')) {
+      setError('رقم الجوال يجب أن يبدأ بـ 05 ويتكون من 10 أرقام');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          identifier: verifyId,
+          code,
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+          phone,
+          ...getVisitSource(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'فشل إنشاء الحساب');
+      if (data.token) {
+        localStorage.setItem('auth_token', data.token);
+        localStorage.setItem('auth_user', JSON.stringify(data.user));
+        router.push('/search');
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'فشل إنشاء الحساب');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (checkingAuth) {
     return (
       <div className="min-h-screen flex items-center justify-center app-bg">
@@ -171,6 +220,13 @@ export default function LandingAuth() {
       </div>
     );
   }
+
+  const subtitle = {
+    'identifier': 'أدخل بريدك الإلكتروني للدخول أو إنشاء حساب',
+    'link-email': 'أدخل بريدك الإلكتروني ليصلك رمز التحقق',
+    'verify': 'أدخل رمز التحقق المرسل إلى بريدك',
+    'name': 'أدخل اسمك ورقم جوالك لإكمال إنشاء الحساب',
+  }[step];
 
   return (
     <>
@@ -186,7 +242,7 @@ export default function LandingAuth() {
           <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-6 relative">
             <button
               onClick={() => {
-                setShowAuth(false); setStep('phone'); setError(null); setCode('');
+                setShowAuth(false); setStep('identifier'); setError(null); setCode('');
               }}
               className="absolute top-4 left-4 text-ink-400 hover:text-ink-600"
             >
@@ -198,11 +254,7 @@ export default function LandingAuth() {
               <h2 className="text-xl font-bold text-ink-900">
                 {step === 'name' ? 'إنشاء حساب' : 'تسجيل الدخول'}
               </h2>
-              <p className="text-xs text-ink-500 mt-1">
-                {step === 'phone' && 'أدخل رقم هاتفك للدخول أو إنشاء حساب'}
-                {step === 'verify' && 'أدخل رمز التحقق المرسل إلى هاتفك'}
-                {step === 'name' && 'أدخل اسمك لإكمال إنشاء الحساب'}
-              </p>
+              <p className="text-xs text-ink-500 mt-1">{subtitle}</p>
             </div>
 
             {error && (
@@ -211,28 +263,66 @@ export default function LandingAuth() {
               </div>
             )}
 
-            {step === 'phone' && (
+            {step === 'identifier' && (
               <div className="space-y-4">
                 <div className="relative">
-                  <Phone className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-ink-400" />
+                  <Mail className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-ink-400" />
                   <input
                     type="text"
-                    value={phone}
-                    onChange={(e) => setPhone(formatPhone(e.target.value))}
-                    onKeyDown={(e) => e.key === 'Enter' && handlePhoneSubmit()}
-                    placeholder="0501234567"
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleIdentifierSubmit()}
+                    placeholder="example@email.com أو 05xxxxxxxx"
+                    className="w-full pr-11 pl-4 py-3 text-base bg-ink-50 border border-ink-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    style={{ direction: 'ltr' }}
+                    autoFocus
+                  />
+                </div>
+                <p className="text-xs text-ink-400">إذا كان حسابك القديم مسجلاً برقم الجوال، أدخل الرقم وسنطلب بريدك</p>
+                <button
+                  onClick={handleIdentifierSubmit}
+                  disabled={loading}
+                  className="w-full py-3 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
+                  متابعة
+                </button>
+              </div>
+            )}
+
+            {step === 'link-email' && (
+              <div className="space-y-4">
+                <p className="text-sm text-ink-600">
+                  {unknownPhone
+                    ? 'لا يوجد حساب بهذا الرقم — أدخل بريدك الإلكتروني لإنشاء حساب جديد'
+                    : 'حسابك مسجل برقم الجوال — أدخل بريدك الإلكتروني ليصلك رمز التحقق'}
+                </p>
+                <div className="relative">
+                  <Mail className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-ink-400" />
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleLinkEmail()}
+                    placeholder="example@email.com"
                     className="w-full pr-11 pl-4 py-3 text-base bg-ink-50 border border-ink-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
                     style={{ direction: 'ltr' }}
                     autoFocus
                   />
                 </div>
                 <button
-                  onClick={handlePhoneSubmit}
+                  onClick={handleLinkEmail}
                   disabled={loading}
                   className="w-full py-3 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
-                  متابعة
+                  إرسال الرمز
+                </button>
+                <button
+                  onClick={() => { setStep('identifier'); setEmail(''); setError(null); }}
+                  className="w-full text-sm text-ink-500 hover:text-ink-700"
+                >
+                  رجوع
                 </button>
               </div>
             )}
@@ -257,19 +347,30 @@ export default function LandingAuth() {
                     type="text"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleNameSubmit()}
                     placeholder="الاسم الأخير"
                     className="w-full pr-11 pl-4 py-3 text-base bg-ink-50 border border-ink-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
                     style={{ direction: 'rtl' }}
                   />
                 </div>
+                <div className="relative">
+                  <Phone className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-ink-400" />
+                  <input
+                    type="text"
+                    value={phone}
+                    onChange={(e) => setPhone(formatPhone(e.target.value))}
+                    onKeyDown={(e) => e.key === 'Enter' && handleRegister()}
+                    placeholder="05xxxxxxxx"
+                    className="w-full pr-11 pl-4 py-3 text-base bg-ink-50 border border-ink-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    style={{ direction: 'ltr' }}
+                  />
+                </div>
                 <button
-                  onClick={handleNameSubmit}
+                  onClick={handleRegister}
                   disabled={loading}
                   className="w-full py-3 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
-                  إرسال رمز التحقق
+                  إنشاء الحساب
                 </button>
               </div>
             )}
@@ -278,7 +379,7 @@ export default function LandingAuth() {
               <div className="space-y-4">
                 <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 rounded-lg p-3">
                   <CheckCircle className="w-4 h-4" />
-                  <span>تم إرسال رمز التحقق إلى {phone}</span>
+                  <span>تم إرسال رمز التحقق إلى {maskedEmail}</span>
                 </div>
                 <input
                   type="text"
@@ -299,10 +400,10 @@ export default function LandingAuth() {
                   تحقق
                 </button>
                 <button
-                  onClick={() => { setStep('phone'); setCode(''); setError(null); }}
+                  onClick={() => { setStep('identifier'); setCode(''); setError(null); }}
                   className="w-full text-sm text-ink-500 hover:text-ink-700"
                 >
-                  تغيير الرقم
+                  رجوع
                 </button>
               </div>
             )}

@@ -2,6 +2,7 @@ import os
 import re
 import time
 import secrets
+from datetime import datetime, timezone
 import urllib.parse
 import urllib.request
 import json as _json
@@ -792,54 +793,112 @@ def admin_login(req: LoginRequest, request: Request):
     return {"status": "ok", "token": token, "user": user_data}
 
 
-# --- Authentica OTP Integration ---
+# --- Email OTP Integration ---
 
-AUTHENTICA_API_URL = "https://api.authentica.sa/api/v2"
+OTP_TTL_MINUTES = 10
+OTP_MAX_ATTEMPTS = 5
+OTP_RESEND_SECONDS = 60
+OTP_DAILY_LIMIT = 10
 
 
-def _get_authentica_key() -> str:
-    return os.getenv("AUTHENTICA_API_KEY", "")
+def _send_email(to: str, subject: str, html_body: str):
+    """Send an email via SMTP (env-configured). Falls back to logging when SMTP is not set up."""
+    host = os.getenv("SMTP_HOST")
+    if not host:
+        # Dev fallback: print the email to the API log so flows are testable
+        print(f"[EMAIL-DEV] To {to} | {subject}\n{html_body}")
+        return
+    import smtplib
+    from email.message import EmailMessage
+    from email.utils import formataddr
 
+    port = int(os.getenv("SMTP_PORT", "587"))
+    user = os.getenv("SMTP_USER", "")
+    password = os.getenv("SMTP_PASSWORD", "")
+    from_email = os.getenv("SMTP_FROM_EMAIL", user)
+    from_name = os.getenv("SMTP_FROM_NAME", "الباحث")
 
-def _authentica_request(endpoint: str, data: dict) -> dict:
-    """Make an authenticated request to Authentica API."""
-    api_key = _get_authentica_key()
-    if not api_key:
-        raise HTTPException(status_code=500, detail="Authentica API key not configured")
-    url = f"{AUTHENTICA_API_URL}{endpoint}"
-    body = _json.dumps(data).encode("utf-8")
-    req = urllib.request.Request(
-        url,
-        data=body,
-        method="POST",
-        headers={
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-            "X-Authorization": api_key,
-        },
-    )
+    msg = EmailMessage()
+    msg["From"] = formataddr((from_name, from_email))
+    msg["To"] = to
+    msg["Subject"] = subject
+    msg.add_alternative(html_body, subtype="html")
+
     try:
-        with urllib.request.urlopen(req, timeout=15) as response:
-            return _json.loads(response.read().decode("utf-8"))
-    except urllib.error.HTTPError as e:
-        error_body = e.read().decode("utf-8")
-        print(f"[AUTHENTICA] Error {e.code}: {error_body}")
-        raise HTTPException(status_code=e.code, detail=f"Authentica error: {error_body}")
+        with smtplib.SMTP(host, port, timeout=15) as server:
+            if port != 25:
+                server.starttls()
+            if user:
+                server.login(user, password)
+            server.send_message(msg)
     except Exception as e:
-        print(f"[AUTHENTICA] Request failed: {e}")
-        raise HTTPException(status_code=500, detail="فشل الاتصال بخدمة التحقق")
+        print(f"[EMAIL] Failed to send to {to}: {e}")
+        raise HTTPException(status_code=500, detail="فشل إرسال البريد الإلكتروني. حاول مرة أخرى")
+
+
+def _send_otp_email(email: str, code: str):
+    html = f"""
+<div dir="rtl" style="font-family: Tahoma, Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px; background: #f8fafc;">
+  <div style="background: white; border-radius: 16px; padding: 32px; text-align: center; border: 1px solid #e2e8f0;">
+    <h2 style="color: #0f172a; margin: 0 0 8px;">رمز التحقق — الباحث</h2>
+    <p style="color: #64748b; font-size: 14px; margin: 0 0 24px;">استخدم الرمز التالي لإتمام تسجيل الدخول</p>
+    <div dir="ltr" style="font-size: 36px; font-weight: bold; letter-spacing: 12px; color: #059669; background: #ecfdf5; border-radius: 12px; padding: 16px 0; margin: 0 0 24px;">{code}</div>
+    <p style="color: #94a3b8; font-size: 12px; margin: 0;">صالح لمدة {OTP_TTL_MINUTES} دقائق — إذا لم تطلب هذا الرمز تجاهل الرسالة</p>
+  </div>
+</div>"""
+    _send_email(email, "رمز التحقق — الباحث", html)
+
+
+def _mask_email(email: str) -> str:
+    local, _, domain = email.partition("@")
+    if len(local) <= 2:
+        masked = local[0] + "***" if local else "***"
+    else:
+        masked = local[:2] + "***"
+    return f"{masked}@{domain}"
+
+
+def _issue_otp(target_email: str, link_phone: str | None):
+    """Create an OTP row and email it, enforcing resend/daily limits."""
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT created_at FROM email_otps WHERE email = %s ORDER BY created_at DESC LIMIT 1",
+            (target_email,),
+        )
+        last = cur.fetchone()
+        if last and (datetime.now(timezone.utc) - last[0].replace(tzinfo=timezone.utc)).total_seconds() < OTP_RESEND_SECONDS:
+            cur.close()
+            raise HTTPException(status_code=429, detail="يرجى الانتظار دقيقة قبل طلب رمز جديد")
+        cur.execute(
+            "SELECT COUNT(*) FROM email_otps WHERE email = %s AND created_at > NOW() - INTERVAL '1 day'",
+            (target_email,),
+        )
+        if cur.fetchone()[0] >= OTP_DAILY_LIMIT:
+            cur.close()
+            raise HTTPException(status_code=429, detail="تم تجاوز الحد اليومي لطلبات الرمز")
+        code = f"{secrets.randbelow(10000):04d}"
+        cur.execute(
+            """INSERT INTO email_otps (email, code, link_phone, expires_at)
+               VALUES (%s, %s, %s, NOW() + INTERVAL '%s minutes')""",
+            (target_email, code, link_phone, OTP_TTL_MINUTES),
+        )
+        conn.commit()
+        cur.close()
+    _send_otp_email(target_email, code)
 
 
 class SendOtpRequest(BaseModel):
-    phone: str
+    identifier: str  # email or phone
+    email: str | None = None  # target email when linking a legacy phone account
 
 
 class VerifyOtpRequest(BaseModel):
-    phone: str
+    identifier: str  # the email the code was sent to (or admin phone)
     code: str
     first_name: str | None = None
     last_name: str | None = None
-    email: str | None = None
+    phone: str | None = None  # collected for brand-new registrations
     source: str | None = None
     medium: str | None = None
     campaign: str | None = None
@@ -858,79 +917,156 @@ def _clean_email(email: str | None) -> str | None:
 
 @router.post("/auth/send-otp")
 def send_otp(req: SendOtpRequest):
-    """Send OTP via Authentica SMS."""
-    phone = normalize_phone(req.phone)
-    if not phone:
-        raise HTTPException(status_code=400, detail="رقم الهاتف غير صحيح. يجب أن يبدأ بـ 05 ويتكون من 9 أرقام")
+    """Send an OTP email. Identifier may be an email or a legacy user's phone."""
+    identifier = req.identifier.strip()
+    email_input = _clean_email(identifier)
+    link_phone = None
+    target_email = None
 
-    # Admin bypass - no OTP needed
-    if phone == ADMIN_PHONE:
-        return {"status": "ok", "message": "تم إرسال رمز التحقق"}
+    if email_input:
+        target_email = email_input
+    else:
+        phone = normalize_phone(identifier)
+        if not phone:
+            raise HTTPException(status_code=400, detail="أدخل بريداً إلكترونياً صحيحاً أو رقم جوال سعودي")
 
-    international_phone = "+" + phone
-    result = _authentica_request("/send-otp", {
-        "method": "sms",
-        "phone": international_phone,
-        "template": "استخدم الرمز {{otp}} للتحقق من حسابك في {{app_name}}.",
-        "app_name": "الباحث",
-    })
-    return {"status": "ok", "message": "تم إرسال رمز التحقق"}
+        # Admin bypass - no OTP needed
+        if phone == ADMIN_PHONE:
+            return {"status": "ok", "admin": True}
+
+        user = query_one("SELECT id, email FROM users WHERE phone = %s", [phone])
+        if user and user.get("email"):
+            target_email = user["email"]
+            link_phone = phone
+        else:
+            provided = _clean_email(req.email)
+            if not provided:
+                return {"status": "needs_email", "unknown_phone": user is None}
+            target_email = provided
+            link_phone = phone if user else None
+
+    if link_phone is None:
+        existing = query_one("SELECT id FROM users WHERE email = %s", [target_email])
+        is_new = existing is None
+    else:
+        is_new = False
+        conflict = query_one(
+            "SELECT id FROM users WHERE email = %s AND phone <> %s", [target_email, link_phone]
+        )
+        if conflict:
+            raise HTTPException(status_code=409, detail="هذا البريد مرتبط بحساب آخر")
+
+    _issue_otp(target_email, link_phone)
+    return {"status": "ok", "masked_email": _mask_email(target_email), "is_new": is_new}
 
 
 @router.post("/auth/verify-otp")
 def verify_otp(req: VerifyOtpRequest, request: Request):
-    """Verify OTP via Authentica and login/register user."""
-    phone = normalize_phone(req.phone)
-    if not phone:
-        raise HTTPException(status_code=400, detail="رقم الهاتف غير صحيح")
+    """Verify an email OTP, then login or register the user."""
+    identifier = req.identifier.strip()
 
     if len(req.code) != 4 or not req.code.isdigit():
         raise HTTPException(status_code=400, detail="الرمز يجب أن يتكون من 4 أرقام")
 
-    # Admin bypass - skip Authentica verification
-    if phone != ADMIN_PHONE:
-        international_phone = "+" + phone
-        result = _authentica_request("/verify-otp", {
-            "phone": international_phone,
-            "otp": req.code,
-        })
-
-        if not result.get("status") and not result.get("verified"):
-            raise HTTPException(status_code=400, detail="رمز التحقق غير صحيح")
-
     ip = get_client_ip(request)
     country = get_country_from_ip(ip)
-    email = _clean_email(req.email)
 
-    user = query_one("SELECT * FROM users WHERE phone = %s", [phone])
+    # Admin bypass - any code logs the admin in
+    admin_phone = normalize_phone(identifier)
+    if admin_phone == ADMIN_PHONE:
+        user = query_one("SELECT id, phone FROM users WHERE phone = %s", [ADMIN_PHONE])
+        if not user:
+            raise HTTPException(status_code=400, detail="حساب المدير غير موجود")
+        token = secrets.token_urlsafe(32)
+        create_session(token, user["id"], user["phone"])
+        _sessions[token] = {"user_id": user["id"], "phone": user["phone"]}
+        user_data = query_one("SELECT id, phone, first_name, last_name, email FROM users WHERE id = %s", [user["id"]])
+        return {"status": "ok", "token": token, "user": user_data}
 
-    with get_db() as conn:
-        cur = conn.cursor()
-        if user:
-            user_id = user["id"]
-            if req.first_name and req.last_name:
-                cur.execute("UPDATE users SET first_name = %s, last_name = %s WHERE id = %s",
-                            (req.first_name, req.last_name, user_id))
-            # Backfill email for users who registered before this field existed
-            if email and not user.get("email"):
-                cur.execute("UPDATE users SET email = %s WHERE id = %s", (email, user_id))
-        else:
-            if not req.first_name or not req.last_name:
-                raise HTTPException(status_code=400, detail="الاسم الأول والأخير مطلوبان للمستخدمين الجدد")
+    email = _clean_email(identifier)
+    if email:
+        otp = query_one(
+            """SELECT id, email, code, link_phone, attempts FROM email_otps
+               WHERE email = %s AND expires_at > NOW()
+               ORDER BY created_at DESC LIMIT 1""",
+            [email],
+        )
+    else:
+        # Legacy path: user entered their phone; resolve OTP sent to their email
+        phone = normalize_phone(identifier)
+        if not phone:
+            raise HTTPException(status_code=400, detail="المعرّف غير صحيح")
+        otp = query_one(
+            """SELECT id, email, code, link_phone, attempts FROM email_otps
+               WHERE link_phone = %s AND expires_at > NOW()
+               ORDER BY created_at DESC LIMIT 1""",
+            [phone],
+        )
+    if not otp or otp["attempts"] >= OTP_MAX_ATTEMPTS:
+        raise HTTPException(status_code=400, detail="انتهت صلاحية الرمز. اطلب رمزاً جديداً")
+
+    if otp["code"] != req.code:
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute("UPDATE email_otps SET attempts = attempts + 1 WHERE id = %s", (otp["id"],))
+            conn.commit()
+            cur.close()
+        raise HTTPException(status_code=400, detail="رمز التحقق غير صحيح")
+
+    email = otp["email"]
+    link_phone = otp["link_phone"]
+    user = None
+    if link_phone:
+        user = query_one("SELECT * FROM users WHERE phone = %s", [link_phone])
+    if not user:
+        user = query_one("SELECT * FROM users WHERE email = %s", [email])
+    if not user and link_phone:
+        # The phone account was deleted between send and verify
+        raise HTTPException(status_code=400, detail="الحساب غير موجود. اطلب رمزاً جديداً")
+
+    if not user:
+        # Brand-new email: signal the client to collect name + phone
+        if not req.first_name or not req.last_name:
+            return {"status": "needs_registration"}
+
+        phone = normalize_phone(req.phone or "")
+        if not phone:
+            raise HTTPException(status_code=400, detail="رقم الجوال مطلوب لإنشاء الحساب")
+        if query_one("SELECT id FROM users WHERE phone = %s", [phone]):
+            raise HTTPException(status_code=409, detail="رقم الجوال مسجل بحساب آخر")
+
+        with get_db() as conn:
+            cur = conn.cursor()
             cur.execute(
                 "INSERT INTO users (phone, first_name, last_name, email, ip_address, country, source, medium, campaign) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
                 (phone, req.first_name, req.last_name, email, ip, country, req.source, req.medium, req.campaign),
             )
             user_id = cur.fetchone()[0]
+            conn.commit()
+            cur.close()
+
+        from api.routes.firms import accept_pending_invitations
+        accept_pending_invitations(phone, user_id)
+    else:
+        user_id = user["id"]
+        if link_phone and not user.get("email"):
+            # Bind the verified email to the legacy phone account
+            with get_db() as conn:
+                cur = conn.cursor()
+                cur.execute("UPDATE users SET email = %s WHERE id = %s", (email, user_id))
+                conn.commit()
+                cur.close()
+
+    # OTP consumed
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM email_otps WHERE id = %s", (otp["id"],))
+        conn.commit()
         cur.close()
 
-    # Auto-join any firm that invited this phone before signup
-    from api.routes.firms import accept_pending_invitations
-    accept_pending_invitations(phone, user_id)
-
+    user_data = query_one("SELECT id, phone, first_name, last_name, email FROM users WHERE id = %s", [user_id])
+    phone = user_data["phone"]
     token = secrets.token_urlsafe(32)
     create_session(token, user_id, phone)
     _sessions[token] = {"user_id": user_id, "phone": phone}
-
-    user_data = query_one("SELECT id, phone, first_name, last_name, email FROM users WHERE id = %s", [user_id])
     return {"status": "ok", "token": token, "user": user_data}
