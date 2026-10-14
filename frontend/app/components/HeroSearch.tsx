@@ -14,6 +14,13 @@ interface HeroResult {
   snippet: string;
 }
 
+interface ProcResult {
+  thread_id: string;
+  question: string;
+  answer: string;
+  topic: string | null;
+}
+
 const EXAMPLE_QUERIES = [
   'تعويض عن إنهاء عقد عمل غير محدد المدة',
   'دعوى مطالبة بقيمة شيك',
@@ -27,6 +34,7 @@ export default function HeroSearch() {
   const [typing, setTyping] = useState('');
   const [exampleIdx, setExampleIdx] = useState(0);
   const [results, setResults] = useState<HeroResult[] | null>(null);
+  const [procResults, setProcResults] = useState<ProcResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [error, setError] = useState(false);
@@ -70,6 +78,7 @@ export default function HeroSearch() {
     setLoading(true);
     setError(false);
     setResults(null);
+    setProcResults([]);
     setRegisterRequired(false);
     try {
       const res = await fetch(`/api/search?anonymous=true&limit=3&q=${encodeURIComponent(text)}`);
@@ -80,6 +89,7 @@ export default function HeroSearch() {
       const data = await res.json();
       if (!res.ok || data.error) throw new Error();
       setResults(data.results || []);
+      setProcResults(data.procedural || []);
     } catch {
       setError(true);
     } finally {
@@ -187,15 +197,17 @@ export default function HeroSearch() {
             </div>
           )}
 
-          {results && results.length === 0 && (
+          {results && results.length === 0 && procResults.length === 0 && (
             <div className="text-center py-8">
               <p className="text-sm text-ink-500 mb-1">لا توجد نتائج مطابقة لهذا الاستعلام في المعاينة</p>
               <p className="text-xs text-ink-400">سجّل الدخول للبحث الكامل بالمعنى في جميع الأحكام</p>
             </div>
           )}
 
-          {results && results.length > 0 && (
+          {results && (results.length > 0 || procResults.length > 0) && (
             <>
+              {results.length > 0 && (
+              <>
               <div className="flex items-center gap-2 mb-4">
                 <Sparkles className="w-4 h-4 text-primary-700" />
                 <p className="text-xs font-bold text-primary-700">
@@ -243,6 +255,40 @@ export default function HeroSearch() {
                   </a>
                 ))}
               </div>
+              </>
+              )}
+
+              {procResults.length > 0 && (
+                <>
+                  <div className={`flex items-center gap-2 ${results.length > 0 ? 'mt-5 pt-4 border-t border-ink-100' : ''} mb-3`}>
+                    <p className="text-xs font-bold text-ink-600">أسئلة إجرائية ذات صلة — إجابات من تجارب حقيقية</p>
+                  </div>
+                  <div className="space-y-3">
+                    {procResults.map((t) => (
+                      <a
+                        key={t.thread_id}
+                        href={`/procedural?q=${encodeURIComponent(query)}`}
+                        className="block border border-ink-100 rounded-2xl p-4 hover:border-primary-300 transition-colors group"
+                      >
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          <span className="text-[11px] px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-semibold">
+                            إجرائي
+                          </span>
+                          {t.topic && (
+                            <span className="text-[11px] px-2 py-0.5 rounded-md bg-ink-50 text-ink-500">
+                              {t.topic}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm font-bold text-ink-800 mb-1 group-hover:text-primary-800 transition-colors">
+                          {t.question}
+                        </p>
+                        <p className="text-xs text-ink-500 leading-relaxed line-clamp-2">{t.answer}</p>
+                      </a>
+                    ))}
+                  </div>
+                </>
+              )}
               <div className="flex items-center justify-between mt-4 pt-4 border-t border-ink-100">
                 <p className="text-xs text-ink-400">المعاينة مجانية بدون تسجيل</p>
                 <a href="/search" className="text-xs font-bold text-primary-700 hover:underline flex items-center gap-1">

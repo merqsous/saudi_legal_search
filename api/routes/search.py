@@ -450,7 +450,7 @@ def _keyword_search(q, where_clause, params, limit, offset):
     """Return (rows, total, all_match_ids) for the Arabic FTS keyword stage."""
     tsv_q = normalize_arabic(q).strip()
     if not tsv_q:
-        return [], 0, []
+        return [], 0
 
     phrase_pat = "%" + q.strip().replace("%", "").replace("_", " ") + "%"
 
@@ -475,7 +475,7 @@ def _keyword_search(q, where_clause, params, limit, offset):
     )
     total = count_row["c"] if count_row else 0
     if not total:
-        return [], 0, []
+        return [], 0
 
     fetch_sql = f"""
         {cte}
