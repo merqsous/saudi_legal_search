@@ -202,6 +202,20 @@ export default function SearchClient() {
             setRegistrationRequired(true);
           } else {
             setSubscriptionRequired(true);
+            // Teaser: paywalled users still get the AI answer; sources stay locked
+            setAiAnswer(null);
+            setAiLoading(true);
+            const aiParams = new URLSearchParams({ q: query, limit: '20' });
+            if (selectedCourtType) aiParams.set('court_type', selectedCourtType);
+            if (selectedCity) aiParams.set('city', selectedCity);
+            if (selectedYear) aiParams.set('year', selectedYear);
+            if (selectedCourtLevel) aiParams.set('court_level', selectedCourtLevel);
+            if (selectedSection) aiParams.set('section', selectedSection);
+            fetch(`/api/ai-answer?${aiParams.toString()}`)
+              .then((r) => r.json())
+              .then((d) => setAiAnswer(d.ai_answer ?? null))
+              .catch(() => setAiAnswer(null))
+              .finally(() => setAiLoading(false));
           }
         } else if (res.status === 500) {
           setError('حدث خطأ مؤقت، يرجى إعادة المحاولة');
@@ -591,14 +605,31 @@ export default function SearchClient() {
           </div>
         )}
 
-        {/* Subscription required */}
+        {/* Subscription required — AI answer teaser + locked sources */}
         {subscriptionRequired && (
-          <div className="mt-6 bg-gradient-to-l from-primary-50 to-white border border-primary-200 rounded-xl p-6 text-center">
+          <div className="mt-6 space-y-4">
+            {(aiAnswer || aiLoading) && (
+              <div className="bg-gradient-to-l from-primary-50 to-white border border-primary-200 rounded-xl p-5 shadow-sm">
+                <div className="flex items-center gap-2 mb-3">
+                  <Sparkles className="w-5 h-5 text-primary-600" />
+                  <h2 className="text-sm font-bold text-ink-800">إجابة قانونية مساعدة</h2>
+                  {aiLoading && <Loader2 className="w-4 h-4 text-primary-500 animate-spin" />}
+                </div>
+                {aiAnswer ? (
+                  <p className="text-sm text-ink-700 leading-relaxed arabic-text" dir="rtl">
+                    {formatAiAnswer(aiAnswer)}
+                  </p>
+                ) : (
+                  <p className="text-sm text-ink-400">جاري توليد الإجابة...</p>
+                )}
+              </div>
+            )}
+          <div className="bg-gradient-to-l from-primary-50 to-white border border-primary-200 rounded-xl p-6 text-center">
             <h3 className="text-lg font-bold text-ink-800 mb-2">
               لقد استخدمت جميع عمليات البحث المجانية
             </h3>
             <p className="text-sm text-ink-600 mb-4">
-              واصل البحث في جميع الأحكام القضائية — اشتراك شهري، أو يوم واحد بدون حدود.
+              الإجابة أعلاه تلخيص آلي — المصادر والأحكام الكاملة وأرقام القضايا متاحة للمشتركين. واصل البحث في جميع الأحكام القضائية — اشتراك شهري، أو يوم واحد بدون حدود.
             </p>
             <div className="flex items-center justify-center gap-3 flex-wrap">
               <button
@@ -614,6 +645,7 @@ export default function SearchClient() {
                 يوم واحد بلا حدود — 5 ريال
               </button>
             </div>
+          </div>
           </div>
         )}
 

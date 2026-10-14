@@ -112,7 +112,21 @@ export default function ProceduralClient() {
         headers: { 'X-User-Phone': authUser?.phone || '' },
       });
       const data = await res.json();
-      if (!handleResponse(res, data)) return;
+      if (!handleResponse(res, data)) {
+        // Teaser: paywalled users still get the AI answer; thread list stays locked
+        if (res.status === 402 && data?.detail !== 'registration_required' && term.trim()) {
+          setAiLoading(true);
+          setAiAnswer(null);
+          const aParams = new URLSearchParams({ q: term });
+          if (selectedTopic) aParams.set('topic', selectedTopic);
+          fetch(`/api/procedural-answer?${aParams.toString()}`)
+            .then(r => r.json())
+            .then(d => setAiAnswer(d.ai_answer || null))
+            .catch(() => {})
+            .finally(() => setAiLoading(false));
+        }
+        return;
+      }
       setResults(data.results || []);
       setTotal(data.total || 0);
 
@@ -285,7 +299,7 @@ export default function ProceduralClient() {
           <div className="mt-6 bg-gradient-to-l from-primary-50 to-white border border-primary-200 rounded-xl p-6 text-center">
             <h3 className="text-lg font-bold text-ink-800 mb-2">لقد استخدمت جميع عمليات البحث المجانية</h3>
             <p className="text-sm text-ink-600 mb-4">
-              واصل البحث في الأسئلة الإجرائية والأحكام — اشتراك شهري، أو يوم واحد بدون حدود.
+              الإجابة أعلاه تلخيص آلي — المحادثات الكاملة والمصادر متاحة للمشتركين. واصل البحث في الأسئلة الإجرائية والأحكام — اشتراك شهري، أو يوم واحد بدون حدود.
             </p>
             <div className="flex items-center justify-center gap-3 flex-wrap">
               <button
