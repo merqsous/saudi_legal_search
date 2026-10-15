@@ -22,11 +22,11 @@ interface ProcResult {
 }
 
 const EXAMPLE_QUERIES = [
-  'تعويض عن إنهاء عقد عمل غير محدد المدة',
-  'دعوى مطالبة بقيمة شيك',
-  'حضانة الطفل بعد الطلاق',
-  'إخلاء مأجور لعدم سداد الإيجار',
-  'فسخ عقد بيع لعدم مطابقة المواصفات',
+  'كيف أرفع قضية في ناجز',
+  'رصيد الإجازات بعد الاستقالة',
+  'إخلاء مستأجر لا يدفع الإيجار',
+  'كيف أنقل مخالفة مرورية لشخص آخر',
+  'الوكالة الشرعية للمحامي',
 ];
 
 export default function HeroSearch() {
@@ -141,10 +141,10 @@ export default function HeroSearch() {
       {!searched && (
         <div className="flex flex-wrap justify-center gap-2.5 mt-6">
           {[
-            { label: 'قضايا العمل', query: 'تعويض عن إنهاء عقد عمل غير محدد المدة', icon: Briefcase },
-            { label: 'الأحوال الشخصية', query: 'حضانة الطفل بعد الطلاق', icon: Users },
-            { label: 'قضايا تجارية', query: 'دعوى مطالبة بقيمة شيك', icon: Building2 },
-            { label: 'عقود وإيجارات', query: 'إخلاء مأجور لعدم سداد الإيجار', icon: FileText },
+            { label: 'ناجز والتنفيذ', query: 'كيف أرفع قضية في ناجز', icon: FileText },
+            { label: 'العمل والعمال', query: 'رصيد الإجازات بعد الاستقالة', icon: Briefcase },
+            { label: 'الإيجار والعقار', query: 'إخلاء مستأجر لا يدفع الإيجار', icon: Building2 },
+            { label: 'المرور والتأمين', query: 'كيف أنقل مخالفة مرورية لشخص آخر', icon: Users },
           ].map((c) => (
             <button
               key={c.label}
