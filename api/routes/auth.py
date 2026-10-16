@@ -798,28 +798,32 @@ def admin_send_signup_reminders(authorization: str = Header(None)):
            ORDER BY o.created_at DESC"""
     )
 
+    # One reminder per email regardless of how many stale OTP rows exist
+    by_email: dict[str, dict] = {}
+    for r in rows:  # rows are newest-first; first occurrence wins
+        by_email.setdefault(r["email"], r)
+
     sent = 0
     failed = []
-    for r in rows:
+    for email, r in by_email.items():
         try:
-            _send_signup_reminder_email(r["email"], r["is_login"])
+            _send_signup_reminder_email(email, r["is_login"])
             sent += 1
         except Exception as e:
-            print(f"[REMINDER] Failed for {r['email']}: {e}")
-            failed.append(r["email"])
-            continue
+            print(f"[REMINDER] Failed for {email}: {e}")
+            failed.append(email)
 
     if sent:
         with get_db() as conn:
             cur = conn.cursor()
             cur.execute(
-                "UPDATE email_otps SET reminded_at = NOW() WHERE id = ANY(%s)",
-                ([r["id"] for r in rows if r["email"] not in failed],),
+                "UPDATE email_otps SET reminded_at = NOW() WHERE email = ANY(%s) AND email <> ALL(%s)",
+                (list(by_email.keys()), failed),
             )
             conn.commit()
             cur.close()
 
-    return {"sent": sent, "failed": failed, "pending": len(rows)}
+    return {"sent": sent, "failed": failed, "pending": len(by_email)}
 
 
 @router.post("/auth/admin-login")
