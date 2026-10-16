@@ -228,7 +228,27 @@ export default function AdminPage() {
     } catch (e) {
       alert(e instanceof Error ? e.message : 'فشل تصدير القائمة');
     }
-  };;
+  };
+
+  const [sendingReminders, setSendingReminders] = useState(false);
+  const sendSignupReminders = async () => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) return;
+    setSendingReminders(true);
+    try {
+      const res = await fetch('/api/auth/admin/signup-reminders', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'فشل الإرسال');
+      alert(`تم إرسال ${data.sent} تذكير${data.failed?.length ? ` — فشل ${data.failed.length}` : ''}`);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'فشل الإرسال');
+    } finally {
+      setSendingReminders(false);
+    }
+  };
 
   useEffect(() => {
     const saved = localStorage.getItem('auth_user');
@@ -808,6 +828,15 @@ export default function AdminPage() {
               }`}
             >
               {userSortNewest ? 'الأحدث أولاً' : 'الأنشط أولاً'}
+            </button>
+            <button
+              onClick={sendSignupReminders}
+              disabled={sendingReminders}
+              className="flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-amber-50 px-3 py-1.5 rounded-lg hover:bg-amber-100 transition-colors disabled:opacity-50"
+              title="يُرسل بريداً لكل من طلب رمز تحقق ولم يكمل التسجيل"
+            >
+              {sendingReminders ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
+              تذكير المتروكين
             </button>
             <button
               onClick={exportEmails}

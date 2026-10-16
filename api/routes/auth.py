@@ -756,6 +756,72 @@ def admin_export_emails(authorization: str = Header(None), active_only: bool = Q
     )
 
 
+def _send_signup_reminder_email(email: str, is_login: bool):
+    """Recovery email for users who requested an OTP but never verified."""
+    action = "تسجيل الدخول" if is_login else "إنشاء حسابك"
+    html = f"""
+<div dir="rtl" style="font-family: Tahoma, Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px; background: #f8fafc;">
+  <div style="background: white; border-radius: 16px; padding: 32px; border: 1px solid #e2e8f0;">
+    <h2 style="color: #0f172a; margin: 0 0 12px;">أكمل {action} في الباحث</h2>
+    <p style="color: #475569; font-size: 14px; line-height: 1.7; margin: 0 0 16px;">
+      لاحظنا أنك طلبت رمز تحقق ولم تكمل {action}.
+      إذا لم يصلك الرمز، تحقق من مجلد <b>الرسائل غير المرغوب فيها</b> أو تبويب <b>العروض (Promotions)</b>.
+    </p>
+    <p style="color: #475569; font-size: 14px; line-height: 1.7; margin: 0 0 20px;">
+      أو اطلب رمزاً جديداً — يصلك فوراً:
+    </p>
+    <div style="text-align: center;">
+      <a href="https://albaheth.app/?signup=1" style="display: inline-block; background: #047857; color: white; font-weight: bold; font-size: 15px; padding: 12px 32px; border-radius: 9999px; text-decoration: none;">
+        إكمال {action}
+      </a>
+    </div>
+    <p style="color: #94a3b8; font-size: 12px; margin: 20px 0 0;">إذا لم تطلب هذا التسجيل تجاهل الرسالة.</p>
+  </div>
+</div>"""
+    _send_email(email, f"أكمل {action} في الباحث", html)
+
+
+@router.post("/auth/admin/signup-reminders")
+def admin_send_signup_reminders(authorization: str = Header(None)):
+    """Email users who requested an OTP but never verified — abandoned signups/logins."""
+    _require_admin(authorization)
+
+    # Unconsumed OTPs older than 1h (code already expired), not yet reminded,
+    # within the last 14 days, and whose email isn't already a registered user.
+    rows = query_all(
+        """SELECT o.id, o.email, o.link_phone IS NOT NULL AS is_login
+           FROM email_otps o
+           WHERE o.reminded_at IS NULL
+             AND o.created_at < NOW() - INTERVAL '1 hour'
+             AND o.created_at > NOW() - INTERVAL '14 days'
+             AND NOT EXISTS (SELECT 1 FROM users u WHERE u.email = o.email)
+           ORDER BY o.created_at DESC"""
+    )
+
+    sent = 0
+    failed = []
+    for r in rows:
+        try:
+            _send_signup_reminder_email(r["email"], r["is_login"])
+            sent += 1
+        except Exception as e:
+            print(f"[REMINDER] Failed for {r['email']}: {e}")
+            failed.append(r["email"])
+            continue
+
+    if sent:
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                "UPDATE email_otps SET reminded_at = NOW() WHERE id = ANY(%s)",
+                ([r["id"] for r in rows if r["email"] not in failed],),
+            )
+            conn.commit()
+            cur.close()
+
+    return {"sent": sent, "failed": failed, "pending": len(rows)}
+
+
 @router.post("/auth/admin-login")
 def admin_login(req: LoginRequest, request: Request):
     phone = normalize_phone(req.phone)
