@@ -162,7 +162,7 @@ export default function AdminPage() {
   const [expandedFirm, setExpandedFirm] = useState<number | null>(null);
   const [subMenuUserId, setSubMenuUserId] = useState<number | null>(null);
   const [userFilter, setUserFilter] = useState('');
-  const [userSortNewest, setUserSortNewest] = useState(false);
+  const [userSortNewest, setUserSortNewest] = useState(true);
 
   const reloadStats = async () => {
     const token = localStorage.getItem('auth_token');
