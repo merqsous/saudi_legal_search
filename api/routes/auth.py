@@ -826,6 +826,84 @@ def admin_send_signup_reminders(authorization: str = Header(None)):
     return {"sent": sent, "failed": failed, "pending": len(by_email)}
 
 
+def _send_procedural_announce_email(email: str, first_name: str | None):
+    """Feature announcement: procedural Q&A search is live."""
+    name = (first_name or "").strip()
+    greeting = f"أهلاً {name}،" if name else "أهلاً بك،"
+    html = f"""
+<div dir="rtl" style="font-family: Tahoma, Arial, sans-serif; max-width: 520px; margin: 0 auto; padding: 24px; background: #f8fafc;">
+  <div style="background: white; border-radius: 16px; padding: 32px; border: 1px solid #e2e8f0;">
+    <p style="color: #047857; font-weight: bold; font-size: 13px; margin: 0 0 8px;">جديد في الباحث</p>
+    <h2 style="color: #0f172a; margin: 0 0 16px; font-size: 22px;">أسئلة إجرائية — إجابات من تجارب حقيقية</h2>
+    <p style="color: #475569; font-size: 14px; line-height: 1.8; margin: 0 0 12px;">
+      {greeting}
+    </p>
+    <p style="color: #475569; font-size: 14px; line-height: 1.8; margin: 0 0 12px;">
+      أضفنا قسماً جديداً يجاوب على الأسئلة العملية التي يواجهها الناس فعلاً في المحاكم السعودية:
+      <b>كيف ترفع قضية في ناجز</b>، <b>إخلاء المستأجر المتأخر</b>، <b>رصيد الإجازات بعد الاستقالة</b>،
+      <b>نقل المخالفات المرورية</b> — وأكثر من 1,900 سؤال وجواب موثّق.
+    </p>
+    <p style="color: #475569; font-size: 14px; line-height: 1.8; margin: 0 0 20px;">
+      كل إجابة تُعرض بصياغة رسمية واضحة مع إجابة مساعدة بالذكاء الاصطناعي تلخص لك الخطوات —
+      وتظهر الآن تلقائياً داخل نتائج البحث بجانب الأحكام القضائية.
+    </p>
+    <div style="text-align: center; margin: 0 0 8px;">
+      <a href="https://albaheth.app/procedural" style="display: inline-block; background: #047857; color: white; font-weight: bold; font-size: 15px; padding: 12px 32px; border-radius: 9999px; text-decoration: none;">
+        جرّب الأسئلة الإجرائية
+      </a>
+    </div>
+    <p style="color: #94a3b8; font-size: 12px; margin: 20px 0 0; text-align: center;">
+      الباحث — محرك البحث القانوني السعودي
+    </p>
+  </div>
+</div>"""
+    _send_email(email, "جديد في الباحث: إجابات إجرائية من تجارب حقيقية", html)
+
+
+@router.post("/auth/admin/announce-procedural")
+def admin_announce_procedural(authorization: str = Header(None)):
+    """Send the procedural-Q&A announcement to all users who have an email.
+
+    Each user receives a given campaign at most once (email_campaigns log).
+    """
+    _require_admin(authorization)
+    campaign = "procedural_launch"
+
+    rows = query_all(
+        """SELECT u.id, u.email, u.first_name
+           FROM users u
+           WHERE u.email IS NOT NULL AND u.email <> ''
+             AND NOT EXISTS (
+               SELECT 1 FROM email_campaigns ec
+               WHERE ec.user_id = u.id AND ec.campaign = %s)
+           ORDER BY u.id""",
+        [campaign],
+    )
+
+    sent, failed = 0, []
+    sent_ids = []
+    for r in rows:
+        try:
+            _send_procedural_announce_email(r["email"], r["first_name"])
+            sent += 1
+            sent_ids.append(r["id"])
+        except Exception as e:
+            print(f"[CAMPAIGN] Failed for {r['email']}: {e}")
+            failed.append(r["email"])
+
+    if sent_ids:
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.executemany(
+                "INSERT INTO email_campaigns (user_id, campaign) VALUES (%s, %s) ON CONFLICT DO NOTHING",
+                [(uid, campaign) for uid in sent_ids],
+            )
+            conn.commit()
+            cur.close()
+
+    return {"sent": sent, "failed": failed, "pending": len(rows)}
+
+
 @router.post("/auth/admin-login")
 def admin_login(req: LoginRequest, request: Request):
     phone = normalize_phone(req.phone)

@@ -250,6 +250,27 @@ export default function AdminPage() {
     }
   };
 
+  const [sendingAnnounce, setSendingAnnounce] = useState(false);
+  const sendProceduralAnnounce = async () => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) return;
+    if (!confirm('إرسال إعلان الأسئلة الإجرائية لجميع المستخدمين المسجلين بالبريد؟')) return;
+    setSendingAnnounce(true);
+    try {
+      const res = await fetch('/api/auth/admin/announce-procedural', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'فشل الإرسال');
+      alert(`تم إرسال الإعلان إلى ${data.sent} مستخدم${data.failed?.length ? ` — فشل ${data.failed.length}` : ''}`);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'فشل الإرسال');
+    } finally {
+      setSendingAnnounce(false);
+    }
+  };
+
   useEffect(() => {
     const saved = localStorage.getItem('auth_user');
     if (!saved) {
@@ -837,6 +858,15 @@ export default function AdminPage() {
             >
               {sendingReminders ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
               تذكير المتروكين
+            </button>
+            <button
+              onClick={sendProceduralAnnounce}
+              disabled={sendingAnnounce}
+              className="flex items-center gap-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg hover:bg-emerald-100 transition-colors disabled:opacity-50"
+              title="يرسل إعلان ميزة الأسئلة الإجرائية لكل مستخدم لديه بريد — مرة واحدة لكل مستخدم"
+            >
+              {sendingAnnounce ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+              إعلان الأسئلة الإجرائية
             </button>
             <button
               onClick={exportEmails}
