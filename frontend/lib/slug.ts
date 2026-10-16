@@ -24,6 +24,12 @@ export function judgmentSlug(judgment: {
   return slugify(parts.join(' '));
 }
 
+export function threadUrl(thread: { id: number | string; formal_question?: string | null; canonical_question?: string | null; question?: string | null }): string {
+  const title = thread.formal_question || thread.canonical_question || thread.question || '';
+  const slug = slugify(title);
+  return slug ? `/procedural/${thread.id}/${slug}` : `/procedural/${thread.id}`;
+}
+
 export function judgmentUrl(id: number | string, judgment: {
   court_type?: string | null;
   court_level?: string | null;

@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Search, Loader2, ExternalLink, Scale, Filter, X, ChevronDown, Sparkles, CheckCircle, MapPin, Building2, Gavel, Bookmark, FileText, Download, BookOpen, ThumbsUp, ThumbsDown, Briefcase, MessageSquare } from 'lucide-react';
-import { judgmentUrl } from '@/lib/slug';
+import { judgmentUrl, threadUrl } from '@/lib/slug';
 import { getVisitSource } from '../components/VisitTracker';
 import Header from '../components/Header';
 
@@ -34,6 +34,7 @@ interface SearchResult {
 }
 
 interface ProceduralResult {
+  id: number;
   thread_id: string;
   topic: string | null;
   question: string;
@@ -697,7 +698,7 @@ export default function SearchClient() {
                   {procResults.map((t) => (
                     <a
                       key={t.thread_id}
-                      href={`/procedural?q=${encodeURIComponent(query)}`}
+                      href={threadUrl({ id: t.id, question: t.question })}
                       className="block bg-white border border-emerald-100 rounded-xl p-4 hover:shadow-card transition-all"
                     >
                       <div className="flex items-center gap-2 mb-2">

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Search, ArrowLeft, Loader2, MapPin, Sparkles, Briefcase, Users, Building2, FileText, UserPlus } from 'lucide-react';
-import { judgmentUrl } from '@/lib/slug';
+import { judgmentUrl, threadUrl } from '@/lib/slug';
 
 interface HeroResult {
   judgment_id: number;
@@ -15,6 +15,7 @@ interface HeroResult {
 }
 
 interface ProcResult {
+  id: number;
   thread_id: string;
   question: string;
   answer: string;
@@ -267,7 +268,7 @@ export default function HeroSearch() {
                     {procResults.map((t) => (
                       <a
                         key={t.thread_id}
-                        href={`/procedural?q=${encodeURIComponent(query)}`}
+                        href={threadUrl({ id: t.id, question: t.question })}
                         className="block border border-ink-100 rounded-2xl p-4 hover:border-primary-300 transition-colors group"
                       >
                         <div className="flex items-center gap-2 mb-2 flex-wrap">

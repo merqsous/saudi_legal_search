@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Search, Loader2, MessageSquare, ChevronDown, ChevronUp, BadgeCheck, Users, Sparkles } from 'lucide-react';
+import { threadUrl } from '@/lib/slug';
 import { getVisitSource } from '../components/VisitTracker';
 import Header from '../components/Header';
 
@@ -19,6 +20,7 @@ interface ConversationTurn {
 }
 
 interface ThreadResult {
+  id: number;
   thread_id: string;
   topic: string | null;
   question: string;
@@ -383,7 +385,9 @@ export default function ProceduralClient() {
                   </div>
 
                   <h3 className="font-bold text-ink-900 leading-relaxed mb-3 arabic-text">
-                    {t.question}
+                    <a href={threadUrl({ id: t.id, question: t.question })} className="hover:text-primary-700 transition-colors">
+                      {t.question}
+                    </a>
                   </h3>
 
                   {t.answer && (

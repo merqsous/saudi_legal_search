@@ -192,6 +192,7 @@ def _search_threads(q, topic, limit, offset):
     for row in rows:
         answer = re.sub(r"</?b>", "", row.get("formal_answer") or row.get("answer_headline") or row.get("consolidated_answer") or "")
         results.append({
+            "id": row["thread_pk"],
             "thread_id": row["thread_id"],
             "topic": row["topic"],
             "question": row["formal_question"] or row["canonical_question"],
@@ -326,3 +327,57 @@ def procedural_answer(
         return {"ai_answer": None}
     results, _, _ = _search_threads(q, topic, 8, 0)
     return {"ai_answer": generate_thread_answer(q, results)}
+
+
+# --- Public SEO endpoints (no auth — these pages are the free-traffic funnel) ---
+
+@router.get("/procedural/ids")
+def procedural_ids(limit: int = Query(5000, ge=1, le=10000)):
+    """All visible thread IDs + titles for sitemap generation."""
+    rows = query_all(
+        """SELECT id, formal_question, canonical_question, created_at
+           FROM legal_threads
+           WHERE quality_ok IS DISTINCT FROM false
+           ORDER BY id LIMIT %s""",
+        [limit],
+    )
+    return {"ids": [
+        {
+            "id": r["id"],
+            "question": r["formal_question"] or r["canonical_question"],
+            "created_at": r["created_at"].isoformat() if r["created_at"] else None,
+        }
+        for r in rows
+    ]}
+
+
+@router.get("/procedural/{tid}")
+def procedural_detail(tid: str):
+    """Public thread detail for SEO pages — formal Q&A + full conversation."""
+    where = "id = %s" if tid.isdigit() else "thread_id = %s"
+    row = query_one(
+        f"""SELECT id, thread_id, topic, canonical_question, formal_question,
+                  consolidated_answer, formal_answer, status, confidence,
+                  responder_count, turn_count, merged_question_count,
+                  source_date, conversation
+           FROM legal_threads
+           WHERE {where} AND quality_ok IS DISTINCT FROM false""",
+        [int(tid) if tid.isdigit() else tid],
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="السؤال غير موجود")
+
+    related = query_all(
+        """SELECT id, formal_question, canonical_question
+           FROM legal_threads
+           WHERE id <> %s AND quality_ok IS DISTINCT FROM false
+             AND (topic = %s OR %s IS NULL)
+           ORDER BY responder_count DESC NULLS LAST, merged_question_count DESC NULLS LAST
+           LIMIT 8""",
+        [tid, row["topic"], row["topic"]],
+    )
+
+    return {
+        "thread": dict(row),
+        "related": [dict(r) for r in related],
+    }
